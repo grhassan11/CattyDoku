@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Runtime permission on API 33+. Asked once by the in-app pre-prompt (phase 8); no scheduling yet (phase 10). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Ads: network + advertising ID (Android 13+). Declare "Advertising ID: yes (ads)" in Play Console. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+
+    <application
+        android:name=".CatPuzzleApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CatPuzzle">
+
+        <!-- AdMob app ID (required by the SDK and UMP; missing = crash). Debug: Google test id; release: placeholder (TBD user), see app/build.gradle.kts. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+
+        <!--
+            Firebase (phase 10): ALL collection OFF by default. TelemetryConsentObserver enables Analytics / Crashlytics at
+            runtime only after UMP consent allows it. Consent-mode defaults are denied until then.
+        -->
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_analytics_storage" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_storage" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_user_data" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.CatPuzzle.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            PORTRAIT LOCK. MainActivity is the only app activity (above). Library activities, from the merged manifest:
+            - Unity FullScreenWebViewDisplay: opaque, so locked here (merge adds only screenOrientation).
+            - NOT overridden: Google ads-mobile-sdk AdActivity (SDK-managed, creatives may need landscape),
+              Meta AudienceNetworkActivity + GoogleApiActivity + HsdpShimActivity (translucent themes: a fixed orientation on a
+              translucent activity throws on Android 8.0 / minSdk 26), debug-only compose PreviewActivity.
+        -->
+        <activity
+            android:name="com.unity3d.ads.adplayer.FullScreenWebViewDisplay"
+            android:screenOrientation="portrait"
+            tools:node="merge" />
+    </application>
+
+</manifest>

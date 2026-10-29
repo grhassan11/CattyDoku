@@ -1,0 +1,110 @@
+[versions]
+# UNSURE (verify on sync): agp, ksp, composeBom, navigation, hilt, room, datastore, mockk, turbine
+agp = "8.13.0"
+kotlin = "2.2.20"
+ksp = "2.2.20-2.0.3"
+hilt = "2.57.1"
+composeBom = "2025.09.01"
+coreKtx = "1.17.0"
+work = "2.10.1"
+coreSplashscreen = "1.0.1"
+activityCompose = "1.11.0"
+lifecycle = "2.9.4"
+navigation = "2.9.5"
+hiltNavigationCompose = "1.3.0"
+room = "2.8.1"
+datastore = "1.1.7"
+coroutines = "1.10.2"
+junit = "4.13.2"
+turbine = "1.2.1"
+mockk = "1.14.5"
+# Ads / consent (phase 9). Versions per user instruction (Bangla App 2026-09-02); newer exist (docs show ads-mobile-sdk 1.6.0): bump SDK + adapters TOGETHER.
+adsMobileSdk = "1.4.0"
+metaAdapter = "6.22.0.0"
+unityAds = "4.20.0"
+unityAdapter = "4.20.0.1"
+# UNSURE: explicit UMP pin; Next-Gen SDK may already pull it transitively (Gradle picks the higher). Verify on sync.
+ump = "3.2.0"
+# Play Billing (Shop). 9.1.0 is the newest billing-ktx found in the local Gradle cache (aar + javadoc inspected). UNSURE it is the latest stable: check the Play Billing release notes; keep core + ktx on the same version.
+billing = "9.1.0"
+# Firebase (phase 10). UNSURE (verify on sync, bump BoM freely; libs below are BoM-managed, no versions): firebaseBom, googleServices, firebaseCrashlyticsPlugin.
+firebaseBom = "34.3.0"
+googleServices = "4.4.3"
+firebaseCrashlyticsPlugin = "3.0.4"
+# Baseline Profile (phase 11). UNSURE: baselineProfile / benchmarkMacro 1.5.0 + uiautomator 2.4.0 + testExtJunit 1.3.0 + profileinstaller 1.4.1 are the versions resolved in the local Gradle cache
+# (used by sibling projects on AGP 9.x). Compat with this project's AGP 8.13.0 UNVERIFIED; if sync fails, try baselineProfile/benchmarkMacro 1.4.1.
+profileinstaller = "1.4.1"
+baselineProfile = "1.5.0"
+benchmarkMacro = "1.5.0"
+uiautomator = "2.4.0"
+testExtJunit = "1.3.0"
+
+[libraries]
+androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+
+androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { module = "androidx.compose.ui:ui" }
+androidx-compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
+androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
+
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
+androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+
+junit = { module = "junit:junit", version.ref = "junit" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+
+# GMA Next-Gen SDK ONLY (com.google.android.libraries.ads.mobile.sdk). Legacy play-services-ads* excluded in app/build.gradle.kts.
+ads-mobile-sdk = { module = "com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk", version.ref = "adsMobileSdk" }
+ads-mediation-facebook = { module = "com.google.ads.mediation:facebook", version.ref = "metaAdapter" }
+ads-mediation-unity = { module = "com.google.ads.mediation:unity", version.ref = "unityAdapter" }
+unity-ads = { module = "com.unity3d.ads:unity-ads", version.ref = "unityAds" }
+ump = { module = "com.google.android.ump:user-messaging-platform", version.ref = "ump" }
+
+# Google Play Billing (KTX pulls in the core library).
+billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "billing" }
+
+# Firebase via BoM (34+: Kotlin extensions live in the main artifacts, no -ktx modules).
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+firebase-config = { module = "com.google.firebase:firebase-config" }
+
+# Baseline profile: app side installs the profile; :baselineprofile (test module) generates it.
+androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }
+androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmarkMacro" }
+androidx-test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "testExtJunit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-test = { id = "com.android.test", version.ref = "agp" }
+baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineProfile" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+# Applied in :app ONLY when app/google-services.json exists (see app/build.gradle.kts).
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlyticsPlugin" }

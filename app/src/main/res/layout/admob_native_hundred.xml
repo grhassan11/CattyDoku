@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Home bottom native ad ("hundred" layout, 112dp). Adapted from Assets/Native Ads/admob_native_hundred.xml:
+    sdp dimens -> dp, AppCompatButton -> TextView (no appcompat dependency), shimmer + loader_screen_hundred dropped
+    (the Home slot collapses while loading, so no skeleton), @color/white etc. -> app colors (native_ad_*).
+    Asset ids kept: ad_app_icon, ad_headline, ad_attribute_txtv (Ad badge), ad_body, ad_call_to_action.
+    The SDK draws AdChoices TOP_RIGHT: the headline row ends 8dp + 12dp padding from the edge, so the corner stays clear.
+    Every asset view is registered with the NativeAdView in NativeAdBar.kt. No MediaView.
+-->
+<com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layoutDirection="ltr">
+
+    <RelativeLayout
+        android:id="@+id/ad_parent_rl"
+        android:layout_width="match_parent"
+        android:layout_height="112dp"
+        android:background="@color/native_ad_background"
+        android:paddingStart="12dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="4dp">
+
+        <ImageView
+            android:id="@+id/ad_app_icon"
+            android:layout_width="45dp"
+            android:layout_height="match_parent"
+            android:layout_above="@+id/ad_call_to_action"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter" />
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@+id/ad_call_to_action"
+            android:layout_marginStart="8dp"
+            android:layout_toEndOf="@+id/ad_app_icon"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:id="@+id/header_ll"
+                android:layout_width="match_parent"
+                android:layout_height="27dp"
+                android:layout_marginEnd="8dp"
+                android:gravity="center_vertical|start"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/ad_headline"
+                    android:fontFamily="@font/fredoka"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:gravity="center_vertical|start"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="5dp"
+                    android:textColor="@color/native_ad_headline"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <!-- "Ad" attribution badge: end of the title row, always visible. -->
+                <TextView
+                    android:id="@+id/ad_attribute_txtv"
+                    android:fontFamily="@font/fredoka"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_native_ad_badge"
+                    android:contentDescription="@string/ad_badge_description"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:minWidth="20dp"
+                    android:minHeight="18dp"
+                    android:paddingStart="6dp"
+                    android:paddingTop="1dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="1dp"
+                    android:text="@string/ad_badge"
+                    android:textColor="@color/native_ad_badge_text"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/ad_body"
+                    android:fontFamily="@font/fredoka"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/header_ll"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="2dp"
+                android:layout_marginBottom="3dp"
+                android:ellipsize="end"
+                android:gravity="top|start"
+                android:maxLines="2"
+                android:textColor="@color/native_ad_body"
+                android:textSize="12sp" />
+        </RelativeLayout>
+
+        <TextView
+            android:id="@+id/ad_call_to_action"
+                    android:fontFamily="@font/fredoka"
+            android:layout_width="match_parent"
+            android:layout_height="35dp"
+            android:layout_alignParentBottom="true"
+            android:background="@drawable/ripple_bg_native_ad_button_twenty"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:textColor="@color/native_ad_cta_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </RelativeLayout>
+
+    <!-- Subtle 1dp top stroke (FrameLayout child drawn above the content; sits in the 4dp top padding, overlaps no asset). -->
+    <View
+        android:id="@+id/ad_top_stroke"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_gravity="top"
+        android:background="@color/native_ad_top_stroke" />
+</com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdView>

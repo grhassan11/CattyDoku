@@ -1,0 +1,295 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "83f907205cd723751e70cd374643d873",
+    "entities": [
+      {
+        "tableName": "level_progress",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`levelIndex` INTEGER NOT NULL, `bestScore` INTEGER NOT NULL, `bestTimeMs` INTEGER NOT NULL, `completedAt` INTEGER NOT NULL, `mistakes` INTEGER NOT NULL, `hintsUsed` INTEGER NOT NULL, PRIMARY KEY(`levelIndex`))",
+        "fields": [
+          {
+            "fieldPath": "levelIndex",
+            "columnName": "levelIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bestScore",
+            "columnName": "bestScore",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bestTimeMs",
+            "columnName": "bestTimeMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completedAt",
+            "columnName": "completedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mistakes",
+            "columnName": "mistakes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hintsUsed",
+            "columnName": "hintsUsed",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "levelIndex"
+          ]
+        }
+      },
+      {
+        "tableName": "puzzle_cache",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`levelIndex` INTEGER NOT NULL, `size` INTEGER NOT NULL, `regions` BLOB NOT NULL, `solution` BLOB NOT NULL, `techniqueLevel` INTEGER NOT NULL, `seed` INTEGER NOT NULL, `generatorVersion` INTEGER NOT NULL, PRIMARY KEY(`levelIndex`))",
+        "fields": [
+          {
+            "fieldPath": "levelIndex",
+            "columnName": "levelIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "size",
+            "columnName": "size",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "regions",
+            "columnName": "regions",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "solution",
+            "columnName": "solution",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "techniqueLevel",
+            "columnName": "techniqueLevel",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seed",
+            "columnName": "seed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generatorVersion",
+            "columnName": "generatorVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "levelIndex"
+          ]
+        }
+      },
+      {
+        "tableName": "saved_game",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`levelIndex` INTEGER NOT NULL, `marks` BLOB NOT NULL, `hearts` INTEGER NOT NULL, `status` INTEGER NOT NULL, `elapsedMs` INTEGER NOT NULL, `hintsUsed` INTEGER NOT NULL, `correctPlacements` INTEGER NOT NULL, `rewardedCells` BLOB NOT NULL, `lockedCells` BLOB NOT NULL, `undo` BLOB NOT NULL, `charges` BLOB NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`levelIndex`))",
+        "fields": [
+          {
+            "fieldPath": "levelIndex",
+            "columnName": "levelIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "marks",
+            "columnName": "marks",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hearts",
+            "columnName": "hearts",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "elapsedMs",
+            "columnName": "elapsedMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hintsUsed",
+            "columnName": "hintsUsed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "correctPlacements",
+            "columnName": "correctPlacements",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rewardedCells",
+            "columnName": "rewardedCells",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lockedCells",
+            "columnName": "lockedCells",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "undo",
+            "columnName": "undo",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "charges",
+            "columnName": "charges",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "levelIndex"
+          ]
+        }
+      },
+      {
+        "tableName": "daily_streak",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`epochDay` INTEGER NOT NULL, PRIMARY KEY(`epochDay`))",
+        "fields": [
+          {
+            "fieldPath": "epochDay",
+            "columnName": "epochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "epochDay"
+          ]
+        }
+      },
+      {
+        "tableName": "inventory",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`boosterType` TEXT NOT NULL, `count` INTEGER NOT NULL, PRIMARY KEY(`boosterType`))",
+        "fields": [
+          {
+            "fieldPath": "boosterType",
+            "columnName": "boosterType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "count",
+            "columnName": "count",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "boosterType"
+          ]
+        }
+      },
+      {
+        "tableName": "granted_purchase",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`token` TEXT NOT NULL, `productId` TEXT NOT NULL, `grantedAtMs` INTEGER NOT NULL, PRIMARY KEY(`token`))",
+        "fields": [
+          {
+            "fieldPath": "token",
+            "columnName": "token",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "productId",
+            "columnName": "productId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "grantedAtMs",
+            "columnName": "grantedAtMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "token"
+          ]
+        }
+      },
+      {
+        "tableName": "streak_reward_claim",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`claimKey` TEXT NOT NULL, `grantedAtMs` INTEGER NOT NULL, PRIMARY KEY(`claimKey`))",
+        "fields": [
+          {
+            "fieldPath": "claimKey",
+            "columnName": "claimKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "grantedAtMs",
+            "columnName": "grantedAtMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "claimKey"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '83f907205cd723751e70cd374643d873')"
+    ]
+  }
+}

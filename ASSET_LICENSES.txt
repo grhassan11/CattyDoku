@@ -1,0 +1,167 @@
+MEOWDOKU - ASSET LICENSE LOG
+============================
+Scope: icon art integrated in phase 5 (res/drawable, res/drawable-nodpi).
+Source folder (all rows): D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Icons
+Status (all rows): Original / licensed (user-provided)
+Provenance beyond "user-provided" is not recorded here. User to add per-icon source / license
+detail below if the store listing or a legal review ever needs it.
+
+Format key
+  VD  = converted by hand-checked script from the SVG to an Android VectorDrawable (res/drawable/<name>.xml)
+  PNG = SVG uses gradients with xlink:href inheritance + gradientTransform (not representable in a
+        VectorDrawable), so the matching 512x512 PNG from the same folder is shipped unchanged in
+        res/drawable-nodpi/<name>.png
+
+Icon                 Format  Role in app                                   Source file(s)
+-------------------  ------  --------------------------------------------  ------------------------------
+ic_back              VD      Top bar back button (tinted)                  ic_back.svg
+ic_settings          VD      Top bar settings gear (tinted)                ic_settings.svg
+ic_close             VD      Settings dialog close X (tinted)              ic_close.svg
+ic_cat_1             PNG     Placed cat (per-region variant); win mascot   ic_cat_1.svg / ic_cat_1.png
+ic_cat_2             PNG     Placed cat (per-region variant); win mascot   ic_cat_2.svg / ic_cat_2.png
+ic_cat_3             PNG     Placed cat (per-region variant); win mascot   ic_cat_3.svg / ic_cat_3.png
+ic_cat_4             PNG     Placed cat (per-region variant); win mascot   ic_cat_4.svg / ic_cat_4.png
+ic_cat_5             PNG     Fixed cat (splash, tutorial, cat booster,     ic_cat_5.svg / ic_cat_5.png
+                             rules diagram); placed cat variant; mascot
+ic_cat_6             PNG     Placed cat (per-region variant); win mascot   ic_cat_6.svg / ic_cat_6.png
+ic_cat_7             PNG     Placed cat (per-region variant); win mascot   ic_cat_7.svg / ic_cat_7.png
+ic_cat_8             PNG     Placed cat (per-region variant); win mascot   ic_cat_8.svg / ic_cat_8.png
+ic_cat_9             PNG     Placed cat (per-region variant); win mascot   ic_cat_9.svg / ic_cat_9.png
+ic_cat_10            PNG     Placed cat (per-region variant); win mascot   ic_cat_10.svg / ic_cat_10.png
+ic_cat_black_flat   VD      Tinted cat silhouette (unsolved region,       ic_cat_black_flat.svg
+                             locked booster)
+ic_fish_live         VD      Life fish (active)                            ic_fish_live.svg
+ic_fish_bone         VD      Life fish (spent); lose dialog bones          ic_fish_bone.svg
+ic_heart_filled      VD      Win dialog "mistakes" stat icon (tinted)      ic_heart_filled.svg
+ic_hint              VD      Hint booster, hint bar, win dialog hints stat ic_hint.svg
+ic_undo              VD      Undo button                                   ic_undo.svg
+ic_reloading         VD      Restart / Retry pill icon (tinted)            ic_reloading.svg
+ic_speaker           VD      Settings: sound tile (tinted)                 ic_speaker.svg
+ic_vibrate           VD      Settings: vibration tile (tinted)             ic_vibrate.svg
+ic_appearance        VD      Settings: pattern mode row (tinted)           ic_appearance.svg
+ic_paw               VD      Imported, not used yet                        ic_paw.svg
+ic_yarn_ball         PNG     Imported, not used yet (gradient SVG)         ic_yarn_ball.svg / ic_yarn_ball.png
+ic_finger_tap        VD      Imported, reserved for tutorial (phase 6)     ic_finger_tap.svg
+ic_bell              VD      Imported, not used yet                        ic_bell.svg
+ic_share             VD      Imported, not used yet                        ic_share.svg
+ic_more              VD      Imported, not used yet                        ic_more.svg
+information          VD      Imported, not used yet (file name kept)       information.svg
+
+Fonts
+  Font:      Fredoka (variable, wght 300-700 / wdth 75-125)
+  File:      app/src/main/res/font/fredoka.ttf  (unmodified copy of Fredoka[wdth,wght].ttf)
+  Source:    https://github.com/google/fonts/tree/main/ofl/fredoka
+  License:   SIL Open Font License 1.1 (https://openfontlicense.org) - (c) 2016 The Fredoka Project Authors
+             (https://github.com/hafontia/Fredoka-One). Full text: https://github.com/google/fonts/blob/main/ofl/fredoka/OFL.txt
+  Accessed:  2026-10-26
+  Used for:  all app text (ui/theme/Type.kt, FredokaFamily)
+
+Own (Compose-drawn) placeholders, NOT third-party art
+  X mark, music note, microphone, padlock  -> ui/components/PlaceholderArt.kt
+  Sunburst, confetti                       -> ui/components/DialogParts.kt
+Replace the placeholders when the user supplies matching icons.
+
+Audio
+  File:      app/src/main/res/raw/sfx_meow.ogg  (unmodified copy of Meow.ogg; Vorbis mono 44.1 kHz, 0.51 s, 9787 bytes)
+  Source:    https://opengameart.org/content/meow
+  Author:    IgnasD (https://opengameart.org/users/ignasd)
+  License:   CC0 1.0 Universal (public domain dedication) - no attribution required
+  Accessed:  2026-10-26
+  Used for:  cat placed / cat booster SFX
+
+  Added 2026-10-26 (user-supplied game SFX)
+  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Audios
+  Source / license (all 5 rows): user-provided, provenance unknown - user to confirm license
+  File (app/src/main/res/raw/)  Format / length                    Used for
+  sfx_wrong_placement.mp3       MP3 stereo 44.1 kHz, 1.6 s         cat placed on non-solution cell
+  sfx_hint.ogg                  Vorbis mono 44.1 kHz, 2.8 s        hint used
+  sfx_win.ogg                   Vorbis stereo 44.1 kHz, 2.0 s      level won (non-milestone levels)
+  sfx_award.ogg                 Vorbis mono 44.1 kHz, 7.6 s        level won on milestone levels 1/5/10/25 (MediaPlayer)
+  sfx_blocked.ogg               Vorbis mono 44.1 kHz, 1.0 s        refused action (no charges, locked cell, tutorial wrong)
+
+App icon (added 2026-10-26)
+  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\App Icon\AppIcons
+  Status: Original / licensed (user-provided)
+  File (app/src/main/res/)                    Source file                       Used for
+  drawable-nodpi/ic_launcher_foreground.png   android/adaptive-foreground.png   adaptive icon foreground (1024x1024) + splash icon (via drawable/ic_splash_icon.xml inset)
+  mipmap-{m,h,xh,xxh,xxxh}dpi/ic_launcher.png android/mipmap-*/ic_launcher.png  legacy launcher icon (copied as ic_launcher_round.png too)
+  (playstore.png is Play Console only, not bundled)
+
+ic_mouse (added 2026-10-29)
+  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Icons
+  Status: Original / licensed (user-provided)
+  File (app/src/main/res/)      Source file    Used for
+  drawable-nodpi/ic_mouse.png   ic_mouse.png   Mouse booster icon: booster dialog, Shop section header (gradient SVG -> PNG, same as ic_cat_*/ic_yarn_ball)
+  drawable-nodpi/ic_mouse_locked.png   ic_mouse_locked.png   Locked mouse booster slot in the game booster row (greyed gradient SVG -> PNG, same as ic_mouse)
+
+ic_cat_1..5 replaced and ic_cat_6..10 added (2026-10-29, 10-cat set)
+  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Icons
+  Status: Original / licensed (user-provided)
+  File (app/src/main/res/)            Source file     Used for
+  drawable-nodpi/ic_cat_1..10.png     ic_cat_1..10.png  512x512 gradient art; per-region placed cat (CatVariants.UNIQUE=10) + win-dialog mascots
+  (gradient SVG -> PNG, same as ic_mouse/ic_yarn_ball; ic_cat_N.svg kept in the source folder only)
+
+ic_fish_bone_level_failed (added 2026-10-29)
+  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Icons
+  Status: Original / licensed (user-provided)
+  File (app/src/main/res/)                          Source file                       Used for
+  drawable-nodpi/ic_fish_bone_level_failed.png      ic_fish_bone_level_failed.png     Level Failed (lose) dialog hero art (gradient SVG -> PNG, same as ic_cat_*/ic_mouse)
+
+ic_cart_store (added 2026-10-29)
+  Source folder: D:TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Icons
+  Status: Original / licensed (user-provided)
+  File (app/src/main/res/)                    Source file         Used for
+  drawable-nodpi/ic_cart_store.png            ic_cart_store.png   Home screen Shop button (under the avatar), full-colour, untinted (512x512 SVG -> PNG, same as ic_mouse)
+
+ic_lock (added 2026-10-29)
+  Source: user-supplied own art (Design\Icons\ic_lock.svg), single flat path -> VectorDrawable. No third-party artwork.
+  Status: Original (project-owned)
+  File (app/src/main/res/)       Used for
+  drawable/ic_lock.xml           Locked booster badge (game) + locked Daily pill padlock (home); tinted at use site
+
+ic_pattern_mode (added 2026-10-29)
+  Source: user-supplied own art (Design\Icons\ic_pattern_mode.svg), single flat colour, 9 paths -> VectorDrawable. No third-party artwork.
+  Status: Original (project-owned)
+  File (app/src/main/res/)            Used for
+  drawable/ic_pattern_mode.xml        Settings: Pattern mode row (tinted at use site); replaces ic_appearance there
+
+ic_star_island (added 2026-10-29)
+  Source: user-supplied own art (Design\Icons\ic_star_island.svg), single linear gradient -> VectorDrawable. No third-party artwork.
+  Status: Original (project-owned)
+  File (app/src/main/res/)       Used for
+  drawable/ic_star_island.xml    Rate Us dialog stars (selected = full colour; unselected = greyscale + reduced alpha at use site)
+
+AUDIO (added 2026-10-29)
+------------------------
+Converted to OGG Vorbis in app/src/main/res/raw/ (originals kept in Projects\Meowdoku\Assets\Audios & Sounds\Chosen).
+
+music_track_1.ogg  (stereo 44.1 kHz, ~q3)
+  Source file: andriih-sweet-cat-dog-animal-music-614072.mp3
+  Author: andriih
+  URL: https://pixabay.com/music/cartoons-sweet-cat-dog-animal-music-614072/
+  License: Pixabay Content License (Content ID registered)
+  Date obtained: 2026-10-29
+  Used for: background music (alternates with music_track_2)
+
+music_track_2.ogg  (stereo 44.1 kHz, ~q3)
+  Source file: andriih-cute-cats-pets-music-613347.mp3
+  Author: andriih
+  URL: https://pixabay.com/music/happy-childrens-tunes-cute-cats-pets-music-613347/
+  License: Pixabay Content License (Content ID registered)
+  Date obtained: 2026-10-29
+  Used for: background music (alternates with music_track_1)
+
+sfx_ui_tap.ogg  (mono 44.1 kHz)
+  Source file: drop_003 (Kenney Interface Sounds pack), https://kenney.nl
+  License: CC0 1.0
+  Used for: UI button / dialog / toggle tap cue
+
+sfx_cross.ogg  (mono 44.1 kHz)
+  Source file: glass_002 (Kenney Interface Sounds pack), https://kenney.nl
+  License: CC0 1.0
+  Used for: X mark placed on the board
+
+sfx_mouse.ogg  (mono 44.1 kHz)
+  Source file: question_003 (Kenney Interface Sounds pack), https://kenney.nl
+  License: CC0 1.0
+  Used for: mouse booster used

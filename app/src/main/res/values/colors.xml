@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="cat_background">#FFF7F1EC</color>
+    <color name="ic_launcher_background">#FFFFF3E6</color>
+
+    <!-- Home native ad (admob_native_hundred.xml). White strip, brand-ink text, deep-orange CTA (white text ~4:1). -->
+    <color name="native_ad_background">#FFFFFFFF</color>
+    <color name="native_ad_headline">#FF4A3F3A</color>
+    <color name="native_ad_body">#FF6B5E57</color>
+    <color name="native_ad_top_stroke">#1F000000</color>
+    <color name="ad_button_color">#FFC46A00</color>
+    <color name="native_ad_cta_text">#FFFFFFFF</color>
+    <color name="native_ad_cta_ripple">#33FFFFFF</color>
+    <color name="native_ad_badge_background">#FFA67C00</color>
+    <color name="native_ad_badge_text">#FFFFFFFF</color>
+</resources>
