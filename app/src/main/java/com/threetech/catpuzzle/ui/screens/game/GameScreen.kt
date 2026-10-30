@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -291,7 +292,10 @@ private fun GameContent(
                 val avail = min(maxWidth.value, maxHeight.value - tabHeightDp)
                 val metrics = BoardLayoutCalc.metrics(avail, content.board.size)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    RegionTab(content.regions)
+                    RegionTab(
+                        content.regions,
+                        cardWidthDp = if (content.board.size >= 9) metrics.cardSideDp(content.board.size) else null,
+                    )
                     BoardView(
                         board = shownBoard,
                         patternMode = content.patternMode,
@@ -597,24 +601,28 @@ private fun RuleDiagram(kind: RuleKind) {
 // ------------------------------------------------------------------ board tab
 
 @Composable
-private fun RegionTab(regions: List<RegionStatusUi>) {
+private fun RegionTab(regions: List<RegionStatusUi>, cardWidthDp: Float? = null) {
     val solved = regions.count { it.solved }
     val text = stringResource(R.string.region_row_description, solved, regions.size)
+    // Fixed width (9x9): exactly the board card width; icons shrink to fit, spread evenly.
+    val fixed = cardWidthDp != null
+    val iconDp = if (cardWidthDp != null) minOf(32f, (cardWidthDp - 16f) / regions.size.coerceAtLeast(1)) else 32f
     Row(
         Modifier
+            .then(if (cardWidthDp != null) Modifier.width(cardWidthDp.dp) else Modifier)
             .height(44.dp)
             .background(GameColors.Card, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-            .padding(horizontal = 14.dp)
+            .then(if (fixed) Modifier else Modifier.padding(horizontal = 14.dp))
             .semantics { contentDescription = text },
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = if (fixed) Arrangement.SpaceEvenly else Arrangement.spacedBy(4.dp),
     ) {
         for (region in regions) {
-            Box(Modifier.size(32.dp)) {
+            Box(Modifier.size(iconDp.dp)) {
                 if (region.solved) {
-                    CatIcon(size = 32.dp, variant = region.catVariant)
+                    CatIcon(size = iconDp.dp, variant = region.catVariant)
                 } else {
-                    CatIcon(size = 32.dp, silhouetteTint = GameColors.region(region.region).copy(alpha = 0.45f))
+                    CatIcon(size = iconDp.dp, silhouetteTint = GameColors.region(region.region).copy(alpha = 0.45f))
                 }
                 if (region.solved) {
                     Box(

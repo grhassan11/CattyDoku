@@ -14,7 +14,58 @@ class DifficultyCurveTest {
         assertEquals(6, DifficultyCurve.sizeFor(13))
         assertEquals(6, DifficultyCurve.sizeFor(24))
         assertEquals(7, DifficultyCurve.sizeFor(25))
+    }
+
+    @Test
+    fun mixedCycleLevels24To40() {
+        // level -> (size, target)
+        val expected = mapOf(
+            24 to (6 to 5),
+            25 to (7 to 2), 26 to (7 to 3), 27 to (8 to 3), 28 to (8 to 4), 29 to (9 to 4), 30 to (9 to 5),
+            31 to (7 to 2), 32 to (7 to 3), 33 to (8 to 3), 34 to (8 to 4), 35 to (9 to 4), 36 to (9 to 5),
+            37 to (7 to 2), 38 to (7 to 3), 39 to (8 to 3), 40 to (8 to 4),
+        )
+        for ((lvl, st) in expected) {
+            val s = DifficultyCurve.specFor(lvl)
+            assertEquals("size L$lvl", st.first, s.size)
+            assertEquals("size L$lvl", st.first, DifficultyCurve.sizeFor(lvl))
+            assertEquals("target L$lvl", st.second, s.targetTechnique)
+        }
+        assertEquals(40, DifficultyCurve.specFor(25).balancePercent)
+        assertEquals(35, DifficultyCurve.specFor(27).balancePercent)
+        assertEquals(30, DifficultyCurve.specFor(29).balancePercent)
+    }
+
+    @Test
+    fun neverAboveMaxBoardAndSizeMatchesSpec() {
+        for (lvl in (1..3000) + listOf(99_999, Int.MAX_VALUE)) {
+            val size = DifficultyCurve.sizeFor(lvl)
+            assertTrue("L$lvl size $size", size in 4..MAX_BOARD_SIZE)
+            assertEquals(size, DifficultyCurve.specFor(lvl).size)
+        }
+        // high level sample: (5000 - 25) % 6 = 1 -> 7x7 target 3; (5002 - 25) % 6 = 3 -> 8x8 target 4
         assertEquals(7, DifficultyCurve.sizeFor(5000))
+        assertEquals(8, DifficultyCurve.sizeFor(5002))
+        assertEquals(4, DifficultyCurve.specFor(5002).targetTechnique)
+    }
+
+    @Test
+    fun fallbackSpecsOnlyForBigBoards() {
+        for (lvl in 1..30) {
+            val fb = DifficultyCurve.fallbackSpecsFor(lvl)
+            val base = DifficultyCurve.specFor(lvl)
+            if (base.size <= 7) {
+                assertTrue("L$lvl", fb.isEmpty())
+            } else {
+                assertTrue("L$lvl", fb.isNotEmpty())
+                for (f in fb) {
+                    assertEquals(lvl, f.levelIndex)
+                    assertTrue(f.size in 7 until base.size || (f.size == 7 && f.targetTechnique <= base.targetTechnique))
+                    assertTrue(f.targetTechnique in 1..base.targetTechnique)
+                }
+                assertEquals(7, fb.last().size)
+            }
+        }
     }
 
     @Test

@@ -66,6 +66,10 @@ object Routes {
     /** TEMP design preview (node styles). Delete with ui/screens/nodegallery/. */
     const val NODE_GALLERY = "node_gallery"
 
+    /** TEMP 9x9 sample: game screen in in-memory sample mode (arg `sample`, read by GameViewModel). Gallery only. */
+    const val SAMPLE_9X9 = "game_sample?sample=true"
+    internal const val SAMPLE_9X9_PATTERN = "game_sample?sample={sample}"
+
     /** Shop opened from a booster dialog: scroll to the matching pack section. */
     fun shopFor(booster: Booster): String = "$SHOP?$ARG_SHOP_SECTION=${ShopUiMapper.argFor(booster)}"
 }
@@ -128,7 +132,25 @@ fun AppNavHost(
             )
         }
         composable(Routes.NODE_GALLERY) { // TEMP node gallery
-            NodeGalleryScreen(onBack = { navController.popBackStack() })
+            NodeGalleryScreen(
+                onBack = { navController.popBackStack() },
+                onPlay9x9Sample = { navController.navigate(Routes.SAMPLE_9X9) { launchSingleTop = true } }, // TEMP 9x9 sample
+            )
+        }
+        composable( // TEMP 9x9 sample
+            route = Routes.SAMPLE_9X9_PATTERN,
+            arguments = listOf(
+                navArgument(GameViewModel.ARG_SAMPLE) {
+                    type = NavType.BoolType
+                    defaultValue = true
+                },
+            ),
+        ) {
+            GameRoute(
+                onBack = { navController.popBackStack() },
+                onOpenShop = {},
+                sample = true,
+            )
         }
         composable(Routes.STREAK) {
             StreakRoute(onBack = { navController.popBackStack() })

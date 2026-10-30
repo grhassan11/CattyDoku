@@ -88,8 +88,16 @@ fun BoardView(
 
     Box(
         modifier
-            .size((gridSideDp + 2 * metrics.cardPaddingDp).dp)
-            .background(GameColors.Card, RoundedCornerShape(24.dp))
+            .size(metrics.cardSideDp(n).dp)
+            .background(
+                GameColors.Card,
+                RoundedCornerShape(
+                    topStart = BoardLayoutCalc.cardTopCornerDp(n).dp,
+                    topEnd = BoardLayoutCalc.cardTopCornerDp(n).dp,
+                    bottomEnd = BoardLayoutCalc.cardCornerDp(n).dp,
+                    bottomStart = BoardLayoutCalc.cardCornerDp(n).dp,
+                ),
+            )
             .padding(metrics.cardPaddingDp.dp),
     ) {
         Column(

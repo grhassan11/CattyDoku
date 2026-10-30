@@ -150,6 +150,9 @@ class BoardGestureResolver(private val doubleTapWindowMs: Long = DEFAULT_DOUBLE_
 data class BoardMetrics(val cardPaddingDp: Float, val gapDp: Float, val cellDp: Float) {
     /** Side of the cell grid (cells + gaps), dp. */
     fun gridSideDp(size: Int): Float = cellDp * size + gapDp * (size - 1)
+
+    /** Side of the whole board card (grid + padding both sides), dp. Single source for card width. */
+    fun cardSideDp(size: Int): Float = gridSideDp(size) + 2 * cardPaddingDp
 }
 
 object BoardLayoutCalc {
@@ -157,6 +160,12 @@ object BoardLayoutCalc {
     const val MIN_CELL_DP = 44f
     const val MAX_CELL_DP = 96f
     private val PADDING_STEPS = floatArrayOf(16f, 12f, 8f, 4f)
+
+    /** Outer card corner radius, dp: 24 up to 7x7, then -6 per size above 7 (8x8 = 18, 9x9 = 12). */
+    fun cardCornerDp(size: Int): Float = (24f - 6f * (size - 7).coerceAtLeast(0)).coerceAtLeast(12f)
+
+    /** Top corner radius, dp: square (0) for 9x9+, otherwise same as [cardCornerDp]. */
+    fun cardTopCornerDp(size: Int): Float = if (size >= 9) 0f else cardCornerDp(size)
 
     /**
      * Size the board from [availableWidthDp]. Prefers 16dp card padding and shrinks it (down to 4dp)

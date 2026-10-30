@@ -12,7 +12,7 @@ import com.threetech.catpuzzle.domain.model.Puzzle
  * solution has one cat per row). A candidate the solver cannot finish rates [Technique.MAX] + 1
  * (fallback heuristic: such candidates are ranked by eliminations only).
  *
- * Cost: at most 7 solver runs on a board of at most 7x7. Call off the main thread.
+ * Cost: at most 9 solver runs on a board of at most 9x9. Call off the main thread.
  * Ratings ([Puzzle.techniqueLevel]) are NOT recomputed with the starter cat: they stay as generated.
  * Open so tests can swap in a "no starter" picker; the tutorial simply never calls this.
  */

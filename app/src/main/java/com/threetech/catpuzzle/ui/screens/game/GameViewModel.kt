@@ -9,6 +9,7 @@ import com.threetech.catpuzzle.domain.analytics.NoopAnalyticsLogger
 import com.threetech.catpuzzle.domain.crash.CrashReporter
 import com.threetech.catpuzzle.domain.crash.NoopCrashReporter
 import com.threetech.catpuzzle.domain.engine.MouseBoosterPolicy
+import com.threetech.catpuzzle.domain.engine.Sample9x9 // TEMP 9x9 sample
 import com.threetech.catpuzzle.domain.model.Booster
 import com.threetech.catpuzzle.domain.model.CellMark
 import com.threetech.catpuzzle.domain.model.GameEvent
@@ -52,7 +53,11 @@ import com.threetech.catpuzzle.domain.usecase.UseHint
 import com.threetech.catpuzzle.domain.usecase.UseMouseBooster
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers // TEMP 9x9 sample
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive // TEMP 9x9 sample
+import kotlinx.coroutines.withContext // TEMP 9x9 sample
+import kotlinx.coroutines.withTimeoutOrNull // TEMP 9x9 sample
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -109,6 +114,16 @@ class GameViewModel @Inject constructor(
      * the win dialog says "Daily complete!". Completion is recorded by [CompleteLevel] under that key.
      */
     private val isDaily: Boolean = savedStateHandle.get<Boolean>(ARG_DAILY) ?: false
+
+    /**
+     * TEMP 9x9 sample: in-memory play of a generated 9x9 board. No persistence of any kind (save, progress,
+     * lastPlayed, inventory, score/streak, analytics). Fixed in-memory booster charges.
+     */
+    private val isSample: Boolean = savedStateHandle.get<Boolean>(ARG_SAMPLE) ?: false
+
+    private val sampleCharges = mapOf(
+        Booster.HINT to Sample9x9.FIXED_HINTS, Booster.CAT to Sample9x9.FIXED_CATS, Booster.MOUSE to Sample9x9.FIXED_MOUSE,
+    ) // TEMP 9x9 sample
 
     private data class Session(
         val puzzle: Puzzle,
@@ -167,6 +182,7 @@ class GameViewModel @Inject constructor(
     /** Win dialog "Level N+1": open the next level. */
     fun onNextLevel() {
         val s = session ?: return
+        if (isSample) return // TEMP 9x9 sample
         if (isDaily || s.outcome !is OutcomeUi.Won) return
         loadLevel(s.puzzle.levelIndex + 1)
     }
@@ -175,12 +191,12 @@ class GameViewModel @Inject constructor(
     fun onRestart() {
         val s = session ?: return
         viewModelScope.launch {
-            val charges = bestEffortResult { getBoosterCharges() } ?: s.state.charges
+            val charges = if (isSample) sampleCharges else bestEffortResult { getBoosterCharges() } ?: s.state.charges // TEMP 9x9 sample
             pauseTimer()
             elapsedBaseMs = 0L
             val fresh = applyStarterCat(s.puzzle, GameState.initial(s.puzzle.size, charges))
             session = Session(s.puzzle, fresh)
-            logStart(s.puzzle)
+            if (!isSample) logStart(s.puzzle) // TEMP 9x9 sample
             resumeTimer()
             enqueueSave()
             publish()
@@ -216,6 +232,10 @@ class GameViewModel @Inject constructor(
         loadJob = viewModelScope.launch {
             var level = requested ?: 0
             try {
+                if (isSample) { // TEMP 9x9 sample
+                    loadSample()
+                    return@launch
+                }
                 bestEffort { seedStarterBoosters() }
                 val puzzle: Puzzle = if (isDaily) {
                     when (val d = resolveDaily()) {
@@ -293,6 +313,24 @@ class GameViewModel @Inject constructor(
         }
     }
 
+    /** TEMP 9x9 sample: generate (Default dispatcher, 60 s cap, kept for restart) and start fresh. No persistence. */
+    private var samplePuzzle: Puzzle? = null // TEMP 9x9 sample
+
+    private suspend fun loadSample() { // TEMP 9x9 sample
+        val puzzle = samplePuzzle ?: withTimeoutOrNull(60_000L) {
+            withContext(Dispatchers.Default) { Sample9x9.generate { ensureActive() } }
+        }
+        if (puzzle == null) {
+            _state.value = GameUiState.Failed(Sample9x9.LEVEL_INDEX, "9x9 sample generation failed")
+            return
+        }
+        samplePuzzle = puzzle
+        elapsedBaseMs = 0L
+        session = Session(puzzle, applyStarterCat(puzzle, GameState.initial(puzzle.size, sampleCharges)))
+        resumeTimer()
+        publish()
+    }
+
     // ---------------------------------------------------------------- board input
 
     fun onCellTap(pos: Pos) {
@@ -352,8 +390,10 @@ class GameViewModel @Inject constructor(
                 val shown = r.hint.takeUnless { it is Hint.None }
                 session = s.copy(state = r.state, hint = shown, hintOverlay = shown != null)
                 if (spent) {
-                    analytics.log(AnalyticsEvent.HintUsed(s.puzzle.levelIndex.coerceAtLeast(0), s.puzzle.size))
-                    viewModelScope.launch { bestEffort { consumeBooster(Booster.HINT) } }
+                    if (!isSample) { // TEMP 9x9 sample
+                        analytics.log(AnalyticsEvent.HintUsed(s.puzzle.levelIndex.coerceAtLeast(0), s.puzzle.size))
+                        viewModelScope.launch { bestEffort { consumeBooster(Booster.HINT) } }
+                    }
                 }
                 if (session?.hint != null) sendSfx(SfxKind.HINT)
                 enqueueSave()
@@ -379,8 +419,10 @@ class GameViewModel @Inject constructor(
             }
             CatBoosterResult.Unavailable -> Unit
             is CatBoosterResult.Placed -> {
-                analytics.log(AnalyticsEvent.BoosterUsed("cat", s.puzzle.levelIndex.coerceAtLeast(0)))
-                viewModelScope.launch { bestEffort { consumeBooster(Booster.CAT) } }
+                if (!isSample) { // TEMP 9x9 sample
+                    analytics.log(AnalyticsEvent.BoosterUsed("cat", s.puzzle.levelIndex.coerceAtLeast(0)))
+                    viewModelScope.launch { bestEffort { consumeBooster(Booster.CAT) } }
+                }
                 applyStep(s, r.step, HapticKind.PLACE, r.cell)
             }
         }
@@ -397,8 +439,10 @@ class GameViewModel @Inject constructor(
             }
             MouseBoosterResult.Unavailable -> Unit // nothing eligible: no charge spent
             is MouseBoosterResult.Marked -> {
-                analytics.log(AnalyticsEvent.BoosterUsed("mouse", s.puzzle.levelIndex.coerceAtLeast(0)))
-                viewModelScope.launch { bestEffort { consumeBooster(Booster.MOUSE) } }
+                if (!isSample) { // TEMP 9x9 sample
+                    analytics.log(AnalyticsEvent.BoosterUsed("mouse", s.puzzle.levelIndex.coerceAtLeast(0)))
+                    viewModelScope.launch { bestEffort { consumeBooster(Booster.MOUSE) } }
+                }
                 // Only X marks were added: cannot solve, lose or conflict, so no outcome check is needed.
                 // State (X marks, charge, save) is final right now; the UI only animates the reveal and then calls
                 // onMouseAnimDone. Input is blocked meanwhile via idle(). onAppStopped also releases it.
@@ -429,6 +473,7 @@ class GameViewModel @Inject constructor(
      * into the running game so the badge and the next tap see it. Safe to call in any state.
      */
     fun onBoosterRewardGranted() {
+        if (isSample) return // TEMP 9x9 sample
         viewModelScope.launch {
             val charges = bestEffortResult { getBoosterCharges() } ?: return@launch
             val s = session ?: return@launch
@@ -548,8 +593,10 @@ class GameViewModel @Inject constructor(
         pauseTimer()
         val result = computeScore(s.puzzle, s.state, (elapsedMs() / 1000L).toInt())
         session = s.copy(outcome = GameUiMapper.outcome(result))
-        viewModelScope.launch { bestEffort { completeLevel(result) } }
-        analytics.log(AnalyticsEvent.levelFinished(result, s.puzzle.size, isDaily))
+        if (!isSample) { // TEMP 9x9 sample
+            viewModelScope.launch { bestEffort { completeLevel(result) } }
+            analytics.log(AnalyticsEvent.levelFinished(result, s.puzzle.size, isDaily))
+        }
         sendHaptic(if (won) HapticKind.WIN else HapticKind.LOSE)
         _events.trySend(
             if (won) GameUiEvent.LevelWon(s.puzzle.levelIndex, result.score.total)
@@ -575,6 +622,7 @@ class GameViewModel @Inject constructor(
 
     private fun enqueueSave() {
         val s = session ?: return
+        if (isSample) return // TEMP 9x9 sample: never autosave over the real save
         saveQueue.trySend(SaveRequest(s.puzzle.levelIndex, s.state, elapsedMs()))
     }
 
@@ -630,6 +678,9 @@ class GameViewModel @Inject constructor(
     companion object {
         /** Nav / SavedStateHandle argument: true = Daily Challenge mode. */
         const val ARG_DAILY = "daily"
+
+        /** TEMP 9x9 sample: nav arg, true = in-memory 9x9 sample mode. */
+        const val ARG_SAMPLE = "sample"
 
         /**
          * STREAK RULE SWITCH. false (shipped, needed so streak milestone rewards cannot be farmed by just opening a

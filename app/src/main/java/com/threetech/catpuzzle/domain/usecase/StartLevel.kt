@@ -1,5 +1,6 @@
 package com.threetech.catpuzzle.domain.usecase
 
+import com.threetech.catpuzzle.domain.engine.DifficultyCurve
 import com.threetech.catpuzzle.domain.engine.GenerationResult
 import com.threetech.catpuzzle.domain.engine.GeneratorConfig
 import com.threetech.catpuzzle.domain.engine.PuzzleGenerator
@@ -13,8 +14,18 @@ fun interface LevelGenerator {
 
 /** Production generator: the deterministic engine with a fixed config. */
 class EnginePuzzleGenerator(private val config: GeneratorConfig = GeneratorConfig.DEFAULT) : LevelGenerator {
-    override fun generate(level: Int, seed: Long): GenerationResult =
-        PuzzleGenerator.generateForLevel(level, seed, config)
+    override fun generate(level: Int, seed: Long): GenerationResult {
+        val primary = PuzzleGenerator.generateForLevel(level, seed, config)
+        if (primary is GenerationResult.Success) return primary
+        // 8x8/9x9 only (empty list for <= 7x7): same seed mix, smaller board / lower target, so a
+        // slow or failing big board can never dead-end the level.
+        val levelSeed = SeededRng.mix(seed, level.coerceAtLeast(1).toLong())
+        for (spec in DifficultyCurve.fallbackSpecsFor(level)) {
+            val r = PuzzleGenerator.generate(spec, levelSeed, config)
+            if (r is GenerationResult.Success) return r
+        }
+        return primary
+    }
 }
 
 /** Last-resort puzzle source when generation keeps failing (e.g. bundled puzzles, added later). */

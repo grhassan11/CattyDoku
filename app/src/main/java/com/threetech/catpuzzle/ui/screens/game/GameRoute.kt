@@ -40,6 +40,7 @@ fun GameRoute(
     onBack: () -> Unit,
     onOpenShop: (Booster) -> Unit,
     modifier: Modifier = Modifier,
+    sample: Boolean = false, // TEMP 9x9 sample: no ads / rate-us / progress side effects
     viewModel: GameViewModel = hiltViewModel(),
     adsViewModel: AdsViewModel = hiltViewModel(),
     rateUsViewModel: RateUsViewModel = hiltViewModel(),
@@ -50,7 +51,7 @@ fun GameRoute(
     val bannerAd by adsViewModel.banner.collectAsStateWithLifecycle()
     // Current level / mode for the ad boundary (daily never shows an interstitial).
     val content = (state as? GameUiState.Ready)?.content
-    val adLevel = content?.levelNumber ?: 0
+    val adLevel = if (sample) 0 else content?.levelNumber ?: 0 // TEMP 9x9 sample
     val adIsDaily = content?.isDaily ?: false
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -86,7 +87,7 @@ fun GameRoute(
     RememberIdleMeow(nudgeEligible && content?.mouseRun == null, interactionClock) { audio?.playIdleMeow() }
 
     // ---- ads wiring: all policy lives in domain; `surfaces` already folds in ad-free levels, consent, kill switches ----
-    LaunchedEffect(adLevel) { adsViewModel.setScreenLevel(adLevel) }
+    LaunchedEffect(adLevel) { if (!sample) adsViewModel.setScreenLevel(adLevel) } // TEMP 9x9 sample
 
     // Keep a rewarded ad preloaded while any booster is empty, on the last heart, and when the lose dialog shows.
     val boosters = content?.boosters
@@ -94,7 +95,7 @@ fun GameRoute(
     val lastHeart = content != null && content.outcome == null && content.hearts <= 1
     val lostShown = content?.outcome is OutcomeUi.Lost
     LaunchedEffect(surfaces.rewarded, anyBoosterEmpty, lastHeart, lostShown, rewardedBusy, boosterDialog) {
-        if (surfaces.rewarded && (anyBoosterEmpty || lastHeart || lostShown || boosterDialog != null)) {
+        if (!sample && surfaces.rewarded && (anyBoosterEmpty || lastHeart || lostShown || boosterDialog != null)) {
             adsViewModel.preloadRewardedAd()
         }
     }
@@ -104,11 +105,11 @@ fun GameRoute(
     // Sticky banner: load when allowed, destroy when the surface turns off. Slot width = screen width.
     val bannerWidthDp = LocalConfiguration.current.screenWidthDp
     LaunchedEffect(surfaces.banner, bannerWidthDp) {
-        if (surfaces.banner) adsViewModel.requestBanner(bannerWidthDp) else adsViewModel.releaseBanner()
+        if (!sample && surfaces.banner) adsViewModel.requestBanner(bannerWidthDp) else adsViewModel.releaseBanner() // TEMP 9x9 sample
     }
     // No banner under dialogs (win / lose / booster): the slot stays reserved, the ad view detaches.
     val bannerVisible = content?.outcome == null && boosterDialog == null && !settingsVisible
-    val adsUi = GameAdsUi(
+    val adsUi = if (sample) GameAdsUi() else GameAdsUi( // TEMP 9x9 sample: all ad surfaces off
         rewardedSurface = surfaces.rewarded,
         rewardedLoad = surfaces.rewardedLoad,
         rewardedBusy = rewardedBusy,
@@ -153,7 +154,7 @@ fun GameRoute(
                 }
                 // Win counts toward the every-Nth-win ad rule (daily ignored: its key is <= 0). The ad itself
                 // only ever shows later, when the user taps "Level N+1".
-                is GameUiEvent.LevelWon -> adsViewModel.onLevelWon(isDaily = event.level <= 0)
+                is GameUiEvent.LevelWon -> if (!sample) adsViewModel.onLevelWon(isDaily = event.level <= 0) // TEMP 9x9 sample
                 is GameUiEvent.LevelLost -> Unit // dialogs render from state.outcome
             }
         }
@@ -223,7 +224,9 @@ fun GameRoute(
         // The one-time Rate us dialog (after Lv 5 is won) goes FIRST, then the normal ad boundary + next level.
         onNextLevel = {
             val proceed = { adsViewModel.afterWin(adLevel, adIsDaily, onDone = viewModel::onNextLevel) }
-            if (adIsDaily) {
+            if (sample) {
+                onBack() // TEMP 9x9 sample: win dialog "next" returns to the gallery
+            } else if (adIsDaily) {
                 proceed()
             } else {
                 scope.launch {
@@ -232,11 +235,29 @@ fun GameRoute(
             }
         },
         // Retry seam (interstitial OFF by default via AdPolicyConfig.showOnLoseRetry). Revive is a separate rewarded CTA.
-        onLoseRetry = { adsViewModel.beforeRetry(adLevel, adIsDaily, onDone = viewModel::onRestart) },
+        onLoseRetry = {
+            // TEMP 9x9 sample: retry the sample directly, no ad seam
+            if (sample) viewModel.onRestart() else adsViewModel.beforeRetry(adLevel, adIsDaily, onDone = viewModel::onRestart)
+        },
         modifier = Modifier.fillMaxSize(),
         ads = adsUi,
         boosterDialog = boosterDialog,
-        onEmptyBoosterTap = { boosterDialog = it },
+        onEmptyBoosterTap = { b -> // TEMP 9x9 sample: no rewarded dialog, just the "none left" snackbar
+            if (!sample) {
+                boosterDialog = b
+            } else {
+                scope.launch {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar(
+                        when (b) {
+                            Booster.CAT -> noCatText
+                            Booster.HINT -> noHintText
+                            Booster.MOUSE -> noMouseText
+                        },
+                    )
+                }
+            }
+        },
         onDismissBoosterDialog = { boosterDialog = null },
         // Reward lands in inventory ONLY on the earned-reward result; then the game mirrors the new stock.
         onWatchBoosterAd = { booster ->

@@ -4,15 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import com.threetech.catpuzzle.ui.components.rememberTapClick
 import kotlinx.coroutines.launch
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -142,58 +138,40 @@ internal fun RateUsDialog(
     }
 }
 
-/** 5-point star outline (outer radius = half the box, inner 0.45) so ripple + clip follow the star. */
-private val StarShape = GenericShape { size, _ ->
-    val cx = size.width / 2f
-    val cy = size.height / 2f
-    val outer = size.minDimension / 2f
-    val inner = outer * 0.45f
-    for (k in 0 until 10) {
-        val r = if (k % 2 == 0) outer else inner
-        val a = -PI / 2.0 + k * PI / 5.0
-        val x = cx + (r * cos(a)).toFloat()
-        val y = cy + (r * sin(a)).toFloat()
-        if (k == 0) moveTo(x, y) else lineTo(x, y)
-    }
-    close()
-}
-
 @Composable
 private fun StarButton(index: Int, filled: Boolean, onClick: () -> Unit) {
     val description = pluralStringResource(R.plurals.rate_star_description, index, index)
     val tap = rememberTapClick(onClick)
     val pop = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
-    // Outer box = 52dp touch target, no indication; inner star-clipped box owns the bounded ripple.
-    Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
-        Box(
-            Modifier
+    // Outer 52dp box = touch target + circular (unbounded) ripple; no star clip. Inner box scales the provided star art as-is.
+    Box(
+        Modifier
+            .size(52.dp)
+            .semantics {
+                contentDescription = description
+                selected = filled
+            }
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = ripple(bounded = false, radius = 26.dp), role = Role.Button) {
+                scope.launch {
+                    pop.animateTo(1.15f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+                    pop.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+                }
+                tap()
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = painterResource(IconArt.StarIsland),
+            contentDescription = null,
+            modifier = Modifier
                 .size(46.dp)
                 .graphicsLayer {
                     scaleX = pop.value
                     scaleY = pop.value
-                }
-                .clip(StarShape)
-                .semantics {
-                    contentDescription = description
-                    selected = filled
-                }
-                .clickable(role = Role.Button) {
-                    scope.launch {
-                        pop.animateTo(1.15f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
-                        pop.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
-                    }
-                    tap()
                 },
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter = painterResource(IconArt.StarIsland),
-                contentDescription = null,
-                modifier = Modifier.size(46.dp),
-                alpha = if (filled) 1f else 0.5f,
-                colorFilter = if (filled) null else ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
-            )
-        }
+            alpha = if (filled) 1f else 0.5f,
+            colorFilter = if (filled) null else ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
+        )
     }
 }
