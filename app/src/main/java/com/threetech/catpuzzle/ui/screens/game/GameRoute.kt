@@ -8,6 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,7 +57,7 @@ fun GameRoute(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
-    val noCatText = stringResource(R.string.booster_no_cat)
+    val noCatText by rememberUpdatedState(stringResource(PieceWording.boosterNone(content?.pieceSkin.word())))
     val noHintText = stringResource(R.string.booster_no_hint)
     val noMouseText = stringResource(R.string.booster_no_mouse)
     val adUnavailableText = stringResource(R.string.reward_ad_unavailable)

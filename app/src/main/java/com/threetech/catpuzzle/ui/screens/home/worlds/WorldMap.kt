@@ -54,13 +54,13 @@ private val ItemW = 114.dp
 private val TrailWidth = 22.dp // road edge (outline)
 private val CoreWidth = 14.dp // road body
 
-/** Lane is taller than the trail band by this much above and below, so glow rings / stars / crowns are never clipped. */
+/** Lane is taller than the trail band by this much above and below, so glow rings / stars are never clipped. */
 private val Slack = 20.dp
 
 /** Gap kept between the trail band and the controls above / below it. */
 private val EdgeGap = 4.dp
 
-/** Room a node needs above / below its centre (PLAY tag + crown above; stars tray below). */
+/** Room a node needs above / below its centre (PLAY tag above; stars tray below). */
 private const val NodeAbove = 104f
 private const val NodeBelow = 78f
 
@@ -86,6 +86,16 @@ private fun trailShape(height: Dp): TrailShape {
     val above = amp + NodeAbove
     val need = above + amp + NodeBelow
     return TrailShape(amp = amp.dp, midY = (above + (h - need) / 2f).dp)
+}
+
+/** How far the node journey is shifted up on screen (dp), limited by the headroom [trailShape] leaves above the crest. */
+private const val JourneyLiftDp = 48f
+
+private fun journeyLift(height: Dp): Dp {
+    val h = height.value
+    val amp = ((h - (NodeAbove + NodeBelow)) / 2f).coerceIn(0f, 72f)
+    val spare = (h - (amp * 2 + NodeAbove + NodeBelow)) / 2f
+    return minOf(JourneyLiftDp, spare.coerceAtLeast(0f)).dp
 }
 
 /** +1 = crest (node above the centre line), -1 = trough, 0 = on the line. Period 4 nodes; exact for any index. */
@@ -222,7 +232,9 @@ private fun LoadedWorldMap(
 
         // ---- trail + nodes, in a lane slightly taller than the band
         val shape = remember(bandHeight) { trailShape(bandHeight) }
-        val laneModifier = Modifier.fillMaxWidth().height(bandHeight + Slack * 2).offset(y = bandTop - Slack)
+        // Lift the whole lane (trail + nodes), capped by the band's spare headroom so the PLAY tag never rides under the controls.
+        val lift = remember(bandHeight) { journeyLift(bandHeight) }
+        val laneModifier = Modifier.fillMaxWidth().height(bandHeight + Slack * 2).offset(y = bandTop - Slack - lift)
         TrailLayer(
             shape = shape,
             nodeCount = nodeCount,
@@ -281,7 +293,8 @@ private fun TrailItem(
         val state = when {
             level < current -> NodeState.Done
             level == current -> NodeState.Current
-            level <= WorldRules.TEMP_UNLOCK_UP_TO -> NodeState.Current // TEMP unlock first 50 levels
+            level < WorldRules.TEMP_UNLOCK_UP_TO -> NodeState.Done // TEMP review unlock (fake done, 3 stars via WorldMapUi.from)
+            level <= WorldRules.TEMP_UNLOCK_UP_TO -> NodeState.Current // TEMP review unlock
             else -> NodeState.Locked
         }
         LevelNode(
@@ -291,6 +304,7 @@ private fun TrailItem(
             theme = theme,
             boss = boss,
             onClick = { onNodeClick(level) },
+            showPlayTag = level == 100, // TEMP review unlock: only L100 shows PLAY
             modifier = Modifier.align(Alignment.TopCenter).offset(y = centerY - nodeCellHeight(boss) / 2),
         )
     }

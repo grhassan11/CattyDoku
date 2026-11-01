@@ -21,6 +21,9 @@ object AudioPolicy {
     /** SFX play only when the Sound setting is on and no full-screen ad is showing. */
     fun sfxAllowed(sfxEnabled: Boolean, fullScreenAdShowing: Boolean): Boolean = sfxEnabled && !fullScreenAdShowing
 
+    /** Placement chime layers a random cat meow only for cat pieces; animal pieces (boss levels) get the bare chime. */
+    fun layersCatOnPlacement(animalPieces: Boolean): Boolean = !animalPieces
+
     /** Random cat-meow index in [0, count), never equal to [previous] (when valid). [roll] is any random int. */
     fun nextCatSfx(previous: Int, count: Int, roll: Int): Int = when {
         count <= 1 -> 0

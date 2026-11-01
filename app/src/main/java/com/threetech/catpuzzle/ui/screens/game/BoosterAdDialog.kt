@@ -33,6 +33,8 @@ import com.threetech.catpuzzle.ui.components.ButtonStyle
 import com.threetech.catpuzzle.ui.components.CatIcon
 import com.threetech.catpuzzle.ui.components.DialogScrim
 import com.threetech.catpuzzle.ui.components.HintBulb
+import com.threetech.catpuzzle.domain.model.PieceSkin
+import com.threetech.catpuzzle.ui.components.IconArt
 import com.threetech.catpuzzle.ui.components.IconImage
 import com.threetech.catpuzzle.ui.components.MouseIcon
 import com.threetech.catpuzzle.ui.components.PillButton
@@ -49,12 +51,13 @@ internal fun BoosterAdDialog(
     booster: Booster,
     load: RewardedLoadState,
     busy: Boolean,
+    pieceSkin: PieceSkin,
     onWatch: () -> Unit,
     onRetryLoad: () -> Unit,
     onStore: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val copy = boosterCopy(booster)
+    val copy = boosterCopy(booster, pieceSkin.word())
     val title = stringResource(copy.title)
     val closeDescription = stringResource(R.string.reward_dialog_close)
     BackHandler(onBack = onDismiss)
@@ -84,7 +87,11 @@ internal fun BoosterAdDialog(
                 }
             }
             when (booster) {
-                Booster.CAT -> CatIcon(size = 72.dp)
+                Booster.CAT -> {
+                    val set = pieceSkin.set
+                    if (set != null) IconImage(IconArt.animalFor(set, pieceSkin.boosterIndex), size = 72.dp)
+                    else CatIcon(size = 72.dp)
+                }
                 Booster.HINT -> HintBulb(size = 72.dp)
                 Booster.MOUSE -> MouseIcon(size = 72.dp)
             }
@@ -156,8 +163,8 @@ internal fun BoosterAdDialog(
 
 private class BoosterCopy(val title: Int, val subtitle: Int, val store: Int)
 
-private fun boosterCopy(booster: Booster): BoosterCopy = when (booster) {
-    Booster.CAT -> BoosterCopy(R.string.reward_cat_title, R.string.reward_cat_subtitle, R.string.reward_cat_store)
+private fun boosterCopy(booster: Booster, word: PieceWord): BoosterCopy = when (booster) {
+    Booster.CAT -> BoosterCopy(PieceWording.rewardTitle(word), PieceWording.rewardSubtitle(word), PieceWording.rewardStore(word))
     Booster.HINT -> BoosterCopy(R.string.reward_hint_title, R.string.reward_hint_subtitle, R.string.reward_hint_store)
     Booster.MOUSE -> BoosterCopy(R.string.reward_mouse_title, R.string.reward_mouse_subtitle, R.string.reward_mouse_store)
 }

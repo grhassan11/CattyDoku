@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import com.threetech.catpuzzle.domain.engine.CatVariants
+import com.threetech.catpuzzle.domain.model.AnimalSet
 import com.threetech.catpuzzle.ui.components.IconArt
 
 /** Pure sampling math for downsampled cat decoding (unit tested). */
@@ -57,3 +58,8 @@ private fun decodeCatPainter(resources: Resources, @DrawableRes id: Int, targetP
     }
     BitmapFactory.decodeResource(resources, id, opts)?.let { BitmapPainter(it.asImageBitmap()) }
 }.getOrNull()
+
+/** Painters for every icon of boss-level [set], index-aligned with [IconArt.animalIcons]. Vector drawables, no decode. */
+@Composable
+internal fun rememberAnimalPainters(set: AnimalSet): List<Painter> =
+    IconArt.animalIcons(set).map { painterResource(it) }

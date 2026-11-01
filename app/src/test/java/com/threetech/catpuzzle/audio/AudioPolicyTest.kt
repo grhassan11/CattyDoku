@@ -45,4 +45,10 @@ class AudioPolicyTest {
             if (prev >= 0) assertTrue(n != prev)
         }
     }
+
+    @Test
+    fun catLayeredOnPlacementOnlyForCatPieces() {
+        assertTrue(AudioPolicy.layersCatOnPlacement(false))
+        assertFalse(AudioPolicy.layersCatOnPlacement(true))
+    }
 }

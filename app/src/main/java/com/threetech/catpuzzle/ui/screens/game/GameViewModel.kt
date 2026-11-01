@@ -3,6 +3,7 @@ package com.threetech.catpuzzle.ui.screens.game
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.threetech.catpuzzle.audio.AudioPolicy
 import com.threetech.catpuzzle.domain.analytics.AnalyticsEvent
 import com.threetech.catpuzzle.domain.analytics.AnalyticsLogger
 import com.threetech.catpuzzle.domain.analytics.NoopAnalyticsLogger
@@ -16,6 +17,7 @@ import com.threetech.catpuzzle.domain.model.GameEvent
 import com.threetech.catpuzzle.domain.model.GameState
 import com.threetech.catpuzzle.domain.model.GameStatus
 import com.threetech.catpuzzle.domain.model.Hint
+import com.threetech.catpuzzle.domain.model.PieceSkin
 import com.threetech.catpuzzle.domain.model.Pos
 import com.threetech.catpuzzle.domain.model.Puzzle
 import com.threetech.catpuzzle.domain.model.Settings
@@ -585,6 +587,7 @@ class GameViewModel @Inject constructor(
         } else {
             if (haptic) sendHaptic(hapticKind)
         }
+        val catLayered = AudioPolicy.layersCatOnPlacement(!isDaily && PieceSkin.forLevel(before.puzzle.levelIndex).isAnimal)
         // After haptic / outcome events so their order is unchanged. Winning placement skips the meow
         // (win / award sound replaces it); a losing wrong placement still plays WRONG; lose has no extra sound.
         when {
@@ -597,8 +600,9 @@ class GameViewModel @Inject constructor(
             )
             wrongPlaced -> sendSfx(SfxKind.WRONG)
             // Soft chime replaces the meow on a clean correct placement (one placement sound, never both).
-            correct -> sendSfx(SfxKind.CHIME)
-            catPlaced -> sendSfx(SfxKind.MEOW)
+            correct -> sendSfx(if (catLayered) SfxKind.CHIME else SfxKind.CHIME_SOLO)
+            // Boss levels place animals: never a cat sound on placement (the idle meow is separate).
+            catPlaced -> sendSfx(if (catLayered) SfxKind.MEOW else SfxKind.CHIME_SOLO)
             // X mark(s) newly placed by tap or drag (not removals / undo). Cat placement keeps its meow above.
             crossSfx && step.state.board.marks.count { it == CellMark.X } > before.state.board.marks.count { it == CellMark.X } ->
                 sendSfx(SfxKind.CROSS)

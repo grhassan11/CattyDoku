@@ -22,11 +22,13 @@ data class WorldMapUi(
     companion object {
         fun from(progress: WorldMapProgress): WorldMapUi = WorldMapUi(
             loaded = true,
-            currentLevel = progress.currentLevel.coerceAtLeast(1),
-            starsByLevel = progress.starsByLevel,
+            // TEMP review unlock - revert (replace with: progress.currentLevel.coerceAtLeast(1))
+            currentLevel = if (TEMP_SHOW_ALL_WORLDS) 100 else progress.currentLevel.coerceAtLeast(1),
+            // TEMP review unlock - revert (replace with: progress.starsByLevel). Display-only fake 3 stars L1..199.
+            starsByLevel = if (TEMP_SHOW_ALL_WORLDS) (1..199).associateWith { 3 } else progress.starsByLevel,
             // TEMP show all worlds - revert (replace with: progress.visibleLevels)
             visibleLevels = if (TEMP_SHOW_ALL_WORLDS) {
-                maxOf(progress.visibleLevels, WorldRules.THEME_COUNT * WorldRules.LEVELS_PER_WORLD)
+                maxOf(progress.visibleLevels, WorldRules.TEMP_UNLOCK_UP_TO) // TEMP review unlock (was THEME_COUNT * LEVELS_PER_WORLD)
             } else {
                 progress.visibleLevels
             },

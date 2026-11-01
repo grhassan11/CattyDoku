@@ -68,6 +68,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.threetech.catpuzzle.R
 import com.threetech.catpuzzle.domain.ads.RewardedLoadState
+import com.threetech.catpuzzle.domain.model.AnimalSet
+import com.threetech.catpuzzle.domain.model.PieceSkin
 import com.threetech.catpuzzle.ui.components.Button3D
 import com.threetech.catpuzzle.ui.components.Button3DHeight
 import com.threetech.catpuzzle.ui.components.ButtonStyle
@@ -104,6 +106,8 @@ internal fun OutcomeOverlay(
     onWinHome: () -> Unit = {},
     /** Daily Challenge: "Daily complete!" headline and a "Back to Home" button ([onNextLevel] must go home). */
     daily: Boolean = false,
+    /** Boss level: win dialog shows one of this skin's animals (and animal wording) instead of the cat. */
+    pieceSkin: PieceSkin = PieceSkin.cats(),
     /** Lose-screen revive CTA (rewarded ad). null = rewarded not allowed (ad-free level, no consent, off): single Retry CTA. */
     onWatchRevive: (() -> Unit)? = null,
     rewardedLoad: RewardedLoadState = RewardedLoadState.IDLE,
@@ -123,6 +127,7 @@ internal fun OutcomeOverlay(
                 outcome = shown,
                 heartsLost = (maxHearts - shown.heartsLeft).coerceAtLeast(0),
                 daily = daily,
+                pieceSkin = if (daily) PieceSkin.cats() else pieceSkin,
                 onNextLevel = onNextLevel,
                 onWinHome = onWinHome,
             )
@@ -166,12 +171,32 @@ private fun WinDialog(
     outcome: OutcomeUi.Won,
     heartsLost: Int,
     daily: Boolean,
+    pieceSkin: PieceSkin,
     onNextLevel: () -> Unit,
     onWinHome: () -> Unit,
 ) {
+    val animalSet = pieceSkin.set
     val headline = stringResource(OutcomeLogic.headline(level, daily).res())
-    val message = stringResource(OutcomeLogic.message(level, heartsLost, outcome.hintsUsed, daily).res())
-    val mascotDescription = stringResource(R.string.win_mascot_description)
+    val winMessage = OutcomeLogic.message(level, heartsLost, outcome.hintsUsed, daily)
+    val message = stringResource(
+        if (winMessage == WinMessage.GOOD && animalSet != null) {
+            if (animalSet == AnimalSet.DOGS) R.string.win_message_good_dogs else R.string.win_message_good_animals
+        } else {
+            winMessage.res()
+        },
+    )
+    val mascotDescription = stringResource(
+        when (animalSet) {
+            null -> R.string.win_mascot_description
+            AnimalSet.DOGS -> R.string.win_mascot_description_dog
+            else -> R.string.win_mascot_description_animal
+        },
+    )
+    val mascotRes = if (animalSet != null) {
+        IconArt.animalFor(animalSet, pieceSkin.boosterIndex)
+    } else {
+        IconArt.mascotFor(level)
+    }
 
     DialogScrim(Modifier.semantics { paneTitle = headline }, scrimColor = GameColors.OutcomeScrim) {
     StatusBarIconsEffect(lightIcons = true)
@@ -189,7 +214,7 @@ private fun WinDialog(
             Spacer(Modifier.height(12.dp))
 
             MascotStage(
-                mascotRes = IconArt.mascotFor(level),
+                mascotRes = mascotRes,
                 description = mascotDescription,
             )
 

@@ -36,6 +36,14 @@ class GameUiMapperTest {
     }
 
     @Test
+    fun pieceSkinIsAnimalOnlyOnBossLevels() {
+        assertFalse(content(level = 9).pieceSkin.isAnimal)
+        assertFalse(content(level = 11).pieceSkin.isAnimal)
+        assertTrue(content(level = 10).pieceSkin.isAnimal)
+        assertTrue(content(level = 20).pieceSkin.isAnimal)
+    }
+
+    @Test
     fun mapsBasicFields() {
         val c = content(GameState.initial(4, mapOf(Booster.CAT to 2, Booster.HINT to 7)))
         assertEquals(1, c.levelNumber)

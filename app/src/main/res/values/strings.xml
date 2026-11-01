@@ -212,6 +212,55 @@
     <string name="hint_overlay_dismiss">Close hint</string>
     <string name="hint_overlay_description">Hint. %1$s</string>
 
+    <!-- Boss-level wording: dogs (Dogs set) and generic animals (Animals / Ocean sets) -->
+    <string name="rule_one_per_color_dog">1 Dog per color</string>
+    <string name="rule_one_per_line_dog">1 Dog per column and row</string>
+    <string name="rule_no_touch_dog">Dogs cannot touch</string>
+    <string name="booster_dog">Place a dog, %1$d left</string>
+    <string name="booster_no_dog">No dog boosters left</string>
+    <string name="booster_dog_watch">Place a dog, none left. Watch a video to get one free</string>
+    <string name="reward_dog_title">Need a dog?</string>
+    <string name="reward_dog_subtitle">Use one dog to place the correct answer</string>
+    <string name="reward_dog_store">Get Dogs in Store</string>
+    <string name="hint_wrong_dog">This dog is in the wrong spot.</string>
+    <string name="hint_x_on_solution_dog">This X is covering a spot where a dog belongs.</string>
+    <string name="hint_place_single_dog">Only one spot is left here. A dog goes in the marked cell.</string>
+    <string name="hint_place_reveal_dog">A dog belongs in the marked cell.</string>
+    <string name="hint_eliminate_confinement_dog">A color is stuck in one line, so the marked cells in that line cannot hold a dog.</string>
+    <string name="hint_eliminate_crowding_dog">These colors share the same lines, so the marked cells cannot hold a dog.</string>
+    <string name="hint_eliminate_lookahead_dog">A dog in the marked cells would leave another color with no spot.</string>
+    <string name="hint_rule_row_dog">Each row has exactly one dog.</string>
+    <string name="hint_rule_column_dog">Each column has exactly one dog.</string>
+    <string name="hint_rule_region_dog">Each color has exactly one dog.</string>
+    <string name="hint_rule_touch_dog">Dogs can\'t touch, even diagonally.</string>
+    <string name="cell_state_dog">dog</string>
+    <string name="cell_action_place_dog">Place dog</string>
+    <string name="cell_action_remove_dog">Remove dog</string>
+
+    <string name="rule_one_per_color_animal">1 Animal per color</string>
+    <string name="rule_one_per_line_animal">1 Animal per column and row</string>
+    <string name="rule_no_touch_animal">Animals cannot touch</string>
+    <string name="booster_animal">Place an animal, %1$d left</string>
+    <string name="booster_no_animal">No animal boosters left</string>
+    <string name="booster_animal_watch">Place an animal, none left. Watch a video to get one free</string>
+    <string name="reward_animal_title">Need an animal?</string>
+    <string name="reward_animal_subtitle">Use one animal to place the correct answer</string>
+    <string name="reward_animal_store">Get Animals in Store</string>
+    <string name="hint_wrong_animal">This animal is in the wrong spot.</string>
+    <string name="hint_x_on_solution_animal">This X is covering a spot where an animal belongs.</string>
+    <string name="hint_place_single_animal">Only one spot is left here. An animal goes in the marked cell.</string>
+    <string name="hint_place_reveal_animal">An animal belongs in the marked cell.</string>
+    <string name="hint_eliminate_confinement_animal">A color is stuck in one line, so the marked cells in that line cannot hold an animal.</string>
+    <string name="hint_eliminate_crowding_animal">These colors share the same lines, so the marked cells cannot hold an animal.</string>
+    <string name="hint_eliminate_lookahead_animal">An animal in the marked cells would leave another color with no spot.</string>
+    <string name="hint_rule_row_animal">Each row has exactly one animal.</string>
+    <string name="hint_rule_column_animal">Each column has exactly one animal.</string>
+    <string name="hint_rule_region_animal">Each color has exactly one animal.</string>
+    <string name="hint_rule_touch_animal">Animals can\'t touch, even diagonally.</string>
+    <string name="cell_state_animal">animal</string>
+    <string name="cell_action_place_animal">Place animal</string>
+    <string name="cell_action_remove_animal">Remove animal</string>
+
     <!-- Board accessibility -->
     <string name="cell_description">row %1$d, column %2$d, %3$s, %4$s</string>
     <string name="cell_state_empty">empty</string>
@@ -250,6 +299,10 @@
     <string name="win_message_first">You found every cat. What a brilliant start!</string>
     <string name="win_message_perfect">Flawless run. Not a single slip!</string>
     <string name="win_message_good">Nicely done. Every cat is home.</string>
+    <string name="win_message_good_dogs">Nicely done. Every dog is home.</string>
+    <string name="win_message_good_animals">Nicely done. Every animal is home.</string>
+    <string name="win_mascot_description_dog">A dog celebrating your win</string>
+    <string name="win_mascot_description_animal">An animal celebrating your win</string>
     <string name="win_message_tough">A tough one, and you stuck with it!</string>
     <string name="win_next_level">Level %1$d</string>
     <string name="win_headline_daily">Daily complete!</string>

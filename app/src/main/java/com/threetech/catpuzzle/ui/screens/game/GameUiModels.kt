@@ -3,6 +3,7 @@ package com.threetech.catpuzzle.ui.screens.game
 import androidx.compose.runtime.Immutable
 import com.threetech.catpuzzle.domain.model.Booster
 import com.threetech.catpuzzle.domain.model.HintRule
+import com.threetech.catpuzzle.domain.model.PieceSkin
 
 /** UI-side cell mark (kept separate so UI never depends on engine enums for rendering decisions). */
 enum class CellMarkUi { EMPTY, X, CAT }
@@ -118,6 +119,8 @@ data class GameContentUi(
     val mouseRun: MouseRunUi? = null,
     /** Latest correct cat placement (drives the board's pop / sparkle / ripple / flash). Null until the first one this session. */
     val lastCorrectPlacement: CorrectPlacementUi? = null,
+    /** What the pieces look like: cats, or one animal set on a boss level (board pieces + Cat booster icon + region row). */
+    val pieceSkin: PieceSkin = PieceSkin.cats(),
 )
 
 /**
@@ -151,6 +154,9 @@ enum class SfxKind {
 
     /** Soft chime on a correct, conflict-free cat placement (non-winning). Reuses the hint sample, quieter + higher pitch. */
     CHIME,
+
+    /** Same chime as [CHIME] but with no cat meow layered on it (animal pieces on boss levels). */
+    CHIME_SOLO,
 
     /** Cat placed on a non-solution cell. */
     WRONG,

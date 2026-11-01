@@ -70,9 +70,9 @@ class SfxPlayer(context: Context) {
             return
         }
         val p = pool ?: return
-        val id = soundIds[kind] ?: return
+        val id = soundIds[if (kind == SfxKind.CHIME_SOLO) SfxKind.CHIME else kind] ?: return
         if (!synchronized(loaded) { id in loaded }) return
-        val soft = kind == SfxKind.CHIME
+        val soft = kind == SfxKind.CHIME || kind == SfxKind.CHIME_SOLO
         val vol = if (soft) CHIME_VOLUME else 1f
         val rate = if (soft) CHIME_RATE else 1f
         track(runCatching { p.play(id, vol, vol, 1, 0, rate) }.getOrDefault(0))

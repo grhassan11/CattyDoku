@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.threetech.catpuzzle.R
+import com.threetech.catpuzzle.domain.model.BossNodeShapes
 import com.threetech.catpuzzle.ui.components.IconArt
 import com.threetech.catpuzzle.ui.components.IconImage
 import com.threetech.catpuzzle.ui.components.ShadowedIcon
@@ -80,8 +81,6 @@ internal val NodeCellHeight = 142.dp
 private val StarSize = 18.dp
 private val StarTrayOffset = 30.dp // was 20dp; +10dp gap between pad and stars tray (offset only, node/road unaffected)
 private val PlayTagGap = 6.dp
-private val CrownRoom = 18.dp
-private val CrownIconSize = 26.dp // ic_crown box; art spans ~19dp tall, so it stays within CrownRoom above the pad
 private val DarkInk = Color(0xFF3B2A1A)
 
 // Locked (future) pads: fully opaque, world-independent warm slate so they read on every backdrop.
@@ -96,7 +95,7 @@ internal fun nodeCellHeight(boss: Boolean): Dp = NodeCellHeight * (if (boss) Bos
 /**
  * Level node: a single 3D cat paw pad (bean with two small top bumps, built from [padPath]) with the level number centred on it. Done: stars tray underneath, tappable via [onClick] (opens the level
  * sheet). Current: pulsing glow, bob, thicker ring, floating PLAY tag above, tappable via [onClick]. Locked (future):
- * flat, dimmed, lock icon, no stars, inert. [boss] = level 10 of a world: 1.05x with a crown. Content description per
+ * flat, dimmed, lock icon, no stars, inert. [boss] = level 10 of a world: 1.05x, body = one of 5 shapes picked per level (see BossNodeShapes). Content description per
  * state; the tappable node is always >= 48dp.
  */
 @Composable
@@ -108,6 +107,7 @@ fun LevelNode(
     boss: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showPlayTag: Boolean = true, // TEMP review unlock
 ) {
     val current = state == NodeState.Current
     val locked = state == NodeState.Locked
@@ -144,6 +144,8 @@ fun LevelNode(
     // Light faces (some world palettes) get dark ink, dark faces white ink with a soft shadow.
     val lightFace = lerp(pal.top, pal.bottom, 0.5f).luminance() > 0.55f
     val pad = remember { Path() } // rebuilt in drawPad when the size changes
+    // Boss body: one of 8 shapes, stable per level (null = regular paw pad).
+    val bossShape = if (boss) BossNodeShapes.indexFor(level) else -1
 
     Box(modifier.size(width = NodeCellWidth * scale, height = NodeCellHeight * scale), contentAlignment = Alignment.Center) {
         if (current) GlowRing(nodeSize * 1.45f, theme.accent)
@@ -155,12 +157,12 @@ fun LevelNode(
                 }
                 .semantics(mergeDescendants = true) { contentDescription = description }
         ) {
-            // Tap target = the pad outline (not the empty corners of the square). Sibling, so the clip never cuts stars / crown.
+            // Tap target = the pad outline (not the empty corners of the square). Sibling, so the clip never cuts stars.
             if (!locked) {
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .clip(PadShape)
+                        .then(if (boss) Modifier else Modifier.clip(PadShape))
                         .clickable(interactionSource = source, indication = null, role = Role.Button, onClick = tap),
                 )
             }
@@ -178,9 +180,14 @@ fun LevelNode(
                         Size(w * 0.76f + 2f * g, 8.dp.toPx() + g),
                     )
                 }
-                drawPad(pad, travel, lip, faceH, pal, outline = (if (current) 4.dp else 2.5.dp).toPx(), locked = locked)
+                if (boss) {
+                    drawBossShape(bossShape, state, BossMetrics(travel, lip, faceH, pal))
+                } else {
+                    drawPad(pad, travel, lip, faceH, pal, outline = (if (current) 4.dp else 2.5.dp).toPx(), locked = locked)
+                }
             }
-            val labelOffset = nodeSize * 0.12f - 5.dp // centre of the pad body
+            val labelOffset = if (boss) nodeSize * bossNumberYFraction(bossShape) - LipRoom / 2 // face centre + per-shape tweak
+            else nodeSize * 0.12f - 5.dp // centre of the pad body
             if (locked) {
                 // Solid dark copy 1.5dp lower = contrast shadow, then the white lock on top.
                 IconImage(
@@ -214,14 +221,6 @@ fun LevelNode(
                         .clearAndSetSemantics { },
                 )
             }
-            if (boss) {
-                // Milestone badge (level multiple of 10): full-colour crown icon (no tint) drawn bottom-flush on the pad top (icon art has ~4dp blank below the crown, so the box overlaps the pad by 4dp).
-                IconImage(
-                    R.drawable.ic_crown,
-                    size = CrownIconSize,
-                    modifier = Modifier.align(Alignment.TopCenter).offset(y = -(CrownIconSize - 4.dp)),
-                )
-            }
             if (state == NodeState.Done) {
                 NodeStars(
                     earned = stars,
@@ -230,9 +229,9 @@ fun LevelNode(
                 )
             }
         }
-        if (current) {
-            // Floating PLAY tag, hovering above the node (and above the crown on a boss node).
-            val lift = nodeSize / 2 + PlayTagGap + (if (boss) CrownRoom else 0.dp)
+        if (current && showPlayTag) { // TEMP review unlock (was: if (current))
+            // Floating PLAY tag, hovering above the node.
+            val lift = nodeSize / 2 + PlayTagGap
             PlayTag(
                 accent = theme.accent,
                 modifier = Modifier

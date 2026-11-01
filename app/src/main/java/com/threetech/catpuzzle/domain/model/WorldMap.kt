@@ -23,8 +23,8 @@ object WorldRules {
 
     fun isBoss(level: Int): Boolean = levelInWorld(level) == LEVELS_PER_WORLD
 
-    // TEMP unlock first 50 levels (difficulty testing): Home map nodes 1..this are tappable/playable regardless of progress. Set 0 to remove.
-    const val TEMP_UNLOCK_UP_TO = 50
+    // TEMP review unlock (was 50; difficulty testing): Home map nodes 1..this are tappable/playable regardless of progress. Set 0 to remove.
+    const val TEMP_UNLOCK_UP_TO = 200
 
     /** Worlds open on a fresh install (Lv 1-60). */
     const val INITIAL_OPEN_WORLDS = 6

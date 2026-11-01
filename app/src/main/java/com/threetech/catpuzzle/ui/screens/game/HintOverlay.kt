@@ -1,7 +1,6 @@
 package com.threetech.catpuzzle.ui.screens.game
 
 import androidx.activity.compose.BackHandler
-import androidx.annotation.StringRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,32 +42,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.threetech.catpuzzle.R
-import com.threetech.catpuzzle.domain.model.HintRule
+import com.threetech.catpuzzle.domain.model.PieceSkin
 import com.threetech.catpuzzle.ui.components.HintBulb
 import com.threetech.catpuzzle.ui.components.PillButton
 import com.threetech.catpuzzle.ui.theme.GameColors
 
 /** Board position (root space) + the metrics it was laid out with, for the spotlight cut-outs. */
 internal data class BoardGeo(val bounds: Rect, val metrics: BoardMetrics)
-
-@StringRes
-internal fun HintMessage.res(): Int = when (this) {
-    HintMessage.WRONG_CAT -> R.string.hint_wrong_cat
-    HintMessage.X_ON_SOLUTION -> R.string.hint_x_on_solution
-    HintMessage.PLACE_SINGLE -> R.string.hint_place_single
-    HintMessage.PLACE_REVEAL -> R.string.hint_place_reveal
-    HintMessage.ELIMINATE_CONFINEMENT -> R.string.hint_eliminate_confinement
-    HintMessage.ELIMINATE_CROWDING -> R.string.hint_eliminate_crowding
-    HintMessage.ELIMINATE_LOOKAHEAD -> R.string.hint_eliminate_lookahead
-}
-
-@StringRes
-internal fun HintRule.res(): Int = when (this) {
-    HintRule.ROW -> R.string.hint_rule_row
-    HintRule.COLUMN -> R.string.hint_rule_column
-    HintRule.REGION -> R.string.hint_rule_region
-    HintRule.TOUCH -> R.string.hint_rule_touch
-}
 
 /**
  * Hint dim: a screen-wide scrim with the [HintOverlayUi.spotlight] cells cut out, plus a rule card at the top
@@ -85,6 +65,7 @@ internal fun HintOverlay(
     boardSize: Int,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    pieceSkin: PieceSkin = PieceSkin.cats(),
 ) {
     BackHandler(onBack = onDismiss)
     val dismissLabel = stringResource(R.string.hint_overlay_dismiss)
@@ -133,6 +114,7 @@ internal fun HintOverlay(
         }
         HintRuleCard(
             hint = overlay.hint,
+            word = pieceSkin.word(),
             onDismiss = onDismiss,
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -143,9 +125,9 @@ internal fun HintOverlay(
 }
 
 @Composable
-private fun HintRuleCard(hint: HintUi, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
-    val ruleText = hint.rule?.let { stringResource(it.res()) }
-    val message = stringResource(hint.message.res())
+private fun HintRuleCard(hint: HintUi, word: PieceWord, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    val ruleText = hint.rule?.let { stringResource(PieceWording.rule(it, word)) }
+    val message = stringResource(PieceWording.message(hint.message, word))
     val spoken = stringResource(R.string.hint_overlay_description, listOfNotNull(ruleText, message).joinToString(" "))
     Column(
         modifier

@@ -11,6 +11,7 @@ import com.threetech.catpuzzle.domain.model.GameState
 import com.threetech.catpuzzle.domain.model.Hint
 import com.threetech.catpuzzle.domain.model.HintTechnique
 import com.threetech.catpuzzle.domain.model.MistakeKind
+import com.threetech.catpuzzle.domain.model.PieceSkin
 import com.threetech.catpuzzle.domain.model.Pos
 import com.threetech.catpuzzle.domain.model.Puzzle
 import com.threetech.catpuzzle.domain.model.Settings
@@ -62,6 +63,7 @@ object GameUiMapper {
         outcome = outcome,
         isDaily = daily,
         dailyEpochDay = if (daily) DailyRules.dayForKey(puzzle.levelIndex) else null,
+        pieceSkin = if (daily) PieceSkin.cats() else PieceSkin.forLevel(puzzle.levelIndex),
     )
 
     fun board(puzzle: Puzzle, state: GameState, analysis: Analysis, hint: Hint?): BoardUi {

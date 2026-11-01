@@ -45,6 +45,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.threetech.catpuzzle.R
 import com.threetech.catpuzzle.domain.engine.CatVariants
+import com.threetech.catpuzzle.domain.model.PieceSkin
 import com.threetech.catpuzzle.domain.model.Pos
 import com.threetech.catpuzzle.ui.components.drawXMark
 import com.threetech.catpuzzle.ui.theme.GameColors
@@ -66,6 +67,8 @@ fun BoardView(
     onDragCross: () -> Unit = {},
     /** Latest correct placement; each new token plays the placement effect once. Null (tutorial) = no effect. */
     lastCorrectPlacement: CorrectPlacementUi? = null,
+    /** Cats (default) or, on a boss level, one animal set: each placed piece shows a fixed pseudo-random animal of it. */
+    pieceSkin: PieceSkin = PieceSkin.cats(),
 ) {
     val n = board.size
     val gridSideDp = metrics.gridSideDp(n)
@@ -81,7 +84,14 @@ fun BoardView(
     var preview by remember { mutableStateOf(emptySet<Int>()) }
 
     // Hoisted once: painters for only the cat variants this board uses, decoded at ~cell size (not 10 full 512 px PNGs).
-    val catPainters = rememberBoardCatPainters(board, with(density) { (metrics.cellDp.dp.toPx() * 0.84f).toInt() })
+    val noCats = remember(n) { BoardUi(n, emptyList()) }
+    val catPainters = rememberBoardCatPainters(
+        if (pieceSkin.isAnimal) noCats else board, // animal skin: no cat PNG decoding
+        with(density) { (metrics.cellDp.dp.toPx() * 0.84f).toInt() },
+    )
+    // Boss levels: animal painters + one animal per region (same source as the RegionTab icon, so they always match).
+    val animalPainters = pieceSkin.set?.let { rememberAnimalPainters(it) }
+    val regionAnimal = remember(pieceSkin, n) { IntArray(n) { pieceSkin.regionIndex(it) } }
 
     // Correct-placement effect. `done` starts at the token already present on first composition, so rotation /
     // re-entry / restored state never replays; only a token that arrives later plays. Skipped when animations are off.
@@ -100,17 +110,17 @@ fun BoardView(
     val colorNames = stringArrayResource(R.array.region_color_names)
     val boardLabel = stringResource(R.string.board_description, n)
     val toggleLabel = stringResource(R.string.cell_action_toggle_x)
-    val placeLabel = stringResource(R.string.cell_action_place_cat)
-    val removeLabel = stringResource(R.string.cell_action_remove_cat)
+    val placeLabel = stringResource(PieceWording.cellPlace(pieceSkin.word()))
+    val removeLabel = stringResource(PieceWording.cellRemove(pieceSkin.word()))
     val stateEmpty = stringResource(R.string.cell_state_empty)
     val stateX = stringResource(R.string.cell_state_x)
-    val stateCat = stringResource(R.string.cell_state_cat)
+    val stateCat = stringResource(PieceWording.cellState(pieceSkin.word()))
 
     Box(
         modifier
             .size(metrics.cardSideDp(n).dp)
             .background(
-                GameColors.Card,
+                LocalGameSurface.current.boardCard,
                 RoundedCornerShape(
                     topStart = BoardLayoutCalc.cardTopCornerDp(n).dp,
                     topEnd = BoardLayoutCalc.cardTopCornerDp(n).dp,
@@ -196,7 +206,11 @@ fun BoardView(
                             patternMode = patternMode,
                             previewing = (r * n + c) in preview,
                             sideDp = metrics.cellDp,
-                            catPainter = if (cell.mark == CellMarkUi.CAT) catPainters[cell.catVariant.mod(CatVariants.UNIQUE)] else null,
+                            catPainter = when {
+                                cell.mark != CellMarkUi.CAT -> null
+                                animalPainters != null -> animalPainters[regionAnimal[cell.region.mod(regionAnimal.size)].mod(animalPainters.size)]
+                                else -> catPainters[cell.catVariant.mod(CatVariants.UNIQUE)]
+                            },
                             placementFx = if (r * n + c == fxIdx) fx else null,
                             placementToken = fxToken,
                             modifier = Modifier.semantics {

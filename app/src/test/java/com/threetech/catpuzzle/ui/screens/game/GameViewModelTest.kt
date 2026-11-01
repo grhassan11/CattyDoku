@@ -207,6 +207,22 @@ class GameViewModelTest {
     }
 
     @Test
+    fun bossLevelPlacementUsesBareChimeNotCat() = vmTest(
+        GameRig().also { rig ->
+            rig.puzzles.rows[10] = fixturePuzzle(10)
+            kotlinx.coroutines.runBlocking { rig.flags.update { it.copy(lastPlayedLevel = 10) } }
+        },
+    ) { _, vm ->
+        assertTrue(vm.ready().pieceSkin.isAnimal)
+        vm.events.test {
+            vm.onCellDoubleTap(Pos(0, 1)) // correct (solution cols 1,3,0,2)
+            assertEquals(GameUiEvent.Haptic(HapticKind.TICK), awaitItem())
+            assertEquals(GameUiEvent.Sfx(SfxKind.CHIME_SOLO), awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun removeCatXAndUndoDoNotMeow() = vmTest { _, vm ->
         vm.events.test {
             vm.onCellDoubleTap(Pos(0, 1))

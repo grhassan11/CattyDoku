@@ -29,6 +29,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import com.threetech.catpuzzle.ui.components.StatusBarIconsEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,7 +85,9 @@ import androidx.compose.ui.unit.sp
 import com.threetech.catpuzzle.R
 import com.threetech.catpuzzle.domain.ads.RewardedLoadState
 import com.threetech.catpuzzle.domain.engine.IdleNudgePolicy
+import com.threetech.catpuzzle.domain.model.AnimalSet
 import com.threetech.catpuzzle.domain.model.Booster
+import com.threetech.catpuzzle.domain.model.PieceSkin
 import com.threetech.catpuzzle.domain.model.Pos
 import com.threetech.catpuzzle.ui.ads.BannerAdSlot
 import com.threetech.catpuzzle.ui.components.CatIcon
@@ -144,17 +148,21 @@ fun GameScreen(
     /** Mouse travel animation finished (run id): the ViewModel unblocks input. */
     onMouseAnimDone: (Int) -> Unit = {},
 ) {
-    Box(modifier.fillMaxSize().background(GameColors.ScreenBackground)) {
+    val surfaceLevel = state.surfaceLevel()
+    val surface = remember(surfaceLevel) { GameSurfaceColors.forLevel(surfaceLevel) }
+    if (surface.themed) StatusBarIconsEffect(lightIcons = surface.dark)
+    CompositionLocalProvider(LocalGameSurface provides surface) {
+    Box(modifier.fillMaxSize().background(surface.background)) {
         when (state) {
             is GameUiState.Loading -> CenterMessage {
                 CircularProgressIndicator(color = GameColors.Primary)
                 Spacer(Modifier.height(16.dp))
-                Text(stringResource(R.string.game_loading), color = GameColors.Body, fontSize = 16.sp)
+                Text(stringResource(R.string.game_loading), color = surface.onSurface, fontSize = 16.sp)
             }
             is GameUiState.Failed -> CenterMessage {
                 Text(
                     stringResource(R.string.game_load_failed),
-                    color = GameColors.Title,
+                    color = if (surface.themed) surface.onSurface else GameColors.Title,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -203,6 +211,14 @@ fun GameScreen(
             modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding(),
         )
     }
+    }
+}
+
+/** Level whose world themes the screen; 0 / null = default colours. */
+private fun GameUiState.surfaceLevel(): Int? = when (this) {
+    is GameUiState.Loading -> levelNumber
+    is GameUiState.Failed -> levelNumber
+    is GameUiState.Ready -> content.levelNumber
 }
 
 @Composable
@@ -286,7 +302,7 @@ private fun GameContent(
             Spacer(Modifier.height(8.dp))
             LivesRow(content, onUndo)
             Spacer(Modifier.height(12.dp))
-            RulesStrip()
+            RulesStrip(content.pieceSkin)
 
             BoxWithConstraints(
                 Modifier.weight(1f).fillMaxWidth(),
@@ -298,6 +314,7 @@ private fun GameContent(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     RegionTab(
                         content.regions,
+                        pieceSkin = content.pieceSkin,
                         cardWidthDp = if (content.board.size >= 9) metrics.cardSideDp(content.board.size) else null,
                     )
                     BoardView(
@@ -310,6 +327,7 @@ private fun GameContent(
                         onDrag = onDrag,
                         onDragCross = onDragCross,
                         lastCorrectPlacement = content.lastCorrectPlacement,
+                        pieceSkin = content.pieceSkin,
                         modifier = Modifier.onGloballyPositioned { boardGeo.value = BoardGeo(it.boundsInRoot(), metrics) },
                     )
                 }
@@ -318,7 +336,7 @@ private fun GameContent(
             // No hint bar here any more: it resized the board. The explanation lives in the hint overlay's rule card.
             Spacer(Modifier.height(12.dp))
             BoostersRow(
-                content.boosters, ads.rewardedSurface, onCatBooster, onHint, onMouseBooster, onEmptyBoosterTap,
+                content.boosters, content.pieceSkin, ads.rewardedSurface, onCatBooster, onHint, onMouseBooster, onEmptyBoosterTap,
                 nudgeActive = nudgeActive,
                 mouseAway = mouseRun != null,
                 onMouseBounds = { mouseBtn.value = it },
@@ -354,6 +372,7 @@ private fun GameContent(
                     boardGeo = boardGeo,
                     boardSize = content.board.size,
                     onDismiss = onHintOverlayDismiss,
+                    pieceSkin = content.pieceSkin,
                 )
             }
         }
@@ -367,6 +386,7 @@ private fun GameContent(
             onHome = onBack, // same pop-to-Home as the top-bar back
             onWinHome = onWinHome,
             daily = content.isDaily,
+            pieceSkin = content.pieceSkin,
             onWatchRevive = if (ads.rewardedSurface) onWatchReviveAd else null,
             rewardedLoad = ads.rewardedLoad,
             rewardedBusy = ads.rewardedBusy,
@@ -385,6 +405,7 @@ private fun GameContent(
                     booster = shown,
                     load = ads.rewardedLoad,
                     busy = ads.rewardedBusy,
+                    pieceSkin = content.pieceSkin,
                     onWatch = { onWatchBoosterAd(shown) },
                     onRetryLoad = onRetryRewardedLoad,
                     onStore = { onOpenStore(shown) },
@@ -425,7 +446,7 @@ private fun CircleButton(
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .shadow(2.dp, CircleShape)
             .clip(CircleShape)
-            .background(GameColors.Card)
+            .background(LocalGameSurface.current.buttonContainer)
             .semantics { contentDescription = description }
             .clickable(interactionSource = source, indication = ripple(), role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -440,7 +461,7 @@ private fun TopBar(content: GameContentUi, onBack: () -> Unit, onOpenSettings: (
             onClick = onBack,
             modifier = Modifier.align(Alignment.CenterStart),
         ) {
-            IconImage(R.drawable.ic_back, size = 24.dp, tint = GameColors.Body)
+            IconImage(R.drawable.ic_back, size = 24.dp, tint = LocalGameSurface.current.buttonContent)
         }
         Row(
             Modifier.align(Alignment.Center),
@@ -462,7 +483,7 @@ private fun TopBar(content: GameContentUi, onBack: () -> Unit, onOpenSettings: (
                 description = stringResource(R.string.game_settings),
                 onClick = onOpenSettings,
             ) {
-                IconImage(R.drawable.ic_settings, size = 26.dp, tint = GameColors.Body)
+                IconImage(R.drawable.ic_settings, size = 26.dp, tint = LocalGameSurface.current.buttonContent)
             }
             if (content.settingsBadge) {
                 Box(
@@ -479,8 +500,9 @@ private fun TopBar(content: GameContentUi, onBack: () -> Unit, onOpenSettings: (
 @Composable
 private fun LabeledValue(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = GameColors.Body, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-        Text(value, color = GameColors.Body, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        val onSurface = LocalGameSurface.current.onSurface
+        Text(label, color = onSurface, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Text(value, color = onSurface, fontSize = 26.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -491,7 +513,7 @@ private fun LivesRow(content: GameContentUi, onUndo: () -> Unit) {
         Row(
             Modifier
                 .align(Alignment.Center)
-                .background(GameColors.Card, CircleShape)
+                .background(LocalGameSurface.current.buttonContainer, CircleShape)
                 .padding(horizontal = 14.dp, vertical = 6.dp)
                 .semantics { contentDescription = livesText },
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -510,7 +532,7 @@ private fun LivesRow(content: GameContentUi, onUndo: () -> Unit) {
                 .graphicsLayer { scaleX = undoScale; scaleY = undoScale }
                 .alpha(if (content.canUndo) 1f else 0.4f)
                 .clip(CircleShape)
-                .background(GameColors.Card)
+                .background(LocalGameSurface.current.buttonContainer)
                 .defaultMinSize(minHeight = 48.dp)
                 .clickable(
                     interactionSource = undoSource,
@@ -523,10 +545,14 @@ private fun LivesRow(content: GameContentUi, onUndo: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            IconImage(R.drawable.ic_undo, size = 18.dp)
+            IconImage(
+                R.drawable.ic_undo,
+                size = 18.dp,
+                tint = if (LocalGameSurface.current.themed) LocalGameSurface.current.buttonContent else null,
+            )
             Text(
                 text = stringResource(R.string.game_undo),
-                color = GameColors.Body,
+                color = LocalGameSurface.current.onSurface,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -539,44 +565,48 @@ private fun LivesRow(content: GameContentUi, onUndo: () -> Unit) {
 private enum class RuleKind { REGION, LINE, TOUCH }
 
 @Composable
-private fun RulesStrip() {
+private fun RulesStrip(pieceSkin: PieceSkin) {
+    val word = pieceSkin.word()
     Row(
         Modifier
             .fillMaxWidth()
-            .background(GameColors.Card, RoundedCornerShape(16.dp))
+            .background(LocalGameSurface.current.ruleStrip, RoundedCornerShape(16.dp))
             .padding(8.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        RuleCard(RuleKind.REGION, stringResource(R.string.rule_one_per_color), Modifier.weight(1f))
-        RuleCard(RuleKind.LINE, stringResource(R.string.rule_one_per_line), Modifier.weight(1f))
-        RuleCard(RuleKind.TOUCH, stringResource(R.string.rule_no_touch), Modifier.weight(1f))
+        RuleCard(RuleKind.REGION, stringResource(PieceWording.rulePerColor(word)), pieceSkin, Modifier.weight(1f))
+        RuleCard(RuleKind.LINE, stringResource(PieceWording.rulePerLine(word)), pieceSkin, Modifier.weight(1f))
+        RuleCard(RuleKind.TOUCH, stringResource(PieceWording.ruleNoTouch(word)), pieceSkin, Modifier.weight(1f))
     }
 }
 
 @Composable
-private fun RuleCard(kind: RuleKind, text: String, modifier: Modifier = Modifier) {
+private fun RuleCard(kind: RuleKind, text: String, pieceSkin: PieceSkin, modifier: Modifier = Modifier) {
     Row(
         modifier
             .height(52.dp)
-            .background(GameColors.RuleCard, RoundedCornerShape(12.dp))
+            .background(LocalGameSurface.current.ruleCard, RoundedCornerShape(12.dp))
             .padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        RuleDiagram(kind)
-        Text(text, color = GameColors.Body, fontSize = 11.sp, lineHeight = 13.sp, letterSpacing = 0.sp, maxLines = 3)
+        RuleDiagram(kind, pieceSkin)
+        Text(text, color = LocalGameSurface.current.onSurface, fontSize = 11.sp, lineHeight = 13.sp, letterSpacing = 0.sp, maxLines = 3)
     }
 }
 
 /** Own 3x3 diagram: tinted = region, X = excluded, cat head = the cat. */
 @Composable
-private fun RuleDiagram(kind: RuleKind) {
+private fun RuleDiagram(kind: RuleKind, pieceSkin: PieceSkin) {
     val marks = when (kind) {
         RuleKind.REGION -> listOf("XC.", "XX.", "...")
         RuleKind.LINE -> listOf(".X.", "XCX", ".X.")
         RuleKind.TOUCH -> listOf("XXX", "XCX", "XXX")
     }
-    val catPainter = painterResource(IconArt.PlacedCat)
+    // Boss level: the level's booster animal replaces the cat head.
+    val catPainter = painterResource(
+        pieceSkin.set?.let { IconArt.animalFor(it, pieceSkin.boosterIndex) } ?: IconArt.PlacedCat,
+    )
     Canvas(Modifier.size(36.dp)) {
         val cell = this.size.minDimension / 3f
         val gap = 1.5f
@@ -607,7 +637,7 @@ private fun RuleDiagram(kind: RuleKind) {
 // ------------------------------------------------------------------ board tab
 
 @Composable
-private fun RegionTab(regions: List<RegionStatusUi>, cardWidthDp: Float? = null) {
+private fun RegionTab(regions: List<RegionStatusUi>, pieceSkin: PieceSkin = PieceSkin.cats(), cardWidthDp: Float? = null) {
     val solved = regions.count { it.solved }
     val text = stringResource(R.string.region_row_description, solved, regions.size)
     // Fixed width (9x9): exactly the board card width; icons shrink to fit, spread evenly.
@@ -617,7 +647,7 @@ private fun RegionTab(regions: List<RegionStatusUi>, cardWidthDp: Float? = null)
         Modifier
             .then(if (cardWidthDp != null) Modifier.width(cardWidthDp.dp) else Modifier)
             .height(44.dp)
-            .background(GameColors.Card, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            .background(LocalGameSurface.current.boardCard, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
             .then(if (fixed) Modifier else Modifier.padding(horizontal = 14.dp))
             .semantics { contentDescription = text },
         verticalAlignment = Alignment.CenterVertically,
@@ -625,7 +655,21 @@ private fun RegionTab(regions: List<RegionStatusUi>, cardWidthDp: Float? = null)
     ) {
         for (region in regions) {
             Box(Modifier.size(iconDp.dp)) {
-                if (region.solved) {
+                val set = pieceSkin.set
+                if (set != null) {
+                    // Boss level. Solved = the region's animal. Unsolved: Dogs = flat dog (like the cat), else a colour dot.
+                    if (region.solved) {
+                        IconImage(IconArt.animalFor(set, pieceSkin.regionIndex(region.region)), size = iconDp.dp)
+                    } else if (set == AnimalSet.DOGS) {
+                        IconImage(
+                            IconArt.DogSilhouette,
+                            size = iconDp.dp,
+                            tint = GameColors.region(region.region).copy(alpha = 0.45f),
+                        )
+                    } else {
+                        Box(Modifier.size(iconDp.dp).background(GameColors.region(region.region), CircleShape))
+                    }
+                } else if (region.solved) {
                     CatIcon(size = iconDp.dp, variant = region.catVariant)
                 } else {
                     CatIcon(size = iconDp.dp, silhouetteTint = GameColors.region(region.region).copy(alpha = 0.45f))
@@ -648,6 +692,7 @@ private fun RegionTab(regions: List<RegionStatusUi>, cardWidthDp: Float? = null)
 @Composable
 private fun BoostersRow(
     boosters: BoostersUi,
+    pieceSkin: PieceSkin,
     rewardedSurface: Boolean,
     onCatBooster: () -> Unit,
     onHint: () -> Unit,
@@ -670,15 +715,20 @@ private fun BoostersRow(
     ) {
         BoosterButton(
             description = if (catWatch) {
-                stringResource(R.string.booster_cat_watch)
+                stringResource(PieceWording.boosterWatch(pieceSkin.word()))
             } else {
-                stringResource(R.string.booster_cat, boosters.catCharges)
+                stringResource(PieceWording.boosterPlace(pieceSkin.word()), boosters.catCharges)
             },
             count = boosters.catCharges,
             onClick = if (catWatch) ({ onEmptyBoosterTap(Booster.CAT) }) else onCatBooster,
             showPlay = catWatch,
             nudge = { nudgeActive() && IdleNudgePolicy.boosterEligible(boosters.catCharges) },
-        ) { CatIcon(size = BOOSTER_ICON_DP.dp) }
+        ) {
+            // Boss level: one animal of the level's set replaces the cat head (behaviour unchanged).
+            val set = pieceSkin.set
+            if (set != null) IconImage(IconArt.animalFor(set, pieceSkin.boosterIndex), size = BOOSTER_ICON_DP.dp)
+            else CatIcon(size = BOOSTER_ICON_DP.dp)
+        }
         BoosterButton(
             description = if (hintWatch) {
                 stringResource(R.string.booster_hint_watch)
