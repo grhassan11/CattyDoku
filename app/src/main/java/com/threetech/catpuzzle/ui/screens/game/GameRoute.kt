@@ -181,6 +181,10 @@ fun GameRoute(
         state = state,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
+        onWinHome = {
+            audio?.stopSfx() // silence the win / award cue before leaving
+            onBack()
+        },
         settingsVisible = settingsVisible,
         onOpenSettings = {
             // Toggle: pause + save while the dialog is open, resume on close.
@@ -223,6 +227,7 @@ fun GameRoute(
         // continue (fail open).
         // The one-time Rate us dialog (after Lv 5 is won) goes FIRST, then the normal ad boundary + next level.
         onNextLevel = {
+            audio?.stopSfx() // silence the win / award cue now, before the rate dialog, ad or next level starts
             val proceed = { adsViewModel.afterWin(adLevel, adIsDaily, onDone = viewModel::onNextLevel) }
             if (sample) {
                 onBack() // TEMP 9x9 sample: win dialog "next" returns to the gallery

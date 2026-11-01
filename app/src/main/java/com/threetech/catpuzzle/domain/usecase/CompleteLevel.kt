@@ -1,5 +1,6 @@
 package com.threetech.catpuzzle.domain.usecase
 
+import com.threetech.catpuzzle.domain.engine.DailyRules
 import com.threetech.catpuzzle.domain.model.GameResult
 import com.threetech.catpuzzle.domain.model.GameState
 import com.threetech.catpuzzle.domain.model.LevelProgress
@@ -20,7 +21,7 @@ data class CompletionOutcome(
 )
 
 /**
- * Persist a finished level: merge progress, count today toward the streak (wins only), then drop the
+ * Persist a finished level: merge progress, count today toward the streak (first win of a level, or a daily win), then drop the
  * autosave. A loss only clears the autosave. Streak-on-win-only is a product assumption.
  */
 class CompleteLevel(
@@ -47,7 +48,10 @@ class CompleteLevel(
         val merged = existing?.mergedWith(run) ?: run
         if (merged != existing) progress.save(merged)
 
-        val dayAdded = streak.recordPlayed(time.todayEpochDay())
+        // Streak counts only the FIRST completion of a level (read from `existing`, i.e. BEFORE this win was saved).
+        // A replay of an already-completed level never adds a streak day. Daily Challenge wins (negative key) still count.
+        val countsForStreak = existing == null || DailyRules.isDailyKey(result.levelIndex)
+        val dayAdded = countsForStreak && streak.recordPlayed(time.todayEpochDay())
         savedGames.clear(result.levelIndex)
 
         return CompletionOutcome(

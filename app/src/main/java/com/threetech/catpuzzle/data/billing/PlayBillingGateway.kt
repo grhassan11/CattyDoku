@@ -140,6 +140,11 @@ class PlayBillingGateway @Inject constructor(
             val offerToken = chooseSubscriptionOffer(d)?.offerToken
                 ?: return@call StoreResult.Failure(BillingFailure.ITEM_UNAVAILABLE)
             paramsBuilder.setOfferToken(offerToken)
+        } else {
+            // Billing 8+: a one-time product can carry several purchase options / offers; the token picks one.
+            // Single-offer products need none. The first option is the default (non-consumable + consumable packs).
+            d.oneTimePurchaseOfferDetailsList?.takeIf { it.size > 1 }?.firstOrNull()?.offerToken
+                ?.let { paramsBuilder.setOfferToken(it) }
         }
         val flow = BillingFlowParams.newBuilder().setProductDetailsParamsList(listOf(paramsBuilder.build())).build()
         // launchBillingFlow must run on the UI thread.

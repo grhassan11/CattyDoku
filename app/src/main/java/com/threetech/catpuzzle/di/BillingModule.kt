@@ -45,7 +45,8 @@ abstract class BillingBindsModule {
 @InstallIn(SingletonComponent::class)
 object BillingModule {
 
-    @Provides
+    /** Singleton: holds the announced-pending token set (pending message shows once per token per process). */
+    @Provides @Singleton
     fun providePurchaseProcessor(
         gateway: BillingGateway,
         grants: PurchaseGrantRepository,

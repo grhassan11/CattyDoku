@@ -58,6 +58,7 @@ import com.threetech.catpuzzle.ui.components.IconImage
 import com.threetech.catpuzzle.ui.components.PillButton
 import com.threetech.catpuzzle.ui.components.rememberPressScale
 import com.threetech.catpuzzle.ui.theme.FredokaFamily
+import com.threetech.catpuzzle.ui.components.homeBackground
 import com.threetech.catpuzzle.ui.theme.GameColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -86,7 +87,7 @@ fun StreakScreen(
     Column(
         modifier
             .fillMaxSize()
-            .background(GameColors.ScreenBackground)
+            .homeBackground()
             .systemBarsPadding()
             .semantics { paneTitle = title },
     ) {

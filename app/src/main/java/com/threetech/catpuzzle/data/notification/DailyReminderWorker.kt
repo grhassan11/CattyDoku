@@ -6,6 +6,7 @@ import androidx.work.WorkerParameters
 import com.threetech.catpuzzle.domain.config.RemoteConfigRepository
 import com.threetech.catpuzzle.domain.engine.DailyReminderPolicy
 import com.threetech.catpuzzle.domain.notification.DailyReminderScheduler
+import com.threetech.catpuzzle.domain.repository.ProgressRepository
 import com.threetech.catpuzzle.domain.repository.SettingsRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -22,6 +23,7 @@ interface DailyReminderEntryPoint {
     fun dailyRemoteConfig(): RemoteConfigRepository
     fun dailyNotifier(): DailyReminderNotifier
     fun dailyScheduler(): DailyReminderScheduler
+    fun dailyProgress(): ProgressRepository
 }
 
 /** Fire-time check. Gates re-read here: Settings toggle + Remote Config kill switch (permission checked by the notifier). */
@@ -38,7 +40,9 @@ class DailyReminderWorker(
             val now = LocalDateTime.now()
 
             if (DailyReminderPolicy.shouldNotify(now.hour * 60 + now.minute, enabled, remote)) {
-                ep.dailyNotifier().show(now.toLocalDate().toEpochDay())
+                // Same source as the Home Daily lock (ObserveDailyStatus): highest completed level.
+                val highest = ep.dailyProgress().observeAll().first().maxOfOrNull { it.levelIndex } ?: 0
+                ep.dailyNotifier().show(now.toLocalDate().toEpochDay(), DailyReminderPolicy.mentionsDaily(highest))
             }
             // Always book the next 20:00 while enabled: the chain never ends.
             if (DailyReminderPolicy.shouldSchedule(enabled, remote)) {

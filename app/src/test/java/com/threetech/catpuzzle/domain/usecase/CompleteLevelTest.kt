@@ -96,6 +96,17 @@ class CompleteLevelTest {
     }
 
     @Test
+    fun replayOnNewDayDoesNotAddStreakDay() = runTest {
+        useCase(result(level = 3))
+        time.today = 20_001L
+        val out = useCase(result(level = 3, total = 900))
+
+        assertFalse(out.firstCompletion)
+        assertFalse(out.streakDayAdded)
+        assertEquals(setOf(20_000L), streak.observePlayedDays().first())
+    }
+
+    @Test
     fun lossWritesNothingButClearsAutosave() = runTest {
         autosave(3)
         val out = useCase(result(won = false, total = 0, heartsLeft = 0))

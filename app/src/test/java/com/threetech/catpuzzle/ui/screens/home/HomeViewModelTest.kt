@@ -15,7 +15,9 @@ import com.threetech.catpuzzle.domain.usecase.FakeTimeProvider
 import com.threetech.catpuzzle.domain.usecase.ObserveSettings
 import com.threetech.catpuzzle.domain.usecase.ObserveCompletedDays
 import com.threetech.catpuzzle.domain.usecase.ObserveDailyStatus
+import com.threetech.catpuzzle.domain.usecase.ObserveLevelDetail
 import com.threetech.catpuzzle.domain.usecase.ObserveStreakCalendar
+import com.threetech.catpuzzle.domain.usecase.ObserveWorldMap
 import com.threetech.catpuzzle.domain.usecase.ObserveStreakRewards
 import com.threetech.catpuzzle.domain.usecase.ResolveStartLevel
 import com.threetech.catpuzzle.domain.usecase.UpdateSettings
@@ -55,6 +57,8 @@ class HomeViewModelTest {
             observeStreakRewards = ObserveStreakRewards(
                 streak, FakeStreakRewardRepository(), this.flags, time, FakeRemoteConfigRepository(),
             ),
+            observeWorldMap = ObserveWorldMap(progress),
+            observeLevelDetail = ObserveLevelDetail(progress),
             observeSettings = ObserveSettings(settingsRepo),
             updateSettings = UpdateSettings(settingsRepo),
         )
@@ -177,6 +181,67 @@ class HomeViewModelTest {
         assertEquals(DayDotState.DAILY_DONE, cal.recent.last().state)
         assertEquals(DayDotState.PLAYED, cal.recent[28].state)
         assertEquals(7, cal.week.size)
+    }
+
+    @Test
+    fun worldMapStartsAtLevelOneWithSixWorlds() = vmTest { _, vm ->
+        val map = vm.state.value.worldMap
+        assertTrue(map.loaded)
+        assertEquals(1, map.currentLevel)
+        assertEquals(60, map.visibleLevels)
+    }
+
+    @Test
+    fun worldMapFollowsWinsAndCarriesStars() = vmTest { rig, vm ->
+        rig.progress.save(LevelProgress(1, 100, 1_000L, 1L, 0, 0))
+        rig.progress.save(LevelProgress(2, 100, 1_000L, 1L, 1, 0))
+        val map = vm.state.value.worldMap
+        assertEquals(3, map.currentLevel)
+        assertEquals(mapOf(1 to 3, 2 to 2), map.starsByLevel)
+    }
+
+    @Test
+    fun worldMapOpensThreeMoreWorldsAtLevel51() = vmTest { rig, vm ->
+        for (l in 1..49) rig.progress.save(won(l))
+        assertEquals(60, vm.state.value.worldMap.visibleLevels)
+        rig.progress.save(won(50))
+        assertEquals(51, vm.state.value.worldMap.currentLevel)
+        assertEquals(90, vm.state.value.worldMap.visibleLevels)
+    }
+
+    @Test
+    fun sheetIsClosedUntilANodeIsSelected() = vmTest { _, vm ->
+        assertNull(vm.state.value.levelSheet)
+    }
+
+    @Test
+    fun selectingCurrentLevelOpensSheetWithoutResults() = vmTest { _, vm ->
+        vm.onNodeSelected(1)
+        val sheet = vm.state.value.levelSheet!!
+        assertEquals(1, sheet.level)
+        assertEquals(4, sheet.boardSize)
+        assertFalse(sheet.completed)
+        assertNull(sheet.bestScore)
+        assertNull(sheet.bestTimeMs)
+    }
+
+    @Test
+    fun selectingDoneLevelShowsStarsScoreAndTime() = vmTest { rig, vm ->
+        rig.progress.save(LevelProgress(1, 250, 65_000L, 1L, 1, 0))
+        vm.onNodeSelected(1)
+        val sheet = vm.state.value.levelSheet!!
+        assertTrue(sheet.completed)
+        assertEquals(2, sheet.stars)
+        assertEquals(250, sheet.bestScore)
+        assertEquals(65_000L, sheet.bestTimeMs)
+    }
+
+    @Test
+    fun dismissingClosesTheSheet() = vmTest { _, vm ->
+        vm.onNodeSelected(2)
+        assertEquals(2, vm.state.value.levelSheet?.level)
+        vm.onSheetDismissed()
+        assertNull(vm.state.value.levelSheet)
     }
 
     @Test

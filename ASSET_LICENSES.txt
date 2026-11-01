@@ -165,3 +165,23 @@ sfx_mouse.ogg  (mono 44.1 kHz)
   Source file: question_003 (Kenney Interface Sounds pack), https://kenney.nl
   License: CC0 1.0
   Used for: mouse booster used
+
+CAT PLACEMENT MEOWS (added 2026-11-01)
+--------------------------------------
+Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Assets\Audios & Sounds\Chosen\Meow Sounds
+Used for: one random meow layered on the correct-placement chime (SfxPlayer, sfx_cat_1..7). Mixkit WAVs converted to mono 44.1 kHz OGG Vorbis (q3), leading silence trimmed, loudness-normalised.
+
+sfx_cat_1.ogg  (unmodified copy of Meow.ogg; mono 44.1 kHz, 0.51 s)
+  Source file: Meow.ogg (user-provided)
+  License: user-provided, license to be confirmed by user
+  (note: res/raw/sfx_meow.ogg is credited above as IgnasD / CC0; confirm whether this is the same file)
+
+sfx_cat_2.ogg  Source file: mixkit-angry-wild-cat-roar-89.wav
+sfx_cat_3.ogg  Source file: mixkit-cartoon-kitty-begging-meow-92.wav
+sfx_cat_4.ogg  Source file: mixkit-cartoon-little-cat-meow-91.wav
+sfx_cat_5.ogg  Source file: mixkit-domestic-cat-hungry-meow-45.wav
+sfx_cat_6.ogg  Source file: mixkit-little-cat-pain-meow-87.wav
+sfx_cat_7.ogg  Source file: mixkit-sweet-kitty-meow-93.wav
+  Source: https://mixkit.co/free-sound-effects/cat/
+  License: Mixkit License (free commercial use, no attribution required; no standalone redistribution)
+  Date obtained: 2026-11-01

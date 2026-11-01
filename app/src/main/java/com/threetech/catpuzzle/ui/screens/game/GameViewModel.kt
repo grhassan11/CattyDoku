@@ -116,6 +116,12 @@ class GameViewModel @Inject constructor(
     private val isDaily: Boolean = savedStateHandle.get<Boolean>(ARG_DAILY) ?: false
 
     /**
+     * Level the Home map asked for (nav arg [ARG_LEVEL], > 0): the current node plays it, a finished node replays it.
+     * Null = resolve with [ResolveStartLevel]. Ignored for the daily.
+     */
+    private val requestedLevel: Int? = if (isDaily) null else savedStateHandle.get<Int>(ARG_LEVEL)?.takeIf { it > 0 }
+
+    /**
      * TEMP 9x9 sample: in-memory play of a generated 9x9 board. No persistence of any kind (save, progress,
      * lastPlayed, inventory, score/streak, analytics). Fixed in-memory booster charges.
      */
@@ -134,9 +140,12 @@ class GameViewModel @Inject constructor(
         val outcome: OutcomeUi? = null,
         /** Mouse flight playing (UI-only animation; the X marks are already in [state]). Blocks input until cleared. */
         val mouseRun: MouseRunUi? = null,
+        /** Latest correct placement; set only by [applyStep], never by load / restore / undo. */
+        val correctPlacement: CorrectPlacementUi? = null,
     )
 
     private var mouseRunSeq = 0
+    private var placementSeq = 0
 
     private class SaveRequest(val level: Int, val state: GameState, val elapsedMs: Long)
 
@@ -168,7 +177,7 @@ class GameViewModel @Inject constructor(
         viewModelScope.launch {
             for (req in saveQueue) bestEffort { saveGame(req.level, req.state, req.elapsedMs) }
         }
-        loadLevel(null)
+        loadLevel(requestedLevel)
     }
 
     // ---------------------------------------------------------------- loading
@@ -562,7 +571,15 @@ class GameViewModel @Inject constructor(
             solved = true
             nextState = nextState.copy(status = GameStatus.SOLVED)
         }
-        session = before.copy(state = nextState, hint = null, hintOverlay = false)
+        // Clean correct placement: a cat newly placed by the player / cat booster on its solution cell (no
+        // WrongPlacement) that is not flagged as a conflict. Never for removal, X marks, undo (cell == null) or load.
+        val correct = catPlaced && !wrongPlaced && cell != null &&
+            cell.index(before.puzzle.size) !in analyseBoard(before.puzzle, nextState.board).conflictCells
+        if (correct) hapticKind = HapticKind.TICK // light tick replaces the heavier PLACE long-press
+        session = before.copy(
+            state = nextState, hint = null, hintOverlay = false,
+            correctPlacement = if (correct && cell != null) CorrectPlacementUi(cell.row, cell.col, ++placementSeq) else before.correctPlacement,
+        )
         if (solved || lost) {
             finish(won = solved)
         } else {
@@ -579,6 +596,8 @@ class GameViewModel @Inject constructor(
                 },
             )
             wrongPlaced -> sendSfx(SfxKind.WRONG)
+            // Soft chime replaces the meow on a clean correct placement (one placement sound, never both).
+            correct -> sendSfx(SfxKind.CHIME)
             catPlaced -> sendSfx(SfxKind.MEOW)
             // X mark(s) newly placed by tap or drag (not removals / undo). Cat placement keeps its meow above.
             crossSfx && step.state.board.marks.count { it == CellMark.X } > before.state.board.marks.count { it == CellMark.X } ->
@@ -634,7 +653,7 @@ class GameViewModel @Inject constructor(
             GameUiMapper.content(
                 s.puzzle, s.state, analysis, s.hint, score, settings, s.outcome,
                 daily = isDaily, hintOverlayOpen = s.hintOverlay,
-            ).copy(mouseRun = s.mouseRun),
+            ).copy(mouseRun = s.mouseRun, lastCorrectPlacement = s.correctPlacement),
         )
     }
 
@@ -678,6 +697,9 @@ class GameViewModel @Inject constructor(
     companion object {
         /** Nav / SavedStateHandle argument: true = Daily Challenge mode. */
         const val ARG_DAILY = "daily"
+
+        /** Nav / SavedStateHandle argument: level to open (> 0), 0 / absent = resolve the start level. */
+        const val ARG_LEVEL = "level"
 
         /** TEMP 9x9 sample: nav arg, true = in-memory 9x9 sample mode. */
         const val ARG_SAMPLE = "sample"

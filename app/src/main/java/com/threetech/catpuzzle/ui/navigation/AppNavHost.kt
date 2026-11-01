@@ -48,8 +48,11 @@ object Routes {
     /** Same destination as [GAME] with the Daily Challenge mode argument (read by GameViewModel via SavedStateHandle). */
     const val DAILY = "game?daily=true"
 
-    /** Graph pattern: optional `daily` arg, default false, so plain "game" still resolves. */
-    internal const val GAME_PATTERN = "game?daily={daily}"
+    /** Graph pattern: optional `daily` (default false) and `level` (default 0 = resolve), so plain "game" still resolves. */
+    internal const val GAME_PATTERN = "game?daily={daily}&level={level}"
+
+    /** Same destination as [GAME], opening exactly [level] (Home map: current node = play, finished node = replay). */
+    fun gameLevel(level: Int): String = "$GAME?level=$level"
     const val TUTORIAL = "tutorial"
 
     /** Full-screen Daily Streak (opened from the Home streak chip). */
@@ -123,7 +126,7 @@ fun AppNavHost(
         }
         composable(Routes.HOME) {
             HomeRoute(
-                onPlay = { navController.navigate(Routes.GAME) },
+                onPlayLevel = { level -> navController.navigate(Routes.gameLevel(level)) },
                 onPlayDaily = { navController.navigate(Routes.DAILY) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
                 onOpenStreak = { navController.navigate(Routes.STREAK) { launchSingleTop = true } },
@@ -161,6 +164,10 @@ fun AppNavHost(
                 navArgument(GameViewModel.ARG_DAILY) {
                     type = NavType.BoolType
                     defaultValue = false
+                },
+                navArgument(GameViewModel.ARG_LEVEL) {
+                    type = NavType.IntType
+                    defaultValue = 0
                 },
             ),
         ) { entry ->

@@ -36,6 +36,8 @@ object GameColors {
     val CtaOrangeLip = Color(0xFFC8741A)
     val CtaGreenFace = Color(0xFF7CC576)
     val CtaGreenLip = Color(0xFF4F9A4A)
+    val CtaTealFace = Color(0xFF2EC4B6)
+    val CtaTealLip = Color(0xFF1B918A)
     val CtaBlueFace = Color(0xFF6BBBE8)
     val CtaBlueLip = Color(0xFF3F8FBF)
     val CtaGreyFace = Color(0xFFABABAB)
@@ -52,6 +54,8 @@ object GameColors {
     /** Hint overlay dim over the whole game screen; spotlight cells are cut out of it. */
     val HintDim = Color(0xC7101010)
     val LoseScrim = Color(0xD9101010) // ~0.85 alpha; lose dialog only (was shared Scrim 0.70)
+    /** Dim shared by the Level Complete and Level Failed screens (single source of truth). */
+    val OutcomeScrim = LoseScrim
     val StatCardBg = Color(0xFFFFFCF8) // win dialog stat chips; near-white, opaque
     val StatCardLabel = Color(0xFF9A5252) // ~5.7:1 on StatCardBg
     val StatCardValue = Color(0xFF7B4E55) // ~7:1 on StatCardBg

@@ -20,15 +20,21 @@ class PurchaseProcessor(
     private val grants: PurchaseGrantRepository,
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) {
+    /** Pending purchase tokens already announced in this process: the "payment pending" message shows once per token. */
+    private val announcedPending: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
     suspend fun process(purchases: List<StorePurchase>): List<PurchaseOutcome> {
         val outcomes = ArrayList<PurchaseOutcome>()
         for (purchase in purchases) {
             for (productId in purchase.productIds) {
                 val product = ShopProduct.fromId(productId) ?: continue
                 when (purchase.status) {
-                    PurchaseStatus.PENDING -> outcomes += PurchaseOutcome.Pending(product)
+                    PurchaseStatus.PENDING ->
+                        if (announcedPending.add(purchase.purchaseToken)) outcomes += PurchaseOutcome.Pending(product)
                     PurchaseStatus.UNSPECIFIED -> Unit
-                    PurchaseStatus.PURCHASED -> handlePurchased(product, purchase)?.let {
+                    PurchaseStatus.PURCHASED -> handlePurchased(product, purchase).also {
+                        announcedPending.remove(purchase.purchaseToken) // resolved: forget it
+                    }?.let {
                         outcomes += it
                         analytics.log(AnalyticsEvent.PurchaseSuccess(product.id)) // fresh grants / activations only
                     }

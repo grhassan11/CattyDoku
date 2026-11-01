@@ -16,6 +16,12 @@ object DailyReminderPolicy {
     /** Number of rotating texts (strings daily_reminder_title_1..7), see [ReminderCopy.indexFor]. */
     const val COPY_VARIANTS = 7
 
+    /** Rotating "come play" texts for players below the Daily unlock level (strings play_reminder_title_1..10). */
+    const val PLAY_COPY_VARIANTS = 10
+
+    /** Daily-Challenge copy only once Daily is unlocked (same rule as the Home lock); below it use the generic play copy. */
+    fun mentionsDaily(highestLevelWon: Int): Boolean = DailyRules.isUnlocked(highestLevelWon)
+
     /** Fire-time decision. Inputs are re-read when the worker runs. */
     fun shouldNotify(nowMinuteOfDay: Int, settingEnabled: Boolean, remoteEnabled: Boolean): Boolean =
         settingEnabled && remoteEnabled && nowMinuteOfDay in FIRE_MINUTE_OF_DAY until WINDOW_END_MINUTE_OF_DAY

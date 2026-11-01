@@ -113,7 +113,7 @@ internal fun RateUsDialog(
             PillButton(
                 text = stringResource(R.string.rate_submit),
                 onClick = { if (stars > 0) onSubmit(stars) },
-                textSize = 18.sp,
+                textSize = 22.sp,
                 horizontalPadding = 16.dp,
                 style = if (stars > 0) ButtonStyle.Green else ButtonStyle.Locked,
                 modifier = Modifier.fillMaxWidth(),

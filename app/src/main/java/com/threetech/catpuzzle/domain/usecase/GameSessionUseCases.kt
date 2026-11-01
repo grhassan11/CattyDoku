@@ -33,10 +33,13 @@ class ResolveStartLevel(
     }
 }
 
-/** Remember the level being played (drives [ResolveStartLevel]). */
+/**
+ * Remember the furthest level being played (drives [ResolveStartLevel], ad pacing and streak rewards). Never moves
+ * backwards: replaying a finished level from the Home map must not pull the player's level back.
+ */
 class MarkLevelPlayed(private val flags: AppFlagsRepository) {
     suspend operator fun invoke(levelIndex: Int) {
-        flags.update { it.copy(lastPlayedLevel = levelIndex) }
+        flags.update { if (levelIndex > it.lastPlayedLevel) it.copy(lastPlayedLevel = levelIndex) else it }
     }
 }
 

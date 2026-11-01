@@ -83,6 +83,23 @@ class PurchaseProcessorTest {
     }
 
     @Test
+    fun pendingIsAnnouncedOncePerTokenThenAgainOnlyForANewToken() = runTest {
+        val p = purchase("cat_pack_50", token = "pend", status = PurchaseStatus.PENDING)
+        assertEquals(1, processor.process(listOf(p)).size)
+        assertTrue("repeat sync stays silent", processor.process(listOf(p)).isEmpty())
+        val other = purchase("hint_pack_5", token = "pend2", status = PurchaseStatus.PENDING)
+        assertEquals(1, processor.process(listOf(p, other)).size)
+    }
+
+    @Test
+    fun pendingResolvedToPurchasedIsGrantedAndForgotten() = runTest {
+        processor.process(listOf(purchase("cat_pack_5", token = "x", status = PurchaseStatus.PENDING)))
+        val out = processor.process(listOf(purchase("cat_pack_5", token = "x")))
+        assertEquals(listOf<PurchaseOutcome>(PurchaseOutcome.PackGranted(ShopProduct.CAT_PACK_5)), out)
+        assertEquals(5, grants.count(Booster.CAT))
+    }
+
+    @Test
     fun unspecifiedStateIsIgnored() = runTest {
         val out = processor.process(listOf(purchase("cat_pack_5", status = PurchaseStatus.UNSPECIFIED)))
         assertTrue(out.isEmpty())

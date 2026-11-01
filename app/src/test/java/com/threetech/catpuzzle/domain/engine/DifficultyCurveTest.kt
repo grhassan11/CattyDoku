@@ -21,9 +21,10 @@ class DifficultyCurveTest {
         // level -> (size, target)
         val expected = mapOf(
             24 to (6 to 5),
-            25 to (7 to 2), 26 to (7 to 3), 27 to (8 to 3), 28 to (8 to 4), 29 to (9 to 4), 30 to (9 to 5),
-            31 to (7 to 2), 32 to (7 to 3), 33 to (8 to 3), 34 to (8 to 4), 35 to (9 to 4), 36 to (9 to 5),
+            25 to (7 to 2), 26 to (7 to 3), 27 to (7 to 3), 28 to (7 to 4), 29 to (7 to 4), 30 to (7 to 4),
+            31 to (7 to 2), 32 to (7 to 3), 33 to (8 to 3), 34 to (8 to 4), 35 to (8 to 4), 36 to (8 to 5),
             37 to (7 to 2), 38 to (7 to 3), 39 to (8 to 3), 40 to (8 to 4),
+            41 to (9 to 4), 42 to (9 to 5),
         )
         for ((lvl, st) in expected) {
             val s = DifficultyCurve.specFor(lvl)
@@ -32,8 +33,22 @@ class DifficultyCurveTest {
             assertEquals("target L$lvl", st.second, s.targetTechnique)
         }
         assertEquals(40, DifficultyCurve.specFor(25).balancePercent)
-        assertEquals(35, DifficultyCurve.specFor(27).balancePercent)
-        assertEquals(30, DifficultyCurve.specFor(29).balancePercent)
+        assertEquals(35, DifficultyCurve.specFor(33).balancePercent)
+        assertEquals(30, DifficultyCurve.specFor(41).balancePercent)
+    }
+
+    @Test
+    fun noBigGridsBeforeGate() {
+        for (lvl in 1..30) assertTrue("L$lvl", DifficultyCurve.sizeFor(lvl) <= 7)
+        for (lvl in 1..40) assertTrue("L$lvl", DifficultyCurve.sizeFor(lvl) <= 8)
+        assertEquals(8, (31..40).maxOf { DifficultyCurve.sizeFor(it) })
+        assertEquals(9, DifficultyCurve.sizeFor(41))
+        for (lvl in 1..300) {
+            val fb = DifficultyCurve.fallbackSpecsFor(lvl)
+            val cap = DifficultyCurve.sizeFor(lvl)
+            assertTrue("L$lvl", fb.all { it.size < cap || (it.size == 7 && cap > 7) })
+            assertEquals("L$lvl dup", fb.size, fb.distinct().size)
+        }
     }
 
     @Test
@@ -51,7 +66,7 @@ class DifficultyCurveTest {
 
     @Test
     fun fallbackSpecsOnlyForBigBoards() {
-        for (lvl in 1..30) {
+        for (lvl in 1..60) {
             val fb = DifficultyCurve.fallbackSpecsFor(lvl)
             val base = DifficultyCurve.specFor(lvl)
             if (base.size <= 7) {
@@ -96,6 +111,12 @@ class DifficultyCurveTest {
         assertTrue(targets.min() < targets.max())
         // cycle repeats
         assertEquals(DifficultyCurve.specFor(25).targetTechnique, DifficultyCurve.specFor(31).targetTechnique)
+    }
+
+    @Test
+    fun noExpertInFirst30Levels() {
+        for (lvl in 1..30) assertTrue("L$lvl", DifficultyCurve.specFor(lvl).targetTechnique <= 4)
+        assertEquals(5, DifficultyCurve.specFor(36).targetTechnique)
     }
 
     @Test

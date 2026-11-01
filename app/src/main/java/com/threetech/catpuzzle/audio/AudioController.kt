@@ -109,6 +109,11 @@ class AudioController @Inject constructor(
         runCatching { sfxLazy.value.play(kind) }
     }
 
+    /** Cut every in-flight SFX (win jingle, 7.6 s award cue, ...). Music untouched. No-op if SFX never initialised. */
+    fun stopSfx() {
+        if (sfxLazy.isInitialized()) runCatching { sfxLazy.value.stopAll() }
+    }
+
     /** UI tap. Gated by the Sound setting and by full-screen ads. */
     fun playUiTap() {
         if (!AudioPolicy.sfxAllowed(sfxEnabled, tracker.fullScreenAdShowing)) return

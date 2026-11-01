@@ -116,7 +116,16 @@ data class GameContentUi(
     val dailyEpochDay: Long? = null,
     /** Mouse booster flight in progress (X marks already in [board]; the screen hides them until the mouse lands). */
     val mouseRun: MouseRunUi? = null,
+    /** Latest correct cat placement (drives the board's pop / sparkle / ripple / flash). Null until the first one this session. */
+    val lastCorrectPlacement: CorrectPlacementUi? = null,
 )
+
+/**
+ * A cat the player (or the cat booster) just placed on its solution cell with no conflict. [token] is unique and
+ * increasing per placement: the board plays the effect once per new token and never for restored / loaded state.
+ */
+@Immutable
+data class CorrectPlacementUi(val row: Int, val col: Int, val token: Int)
 
 /** One mouse booster flight: [id] is unique per use, [cells] the target tiles in visit order. */
 @Immutable
@@ -137,8 +146,11 @@ enum class HapticKind { TICK, PLACE, WRONG, WIN, LOSE }
 
 /** Sound cues the UI can play. */
 enum class SfxKind {
-    /** Correct cat placement / cat booster. */
+    /** Cat placement that is not a clean correct one (e.g. conflicting); tutorial placement. */
     MEOW,
+
+    /** Soft chime on a correct, conflict-free cat placement (non-winning). Reuses the hint sample, quieter + higher pitch. */
+    CHIME,
 
     /** Cat placed on a non-solution cell. */
     WRONG,

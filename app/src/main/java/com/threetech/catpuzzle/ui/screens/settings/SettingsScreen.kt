@@ -45,6 +45,7 @@ import com.threetech.catpuzzle.ui.components.MusicNotePlaceholder
 import com.threetech.catpuzzle.ui.components.LocalAudioController
 import com.threetech.catpuzzle.ui.screens.game.SettingToggle
 import com.threetech.catpuzzle.ui.screens.game.SettingsUi
+import com.threetech.catpuzzle.ui.components.homeBackground
 import com.threetech.catpuzzle.ui.theme.GameColors
 
 private val CardShape = RoundedCornerShape(20.dp)
@@ -65,7 +66,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onPrivacyOptions: (() -> Unit)? = null,
 ) {
-    Box(modifier.fillMaxSize().background(GameColors.ScreenBackground)) {
+    Box(modifier.fillMaxSize().homeBackground()) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
             SettingsTopBar(onBack)
             Column(

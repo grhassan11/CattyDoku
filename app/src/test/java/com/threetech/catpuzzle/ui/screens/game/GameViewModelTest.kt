@@ -190,13 +190,14 @@ class GameViewModelTest {
 
     // ---- sfx ----
 
-    private val meow = GameUiEvent.Sfx(SfxKind.MEOW)
+    // Correct, conflict-free placement plays the soft chime (not the meow) with a light tick.
+    private val meow = GameUiEvent.Sfx(SfxKind.CHIME)
 
     @Test
     fun catPlacementEmitsMeow() = vmTest { _, vm ->
         vm.events.test {
             vm.onCellDoubleTap(Pos(0, 1)) // correct
-            assertEquals(GameUiEvent.Haptic(HapticKind.PLACE), awaitItem())
+            assertEquals(GameUiEvent.Haptic(HapticKind.TICK), awaitItem())
             assertEquals(meow, awaitItem())
             vm.onCellDoubleTap(Pos(3, 3)) // wrong cat: heart-lost haptic + wrong-placement sound, no meow
             assertEquals(GameUiEvent.Haptic(HapticKind.WRONG), awaitItem())
@@ -236,7 +237,7 @@ class GameViewModelTest {
     fun catBoosterSuccessEmitsMeowFailureDoesNot() = vmTest { _, vm ->
         vm.events.test {
             vm.onCatBooster()
-            assertEquals(GameUiEvent.Haptic(HapticKind.PLACE), awaitItem())
+            assertEquals(GameUiEvent.Haptic(HapticKind.TICK), awaitItem())
             assertEquals(meow, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
@@ -467,6 +468,19 @@ class GameViewModelTest {
         assertEquals(900, rig.progress.get(1)!!.bestScore)
         assertNull(rig.saved.rows[1])
         assertTrue(20_000L in rig.streak.observePlayedDays().first()) // win counts the day (win-only streak)
+    }
+
+    @Test
+    fun replayWinDoesNotRecordStreakDay() = vmTest { rig, vm ->
+        rig.progress.save(LevelProgress(1, 500, 60_000L, 1_000L, mistakes = 0, hintsUsed = 0)) // already completed
+        vm.events.test {
+            for (p in solution) vm.onCellDoubleTap(p)
+            awaitEvent<GameUiEvent.LevelWon>()
+            cancelAndIgnoreRemainingEvents()
+        }
+        advanceUntilIdle()
+        assertEquals(900, rig.progress.get(1)!!.bestScore) // progress still merged
+        assertTrue(rig.streak.observePlayedDays().first().isEmpty()) // replay: no streak day
     }
 
     @Test

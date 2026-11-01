@@ -112,7 +112,7 @@ internal fun RememberIdleMeow(eligible: Boolean, clock: InteractionClock, onMeow
 
 /** False when the system animator duration scale is 0 (user disabled animations). Re-read when [key] changes. */
 @Composable
-private fun rememberAnimationsEnabled(key: Any?): Boolean {
+internal fun rememberAnimationsEnabled(key: Any?): Boolean {
     val context = LocalContext.current
     return remember(context, key) {
         runCatching {

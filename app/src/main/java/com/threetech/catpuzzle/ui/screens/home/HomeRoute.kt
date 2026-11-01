@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun HomeRoute(
-    onPlay: () -> Unit,
+    onPlayLevel: (Int) -> Unit,
     onPlayDaily: () -> Unit,
     onOpenStreak: () -> Unit,
     onOpenShop: () -> Unit,
@@ -47,6 +47,7 @@ fun HomeRoute(
     val requiredLevel = (state.daily as? DailyUi.Locked)?.requiredLevel ?: DailyRules.UNLOCK_LEVEL
     val lockedText = stringResource(R.string.home_daily_locked_snackbar, requiredLevel)
     val doneText = stringResource(R.string.home_daily_done_snackbar)
+    val sudokuSoonText = stringResource(R.string.home_sudoku_coming_soon)
 
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
         viewModel.refresh()
@@ -65,7 +66,12 @@ fun HomeRoute(
     HomeScreen(
         state = state,
         snackbarHostState = snackbarHostState,
-        onPlay = onPlay,
+        onNodeClick = viewModel::onNodeSelected,
+        onSheetDismiss = viewModel::onSheetDismissed,
+        onPlayLevel = { lvl ->
+            viewModel.onSheetDismissed()
+            onPlayLevel(lvl)
+        },
         onDailyChallenge = {
             when (state.daily) {
                 DailyUi.Available -> onPlayDaily()
@@ -79,6 +85,12 @@ fun HomeRoute(
         onOpenSettings = onOpenSettings,
         onOpenShop = onOpenShop,
         onOpenAvatar = onOpenAvatar, // TEMP node gallery
+        onSudokuTab = {
+            scope.launch {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                snackbarHostState.showSnackbar(sudokuSoonText)
+            }
+        },
         modifier = Modifier.fillMaxSize(),
         nativeAdSlot = nativeAdSlot,
     )

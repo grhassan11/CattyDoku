@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -84,7 +85,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.threetech.catpuzzle.R
+import com.threetech.catpuzzle.ui.components.IconArt
 import com.threetech.catpuzzle.ui.components.IconImage
+import com.threetech.catpuzzle.ui.components.ShadowedIcon
 import com.threetech.catpuzzle.ui.components.rememberPressScale
 import com.threetech.catpuzzle.ui.components.rememberTapClick
 import com.threetech.catpuzzle.ui.theme.FredokaFamily
@@ -101,6 +104,7 @@ private const val CurrentScale = 1.2f
 private val LipRoom = 6.dp
 private val CellWidth = 96.dp
 private val CellHeight = 112.dp
+private val PanelHeight = 360.dp // TEMP node gallery: world panel height
 private val Ink = Color(0xFF4A2F2F)
 private val StarYellow = GameColors.Bulb
 private val StarEdge = Color(0xFFC98A00)
@@ -397,23 +401,26 @@ private fun NodeShell(
                 }
             }
             if (state == NodeState.Done) {
-                Canvas(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .offset(y = 12.dp)
-                        .size(width = 42.dp, height = 14.dp),
-                ) {
-                    val outer = 6.5.dp.toPx()
-                    val inner = 2.8.dp.toPx()
-                    val cy = this.size.height / 2f
-                    val xs = floatArrayOf(this.size.width * 0.18f, this.size.width * 0.5f, this.size.width * 0.82f)
-                    for ((i, x) in xs.withIndex()) {
-                        val star = starPath(x, if (i == 1) cy - 1.dp.toPx() else cy, outer, inner)
-                        drawPath(star, StarYellow)
-                        drawPath(star, StarEdge, style = Stroke(width = 1.dp.toPx(), join = StrokeJoin.Round))
-                    }
-                }
+                NodeStars(
+                    earned = 3,
+                    modifier = Modifier.align(Alignment.BottomCenter).offset(y = 12.dp),
+                )
             }
+        }
+    }
+}
+
+/** Earned-star row on a node: ic_star_island x3 with drop shadow; unearned = greyed (alpha 0.5, saturation 0). Middle star sits 1dp higher. */
+@Composable
+private fun NodeStars(earned: Int, modifier: Modifier = Modifier, total: Int = 3) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        for (i in 0 until total) {
+            ShadowedIcon(
+                res = IconArt.StarIsland,
+                size = 14.dp,
+                greyed = i >= earned,
+                modifier = if (i == 1) Modifier.offset(y = (-1).dp) else Modifier,
+            )
         }
     }
 }
@@ -735,7 +742,7 @@ private const val ParallaxMid = 0.5f
 private const val ParallaxNear = 0.8f
 
 /** TEMP node gallery: one background layer. [content] fills its parent, shifts by -parallaxOffset * [speed]. */
-private class BackdropLayer(val name: String, val speed: Float, val content: @Composable (parallaxOffset: Float) -> Unit)
+private class BackdropLayer(val name: String, val speed: Float, val content: @Composable (parallaxOffset: () -> Float) -> Unit)
 
 /** TEMP node gallery: ordered back-to-front layers + legibility [scrim] (over all layers) + trail [halo] colour. */
 private class WorldBackground(val layers: List<BackdropLayer>, val scrim: Color, val halo: Color)
@@ -935,22 +942,31 @@ private fun StylePicker(selected: NodeStyle, onSelect: (NodeStyle) -> Unit) {
 @Composable
 private fun WorldCard(world: SampleWorld, style: NodeStyle, worldIndex: Int) {
     val t = world.theme
-    Column(
+    val scroll = rememberScrollState()
+    val parallax = remember(scroll) { { scroll.value.toFloat() } } // read in draw phase only
+    Box(
         Modifier
             .fillMaxWidth()
             .background(t.bgTint, RoundedCornerShape(24.dp))
             .padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        WorldBanner(t, world.doneCount, worldIndex + 1)
-        WorldPath(t, style, world.doneCount, baseLevel = worldIndex * 10)
+        Box(Modifier.fillMaxWidth().height(PanelHeight).clip(RoundedCornerShape(18.dp))) {
+            Box(Modifier.fillMaxSize().horizontalScroll(scroll)) {
+                WorldPath(t, style, world.doneCount, baseLevel = worldIndex * 10, parallax = parallax)
+            }
+            // sticky banner: sits outside the scrolled content
+            WorldBanner(
+                t, world.doneCount, worldIndex + 1,
+                Modifier.align(Alignment.TopStart).padding(8.dp).width(280.dp),
+            )
+        }
     }
 }
 
 @Composable
-private fun WorldBanner(t: WorldTheme, done: Int, worldNo: Int) {
+private fun WorldBanner(t: WorldTheme, done: Int, worldNo: Int, modifier: Modifier = Modifier) {
     Column(
-        Modifier
+        modifier
             .fillMaxWidth()
             .background(Brush.horizontalGradient(listOf(t.bannerA, t.bannerB)), RoundedCornerShape(18.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -996,18 +1012,18 @@ private fun WorldBanner(t: WorldTheme, done: Int, worldNo: Int) {
     }
 }
 
-/** 10 nodes bottom-up on a winding trail; i < done = Done, i == done = Current, rest Locked; node 10 = boss (larger + crown). */
+/** 10 nodes left-to-right on a sine-wave trail; i < done = Done, i == done = Current, rest Locked; node 10 = boss (larger + crown). */
 @Composable
-private fun WorldPath(t: WorldTheme, style: NodeStyle, done: Int, baseLevel: Int) {
-    val rowH = 92.dp
-    val pad = 36.dp
-    val total = rowH * 10 + pad
-    val xs = floatArrayOf(0.5f, 0.76f, 0.5f, 0.24f, 0.5f, 0.76f, 0.5f, 0.24f, 0.5f, 0.5f)
-    BoxWithConstraints(Modifier.fillMaxWidth().height(total)) {
-        val wDp = maxWidth
-        WorldBackdrop(t.background, parallaxOffset = 0f, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp))) // TEMP node gallery
-        fun cx(i: Int): Dp = wDp * xs[i]
-        fun cy(i: Int): Dp = total - pad / 2 - rowH * i - rowH / 2
+private fun WorldPath(t: WorldTheme, style: NodeStyle, done: Int, baseLevel: Int, parallax: () -> Float) {
+    val colW = 92.dp
+    val padX = 56.dp
+    val total = padX * 2 + colW * 9
+    val midY = 225.dp
+    val amp = 60.dp
+    Box(Modifier.width(total).height(PanelHeight)) {
+        WorldBackdrop(t.background, parallaxOffset = parallax, modifier = Modifier.fillMaxSize()) // TEMP node gallery
+        fun cx(i: Int): Dp = padX + colW * i
+        fun cy(i: Int): Dp = midY - amp * sin(i * 1.5707964f) // period 4 nodes
         Canvas(Modifier.fillMaxSize()) {
             fun pt(i: Int) = Offset(cx(i).toPx(), cy(i).toPx())
             fun trail(upTo: Int): Path = Path().apply {
@@ -1015,8 +1031,8 @@ private fun WorldPath(t: WorldTheme, style: NodeStyle, done: Int, baseLevel: Int
                 for (i in 1..upTo) {
                     val p0 = pt(i - 1)
                     val p1 = pt(i)
-                    val my = (p0.y + p1.y) / 2f
-                    cubicTo(p0.x, my, p1.x, my, p1.x, p1.y)
+                    val mx = (p0.x + p1.x) / 2f
+                    cubicTo(mx, p0.y, mx, p1.y, p1.x, p1.y)
                 }
             }
             val all = trail(9)
@@ -1392,18 +1408,23 @@ private fun CandyNode(level: Int, state: NodeState, modifier: Modifier = Modifie
 
 /** TEMP node gallery: stacks layers back-to-front, then the scrim. Stateless; [parallaxOffset] = future scroll px. */
 @Composable
-private fun WorldBackdrop(bg: WorldBackground, parallaxOffset: Float, modifier: Modifier = Modifier) {
+private fun WorldBackdrop(bg: WorldBackground, parallaxOffset: () -> Float, modifier: Modifier = Modifier) {
     Box(modifier) {
         for (layer in bg.layers) layer.content(parallaxOffset)
         Box(Modifier.fillMaxSize().background(bg.scrim))
     }
 }
 
-/** TEMP node gallery: cached Canvas layer. [build] runs on size change only (allocate Paths/Brushes there). */
-private fun Modifier.bgLayer(speed: Float, parallaxOffset: Float, build: CacheDrawScope.() -> DrawScope.() -> Unit): Modifier =
+/**
+ * TEMP node gallery: cached Canvas layer. [build] runs on size change only (allocate Paths/Brushes there).
+ * Backdrop lives inside the horizontal scroll content (scrolls at 1x), so draw shifts right by offset*(1-speed):
+ * net screen speed = [speed] (sky 0 = pinned). Layer spans full panel width, so no blank edge:
+ * left edge s<=offset, right edge s+P>=offset+V since offset<=P-V. [parallaxOffset] read in draw phase only.
+ */
+private fun Modifier.bgLayer(speed: Float, parallaxOffset: () -> Float, build: CacheDrawScope.() -> DrawScope.() -> Unit): Modifier =
     fillMaxSize().drawWithCache {
         val draw = build()
-        onDrawBehind { translate(left = -parallaxOffset * speed) { draw(this) } }
+        onDrawBehind { translate(left = parallaxOffset() * (1f - speed)) { draw(this) } }
     }
 
 private fun CacheDrawScope.art(block: DrawScope.() -> Unit): DrawScope.() -> Unit = block
@@ -1431,7 +1452,7 @@ private fun DrawScope.drawCloud(cx: Float, cy: Float, s: Float, color: Color) {
 /* ---- Sunny Garden */
 
 @Composable
-private fun SunnySky(o: Float) {
+private fun SunnySky(o: () -> Float) {
     Box(Modifier.bgLayer(0f, o) {
         val br = Brush.verticalGradient(listOf(Color(0xFF86D4F5), Color(0xFFD3F0EE), Color(0xFFEAF6DC)), 0f, size.height)
         art { drawRect(br) }
@@ -1439,7 +1460,7 @@ private fun SunnySky(o: Float) {
 }
 
 @Composable
-private fun SunnyFar(o: Float) {
+private fun SunnyFar(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxFar, o) {
         val w = size.width
         val h = size.height
@@ -1471,7 +1492,7 @@ private fun SunnyFar(o: Float) {
 }
 
 @Composable
-private fun SunnyMid(o: Float) {
+private fun SunnyMid(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxMid, o) {
         val w = size.width
         val h = size.height
@@ -1504,7 +1525,7 @@ private fun SunnyMid(o: Float) {
 }
 
 @Composable
-private fun SunnyNear(o: Float) {
+private fun SunnyNear(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxNear, o) {
         val w = size.width
         val h = size.height
@@ -1544,7 +1565,7 @@ private fun SunnyNear(o: Float) {
 /* ---- Midnight Roof */
 
 @Composable
-private fun MidnightSky(o: Float) {
+private fun MidnightSky(o: () -> Float) {
     Box(Modifier.bgLayer(0f, o) {
         val br = Brush.verticalGradient(listOf(Color(0xFF0B0F33), Color(0xFF232A6B), Color(0xFF4B4F96)), 0f, size.height)
         art { drawRect(br) }
@@ -1552,7 +1573,7 @@ private fun MidnightSky(o: Float) {
 }
 
 @Composable
-private fun MidnightFar(o: Float) {
+private fun MidnightFar(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxFar, o) {
         val w = size.width
         val h = size.height
@@ -1605,7 +1626,7 @@ private fun MidnightFar(o: Float) {
 }
 
 @Composable
-private fun MidnightMid(o: Float) {
+private fun MidnightMid(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxMid, o) {
         val w = size.width
         val h = size.height
@@ -1636,7 +1657,7 @@ private fun MidnightMid(o: Float) {
 }
 
 @Composable
-private fun MidnightNear(o: Float) {
+private fun MidnightNear(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxNear, o) {
         val w = size.width
         val h = size.height
@@ -1665,7 +1686,7 @@ private fun MidnightNear(o: Float) {
 /* ---- Candy Kitchen */
 
 @Composable
-private fun CandySky(o: Float) {
+private fun CandySky(o: () -> Float) {
     Box(Modifier.bgLayer(0f, o) {
         val br = Brush.verticalGradient(listOf(Color(0xFFFFD3E4), Color(0xFFFFE9EF), Color(0xFFFFF5E6)), 0f, size.height)
         art { drawRect(br) }
@@ -1673,7 +1694,7 @@ private fun CandySky(o: Float) {
 }
 
 @Composable
-private fun CandyFar(o: Float) {
+private fun CandyFar(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxFar, o) {
         val w = size.width
         val h = size.height
@@ -1702,7 +1723,7 @@ private fun CandyFar(o: Float) {
 }
 
 @Composable
-private fun CandyMid(o: Float) {
+private fun CandyMid(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxMid, o) {
         val w = size.width
         val h = size.height
@@ -1754,7 +1775,7 @@ private fun CandyMid(o: Float) {
 }
 
 @Composable
-private fun CandyNear(o: Float) {
+private fun CandyNear(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxNear, o) {
         val w = size.width
         val h = size.height
@@ -1776,7 +1797,7 @@ private fun CandyNear(o: Float) {
 /* ---- Snow Cabin */
 
 @Composable
-private fun SnowSky(o: Float) {
+private fun SnowSky(o: () -> Float) {
     Box(Modifier.bgLayer(0f, o) {
         val br = Brush.verticalGradient(listOf(Color(0xFFBFE1F7), Color(0xFFE6F3FC), Color(0xFFF4FAFF)), 0f, size.height)
         art { drawRect(br) }
@@ -1784,7 +1805,7 @@ private fun SnowSky(o: Float) {
 }
 
 @Composable
-private fun SnowFar(o: Float) {
+private fun SnowFar(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxFar, o) {
         val w = size.width
         val h = size.height
@@ -1827,7 +1848,7 @@ private fun SnowFar(o: Float) {
 }
 
 @Composable
-private fun SnowMid(o: Float) {
+private fun SnowMid(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxMid, o) {
         val w = size.width
         val h = size.height
@@ -1862,7 +1883,7 @@ private fun SnowMid(o: Float) {
 }
 
 @Composable
-private fun SnowNear(o: Float) {
+private fun SnowNear(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxNear, o) {
         val w = size.width
         val h = size.height
@@ -1906,7 +1927,7 @@ private fun SnowNear(o: Float) {
 /* ---- Berry Dusk */
 
 @Composable
-private fun BerrySky(o: Float) {
+private fun BerrySky(o: () -> Float) {
     Box(Modifier.bgLayer(0f, o) {
         val br = Brush.verticalGradient(
             listOf(Color(0xFF3A2766), Color(0xFF8E4A9E), Color(0xFFFF9B6A), Color(0xFF9B4F8F)),
@@ -1917,7 +1938,7 @@ private fun BerrySky(o: Float) {
 }
 
 @Composable
-private fun BerryFar(o: Float) {
+private fun BerryFar(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxFar, o) {
         val w = size.width
         val h = size.height
@@ -1941,7 +1962,7 @@ private fun BerryFar(o: Float) {
 }
 
 @Composable
-private fun BerryMid(o: Float) {
+private fun BerryMid(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxMid, o) {
         val w = size.width
         val h = size.height
@@ -2001,7 +2022,7 @@ private fun BerryMid(o: Float) {
 }
 
 @Composable
-private fun BerryNear(o: Float) {
+private fun BerryNear(o: () -> Float) {
     Box(Modifier.bgLayer(ParallaxNear, o) {
         val w = size.width
         val h = size.height

@@ -6,13 +6,17 @@ import com.threetech.catpuzzle.domain.analytics.AnalyticsEvent
 import com.threetech.catpuzzle.domain.analytics.AnalyticsLogger
 import com.threetech.catpuzzle.domain.analytics.NoopAnalyticsLogger
 import com.threetech.catpuzzle.domain.model.DailyStatus
+import com.threetech.catpuzzle.domain.model.LevelDetail
 import com.threetech.catpuzzle.domain.model.Settings
 import com.threetech.catpuzzle.domain.model.StreakCalendar
 import com.threetech.catpuzzle.domain.model.StreakRewardState
 import com.threetech.catpuzzle.domain.usecase.ObserveDailyStatus
+import com.threetech.catpuzzle.domain.usecase.ObserveLevelDetail
 import com.threetech.catpuzzle.domain.usecase.ObserveSettings
 import com.threetech.catpuzzle.domain.usecase.ObserveStreakCalendar
 import com.threetech.catpuzzle.domain.usecase.ObserveStreakRewards
+import com.threetech.catpuzzle.domain.usecase.ObserveWorldMap
+import com.threetech.catpuzzle.ui.screens.home.worlds.WorldMapUi
 import com.threetech.catpuzzle.domain.usecase.ResolveStartLevel
 import com.threetech.catpuzzle.domain.usecase.UpdateSettings
 import com.threetech.catpuzzle.ui.screens.game.SettingToggle
@@ -26,6 +30,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -42,6 +47,8 @@ class HomeViewModel @Inject constructor(
     private val observeStreakCalendar: ObserveStreakCalendar,
     private val observeDailyStatus: ObserveDailyStatus,
     private val observeStreakRewards: ObserveStreakRewards,
+    private val observeWorldMap: ObserveWorldMap,
+    private val observeLevelDetail: ObserveLevelDetail,
     observeSettings: ObserveSettings,
     private val updateSettings: UpdateSettings,
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
@@ -61,10 +68,24 @@ class HomeViewModel @Inject constructor(
     /** Only the pending flag reaches Home (dot on the streak chip); the full reward state lives on the Streak screen. */
     private val rewards: Flow<StreakRewardState> = refreshTick.flatMapLatest { observeStreakRewards() }
 
+    /** Live map progress (current level + stars); updates when a level is won, no refresh needed. */
+    private val worldMap: Flow<WorldMapUi> = observeWorldMap().map { WorldMapUi.from(it) }
+
+    /** Level whose detail sheet is open (null = closed). Cleared on dismiss and when Play is tapped. */
+    private val selectedLevel = MutableStateFlow<Int?>(null)
+
+    private val levelSheet: Flow<LevelSheetUi?> = selectedLevel.flatMapLatest { lvl ->
+        if (lvl == null) flowOf(null) else observeLevelDetail(lvl).map<LevelDetail, LevelSheetUi?> { LevelSheetUi.from(it) }
+    }
+
     val state: StateFlow<HomeUiState> =
-        combine(level, calendar, daily, observeSettings(), rewards) { lvl, cal, dly, settings, rw ->
-            HomeUiMapper.map(lvl, cal, dly, settings, rewardPending = rw.pendingCount > 0)
-        }.stateIn(
+        combine(
+            combine(level, calendar, daily, observeSettings(), rewards) { lvl, cal, dly, settings, rw ->
+                HomeUiMapper.map(lvl, cal, dly, settings, rewardPending = rw.pendingCount > 0)
+            },
+            worldMap,
+            levelSheet,
+        ) { base, map, sheet -> base.copy(worldMap = map, levelSheet = sheet) }.stateIn(
             viewModelScope,
             SharingStarted.Eagerly,
             HomeUiMapper.map(null, null, null, Settings()),
@@ -85,6 +106,14 @@ class HomeViewModel @Inject constructor(
                 // keep the previous label; the game resolves the level itself
             }
         }
+    }
+
+    fun onNodeSelected(level: Int) {
+        selectedLevel.value = level.coerceAtLeast(1)
+    }
+
+    fun onSheetDismissed() {
+        selectedLevel.value = null
     }
 
     fun onSettingChanged(toggle: SettingToggle, enabled: Boolean) {

@@ -30,6 +30,8 @@ import com.threetech.catpuzzle.domain.usecase.EnginePuzzleGenerator
 import com.threetech.catpuzzle.domain.usecase.ObserveCompletedDays
 import com.threetech.catpuzzle.domain.usecase.ObserveDailyStatus
 import com.threetech.catpuzzle.domain.usecase.ObserveStreakCalendar
+import com.threetech.catpuzzle.domain.usecase.ObserveLevelDetail
+import com.threetech.catpuzzle.domain.usecase.ObserveWorldMap
 import com.threetech.catpuzzle.domain.usecase.ResolveDaily
 import com.threetech.catpuzzle.domain.usecase.FallbackPuzzleProvider
 import com.threetech.catpuzzle.domain.usecase.GetBoosterCharges
@@ -251,6 +253,12 @@ object UseCaseModule {
     @Provides
     fun provideObserveCompletedDays(progress: ProgressRepository): ObserveCompletedDays =
         ObserveCompletedDays(progress)
+
+    @Provides
+    fun provideObserveWorldMap(progress: ProgressRepository): ObserveWorldMap = ObserveWorldMap(progress)
+
+    @Provides
+    fun provideObserveLevelDetail(progress: ProgressRepository): ObserveLevelDetail = ObserveLevelDetail(progress)
 
     @Provides
     fun provideObserveDailyStatus(

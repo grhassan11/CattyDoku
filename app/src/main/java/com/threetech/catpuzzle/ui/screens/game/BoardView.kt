@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -27,6 +29,8 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.inset
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringArrayResource
@@ -60,6 +64,8 @@ fun BoardView(
     onDrag: (List<Pos>) -> Unit,
     modifier: Modifier = Modifier,
     onDragCross: () -> Unit = {},
+    /** Latest correct placement; each new token plays the placement effect once. Null (tutorial) = no effect. */
+    lastCorrectPlacement: CorrectPlacementUi? = null,
 ) {
     val n = board.size
     val gridSideDp = metrics.gridSideDp(n)
@@ -76,6 +82,20 @@ fun BoardView(
 
     // Hoisted once: painters for only the cat variants this board uses, decoded at ~cell size (not 10 full 512 px PNGs).
     val catPainters = rememberBoardCatPainters(board, with(density) { (metrics.cellDp.dp.toPx() * 0.84f).toInt() })
+
+    // Correct-placement effect. `done` starts at the token already present on first composition, so rotation /
+    // re-entry / restored state never replays; only a token that arrives later plays. Skipped when animations are off.
+    val animationsOn = rememberAnimationsEnabled(null)
+    val fx = remember { PlacementFx() }
+    var doneToken by remember { mutableIntStateOf(lastCorrectPlacement?.token ?: 0) }
+    LaunchedEffect(lastCorrectPlacement?.token) {
+        val p = lastCorrectPlacement ?: return@LaunchedEffect
+        if (p.token == doneToken) return@LaunchedEffect
+        if (animationsOn) fx.run(p.token)
+        doneToken = p.token
+    }
+    val fxToken = if (animationsOn && lastCorrectPlacement != null && lastCorrectPlacement.token != doneToken) lastCorrectPlacement.token else 0
+    val fxIdx = if (fxToken != 0 && lastCorrectPlacement != null) lastCorrectPlacement.row * n + lastCorrectPlacement.col else -1
 
     val colorNames = stringArrayResource(R.array.region_color_names)
     val boardLabel = stringResource(R.string.board_description, n)
@@ -104,6 +124,11 @@ fun BoardView(
             Modifier
                 .size(gridSideDp.dp)
                 .semantics { contentDescription = boardLabel }
+                .drawWithContent {
+                    drawContent()
+                    // Above all cells, not clipped by neighbours. Draw-phase reads only.
+                    if (fxToken != 0) drawPlacementFx(fx, fxToken, fxIdx, board, metrics.gapDp.dp.toPx())
+                }
                 .pointerInput(n, sidePx, enabled) {
                     if (!enabled) return@pointerInput
                     awaitEachGesture {
@@ -172,6 +197,8 @@ fun BoardView(
                             previewing = (r * n + c) in preview,
                             sideDp = metrics.cellDp,
                             catPainter = if (cell.mark == CellMarkUi.CAT) catPainters[cell.catVariant.mod(CatVariants.UNIQUE)] else null,
+                            placementFx = if (r * n + c == fxIdx) fx else null,
+                            placementToken = fxToken,
                             modifier = Modifier.semantics {
                                 contentDescription = description
                                 role = Role.Button
@@ -205,6 +232,9 @@ private fun BoardCell(
     sideDp: Float,
     catPainter: Painter?,
     modifier: Modifier = Modifier,
+    /** Non-null only for the just-placed cell while its effect runs: scales the cat (pop + squish). */
+    placementFx: PlacementFx? = null,
+    placementToken: Int = 0,
 ) {
     Canvas(modifier.size(sideDp.dp)) {
         val s = this.size.minDimension
@@ -228,9 +258,21 @@ private fun BoardCell(
         when (cell.mark) {
             CellMarkUi.X -> drawXMark(Offset.Zero, s, GameColors.XMark.copy(alpha = if (previewing) 0.25f else 1f))
             CellMarkUi.CAT -> catPainter?.let { painter ->
-                inset(s * 0.08f) {
-                    val iconSize = this.size
-                    with(painter) { draw(iconSize) }
+                if (placementFx == null) {
+                    inset(s * 0.08f) {
+                        val iconSize = this.size
+                        with(painter) { draw(iconSize) }
+                    }
+                } else {
+                    // Pop + squish about the cell centre: 0.6 -> ~1.12 -> 1.0, x/y squash coupled to the overshoot.
+                    val sc = placementFx.popScale(placementToken)
+                    val k = PlacementFx.SQUASH * (sc - 1f)
+                    scale(sc * (1f - k), sc * (1f + k), pivot = Offset(s / 2f, s / 2f)) {
+                        inset(s * 0.08f) {
+                            val iconSize = this.size
+                            with(painter) { draw(iconSize) }
+                        }
+                    }
                 }
             }
             CellMarkUi.EMPTY -> if (previewing) drawXMark(Offset.Zero, s, GameColors.XMark.copy(alpha = 0.5f))

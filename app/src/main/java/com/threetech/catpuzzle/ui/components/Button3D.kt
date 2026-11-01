@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -40,6 +41,7 @@ enum class ButtonStyle(val face: Color, val lip: Color, val content: Color, val 
     Green(GameColors.CtaGreenFace, GameColors.CtaGreenLip, Color.White, true),
     Blue(GameColors.CtaBlueFace, GameColors.CtaBlueLip, Color.White, true),
     Pink(GameColors.DailyPink, GameColors.DailyPinkDark, Color.White, true),
+    Teal(GameColors.CtaTealFace, GameColors.CtaTealLip, Color.White, true),
 }
 
 /** Pure press math, unit-testable. [progress] 0 = rest, 1 = fully pressed. */
@@ -74,6 +76,8 @@ fun Button3D(
     horizontalPadding: Dp = 24.dp,
     totalHeight: Dp = Button3DHeight,
     lipHeight: Dp = LipHeight,
+    role: Role = Role.Button,
+    selected: Boolean? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
     val source = remember { MutableInteractionSource() }
@@ -131,8 +135,9 @@ fun Button3D(
             .semantics(mergeDescendants = true) {
                 if (contentDescription != null) this.contentDescription = contentDescription
                 if (markDisabled) disabled()
+                if (selected != null) this.selected = selected
             }
-            .clickable(interactionSource = source, indication = null, role = Role.Button, onClick = tapClick)
+            .clickable(interactionSource = source, indication = null, role = role, onClick = tapClick)
             .padding(start = horizontalPadding, end = horizontalPadding, bottom = lipHeight)
             .graphicsLayer { translationY = Button3DMath.faceOffset(progress, lipHeight.toPx()) },
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),

@@ -119,6 +119,8 @@ fun GameScreen(
     onNextLevel: () -> Unit,
     onLoseRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Level Complete HOME icon; defaults to the same pop-to-Home as [onBack]. */
+    onWinHome: () -> Unit = onBack,
     ads: GameAdsUi = GameAdsUi(),
     /** Booster whose "Need one?" rewarded dialog is open (null = closed). */
     boosterDialog: Booster? = null,
@@ -167,6 +169,7 @@ fun GameScreen(
             is GameUiState.Ready -> GameContent(
                 content = state.content,
                 onBack = onBack,
+                onWinHome = onWinHome,
                 onOpenSettings = onOpenSettings,
                 onCellTap = onCellTap,
                 onCellDoubleTap = onCellDoubleTap,
@@ -215,6 +218,7 @@ private fun CenterMessage(content: @Composable () -> Unit) {
 private fun GameContent(
     content: GameContentUi,
     onBack: () -> Unit,
+    onWinHome: () -> Unit,
     onOpenSettings: () -> Unit,
     onCellTap: (Pos) -> Unit,
     onCellDoubleTap: (Pos) -> Unit,
@@ -305,6 +309,7 @@ private fun GameContent(
                         onDoubleTap = onCellDoubleTap,
                         onDrag = onDrag,
                         onDragCross = onDragCross,
+                        lastCorrectPlacement = content.lastCorrectPlacement,
                         modifier = Modifier.onGloballyPositioned { boardGeo.value = BoardGeo(it.boundsInRoot(), metrics) },
                     )
                 }
@@ -360,6 +365,7 @@ private fun GameContent(
             onNextLevel = if (content.isDaily) onBack else onNextLevel,
             onRetry = onLoseRetry,
             onHome = onBack, // same pop-to-Home as the top-bar back
+            onWinHome = onWinHome,
             daily = content.isDaily,
             onWatchRevive = if (ads.rewardedSurface) onWatchReviveAd else null,
             rewardedLoad = ads.rewardedLoad,

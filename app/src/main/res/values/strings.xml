@@ -26,7 +26,8 @@
     <string name="home_play">Play</string>
     <string name="home_level_button">Level %1$d</string>
     <string name="home_daily_challenge">Daily Challenge</string>
-    <string name="home_daily_locked_description">Daily Challenge, locked</string>
+    <string name="home_daily_locked_description">Daily Challenge, locked. Unlocks at Level %1$d</string>
+    <string name="home_daily_locked_hint">Unlocks at Level %1$d</string>
     <string name="home_daily_locked_snackbar">Reach Level %1$d to unlock the Daily Challenge</string>
     <string name="home_daily_done">Done today ✓</string>
     <string name="home_daily_done_description">Daily Challenge, done today</string>
@@ -60,6 +61,27 @@
     <string name="daily_reminder_body_6">A new Daily Challenge just purred in. Ready?</string>
     <string name="daily_reminder_title_7">Nap time? Not yet!</string>
     <string name="daily_reminder_body_7">One more puzzle before the cats settle in for the night.</string>
+    <!-- Generic play reminder (player below Daily unlock level): no Daily mention -->
+    <string name="play_reminder_title_1">🐱 Meow! Time to play</string>
+    <string name="play_reminder_body_1">Your cat puzzles are waiting. Jump back in!</string>
+    <string name="play_reminder_title_2">🧩 Paws for a puzzle?</string>
+    <string name="play_reminder_body_2">Take a few calm minutes and solve a level.</string>
+    <string name="play_reminder_title_3">🐾 The cats miss you</string>
+    <string name="play_reminder_body_3">Come say hi and find them all a cozy spot.</string>
+    <string name="play_reminder_title_4">🐟 Snack-time puzzle break</string>
+    <string name="play_reminder_body_4">Treat yourself to one quick level tonight.</string>
+    <string name="play_reminder_title_5">🎮 Ready for the next level?</string>
+    <string name="play_reminder_body_5">Your next cat puzzle is ready to play.</string>
+    <string name="play_reminder_title_6">🏆 Keep climbing!</string>
+    <string name="play_reminder_body_6">Solve another level and show those cats who is boss.</string>
+    <string name="play_reminder_title_7">⭐ Your kitty crew is waiting</string>
+    <string name="play_reminder_body_7">One more level before the cats settle in.</string>
+    <string name="play_reminder_title_8">🔥 Keep your puzzle skills sharp</string>
+    <string name="play_reminder_body_8">A quick round keeps you purring along.</string>
+    <string name="play_reminder_title_9">🧠 Brain teaser time</string>
+    <string name="play_reminder_body_9">Give your mind a cozy workout with a new level.</string>
+    <string name="play_reminder_title_10">😺 Whisker-twitching time</string>
+    <string name="play_reminder_body_10">The cats are restless. Can you seat them all?</string>
 
     <!-- Streak dialog -->
     <string name="streak_title">Daily Streak</string>
@@ -128,6 +150,11 @@
     <string name="booster_cat">Place a cat, %1$d left</string>
     <string name="booster_hint">Hint, %1$d left</string>
     <string name="home_shop">Shop</string>
+    <string name="home_world_name_description">World: %1$s</string>
+    <string name="home_jump_to_current">Jump to current level</string>
+    <string name="home_tab_classic">Levels</string>
+    <string name="home_tab_sudoku">Sudoku</string>
+    <string name="home_sudoku_coming_soon">Sudoku coming soon</string>
     <string name="booster_mouse">Mouse, %1$d left</string>
     <string name="booster_no_mouse">No mice left</string>
     <string name="booster_locked">Unlocks at level %1$d</string>
@@ -227,6 +254,7 @@
     <string name="win_next_level">Level %1$d</string>
     <string name="win_headline_daily">Daily complete!</string>
     <string name="win_back_home">Back to Home</string>
+    <string name="win_home">Home</string>
     <string name="win_score_label">Score</string>
     <string name="win_score_description">Final score %1$d</string>
     <string name="win_stat_time">Time</string>
@@ -349,4 +377,30 @@
     <!-- Native ad attribution -->
     <string name="ad_badge">Ad</string>
     <string name="ad_badge_description">Advertisement</string>
+
+    <!-- Home world map -->
+    <string name="world_node_done">Level %1$d, completed, %2$d of 3 stars. Tap for details</string>
+    <string name="world_node_current">Level %1$d, current level. Tap for details</string>
+    <string name="world_node_locked">Level %1$d, locked</string>
+    <string name="world_tail_title">More worlds coming</string>
+    <string name="world_tail_description">More worlds are coming soon</string>
+    <string name="home_node_play_tag">PLAY</string>
+
+    <!-- Home level details sheet -->
+    <string name="level_sheet_description">Level %1$d details</string>
+    <string name="level_sheet_title">Level %1$d</string>
+    <string name="level_sheet_board_size">Board size</string>
+    <string name="level_sheet_board_value">%1$d x %1$d</string>
+    <string name="level_sheet_difficulty">Difficulty</string>
+    <string name="level_sheet_difficulty_easy">Easy</string>
+    <string name="level_sheet_difficulty_medium">Medium</string>
+    <string name="level_sheet_difficulty_hard">Hard</string>
+    <string name="level_sheet_difficulty_expert">Expert</string>
+    <string name="level_sheet_stars">Stars earned</string>
+    <string name="level_sheet_stars_description">%1$d of 3 stars</string>
+    <string name="level_sheet_best_time">Best time</string>
+    <string name="level_sheet_best_score">Best score</string>
+    <string name="level_sheet_none">--</string>
+    <string name="level_sheet_play">Play</string>
+    <string name="level_sheet_replay">Replay</string>
 </resources>

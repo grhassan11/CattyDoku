@@ -7,7 +7,8 @@ import com.threetech.catpuzzle.domain.model.LevelSpec
  *
  * 4x4 L1-4, 5x5 L5-12, 6x6 L13-24, then from L25 a repeating 6-level sawtooth where size and
  * technique target rise together: 7,7,8,8,9,9 with targets 2,3,3,4,4,5 (index = (lvl - 25) % 6).
- * Board never exceeds 9x9 ([MAX_BOARD_SIZE]).
+ * Targets at L1-30 are capped at 4 (first Expert is L36). Sizes are capped: max 7x7 to L30, 8x8 to L40,
+ * 9x9 from L41. Board never exceeds 9x9 ([MAX_BOARD_SIZE]).
  * Targets are Technique levels (1 naked single .. 5 look-ahead).
  * Changing any table changes generated puzzles => bump GENERATOR_VERSION.
  */
@@ -19,7 +20,7 @@ object DifficultyCurve {
 
     private val TARGETS_4X4 = intArrayOf(1, 1, 2, 2)
     private val TARGETS_5X5 = intArrayOf(2, 2, 2, 3, 3, 3, 4, 4)
-    private val TARGETS_6X6 = intArrayOf(3, 3, 4, 3, 4, 4, 5, 4, 4, 5, 4, 5)
+    private val TARGETS_6X6 = intArrayOf(3, 3, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4)
 
     /** L25+ repeating sawtooth, parallel arrays (same length): easy, medium, medium, hard, hard, hardest, then drop. */
     private val CYCLE_TARGETS = intArrayOf(2, 3, 3, 4, 4, 5)
@@ -36,6 +37,13 @@ object DifficultyCurve {
     private const val BALANCE_9X9 = 30
 
     private const val MIN_REGION = 2
+
+    /** Expert (technique 5+) never appears at or below this level; targets are capped to 4 there. */
+    private const val LAST_NON_EXPERT_LEVEL = 30
+
+    /** 8x8 first appears at L31, 9x9 at L41: cycle size is capped to 7 up to L30 and to 8 up to L40. */
+    private const val LAST_LEVEL_BELOW_8X8 = 30
+    private const val LAST_LEVEL_BELOW_9X9 = 40
 
     init {
         require(CYCLE_TARGETS.size == CYCLE_SIZES.size) { "cycle arrays differ" }
@@ -57,7 +65,13 @@ object DifficultyCurve {
         level <= LAST_LEVEL_4X4 -> 4
         level <= LAST_LEVEL_5X5 -> 5
         level <= LAST_LEVEL_6X6 -> 6
-        else -> CYCLE_SIZES[cycleIndex(level)]
+        else -> minOf(CYCLE_SIZES[cycleIndex(level)], maxCycleSizeFor(level))
+    }
+
+    private fun maxCycleSizeFor(level: Int): Int = when {
+        level <= LAST_LEVEL_BELOW_8X8 -> MIN_CYCLE_SIZE
+        level <= LAST_LEVEL_BELOW_9X9 -> 8
+        else -> MAX_BOARD_SIZE
     }
 
     fun specFor(level: Int): LevelSpec {
@@ -75,9 +89,11 @@ object DifficultyCurve {
             6 -> LevelSpec(
                 lvl, 6, TARGETS_6X6[lvl - LAST_LEVEL_5X5 - 1], MIN_REGION, BALANCE_6X6, 0,
             )
-            else -> LevelSpec(
-                lvl, size, CYCLE_TARGETS[cycleIndex(lvl)], MIN_REGION, balanceFor(size), 0,
-            )
+            else -> {
+                val raw = CYCLE_TARGETS[cycleIndex(lvl)]
+                val t = if (lvl <= LAST_NON_EXPERT_LEVEL) minOf(raw, 4) else raw
+                LevelSpec(lvl, size, t, MIN_REGION, balanceFor(size), 0)
+            }
         }
     }
 

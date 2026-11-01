@@ -2,7 +2,10 @@ package com.threetech.catpuzzle.ui.screens.home
 
 import androidx.compose.runtime.Immutable
 import com.threetech.catpuzzle.domain.engine.DailyRules
+import com.threetech.catpuzzle.domain.model.LevelDetail
+import com.threetech.catpuzzle.domain.model.LevelDifficulty
 import com.threetech.catpuzzle.ui.screens.game.SettingsUi
+import com.threetech.catpuzzle.ui.screens.home.worlds.WorldMapUi
 
 /** What the Daily Challenge button offers. Unlock level lives in [DailyRules.UNLOCK_LEVEL]. */
 sealed interface DailyUi {
@@ -46,4 +49,37 @@ data class HomeUiState(
     val calendar: StreakCalendarUi? = null,
     /** At least one streak milestone reward is ready to claim: small dot on the streak chip. */
     val streakRewardPending: Boolean = false,
+    /** Home world map: current level + stars per won level. */
+    val worldMap: WorldMapUi = WorldMapUi(),
+    /** Open level detail sheet (null = closed). */
+    val levelSheet: LevelSheetUi? = null,
 )
+
+/**
+ * Level detail sheet content. [completed] false = the current, never-won level: no stars and no best values.
+ * [bestScore] / [bestTimeMs] null = show "--".
+ */
+@Immutable
+data class LevelSheetUi(
+    val level: Int,
+    val worldNumber: Int,
+    val boardSize: Int,
+    val difficulty: LevelDifficulty,
+    val completed: Boolean,
+    val stars: Int,
+    val bestScore: Int?,
+    val bestTimeMs: Long?,
+) {
+    companion object {
+        fun from(d: LevelDetail): LevelSheetUi = LevelSheetUi(
+            level = d.level,
+            worldNumber = d.worldNumber,
+            boardSize = d.boardSize,
+            difficulty = d.difficulty,
+            completed = d.completed,
+            stars = d.stars,
+            bestScore = d.bestScore,
+            bestTimeMs = d.bestTimeMs,
+        )
+    }
+}

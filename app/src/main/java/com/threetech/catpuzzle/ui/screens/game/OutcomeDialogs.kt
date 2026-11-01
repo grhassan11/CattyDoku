@@ -19,14 +19,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import com.threetech.catpuzzle.R
 import com.threetech.catpuzzle.domain.ads.RewardedLoadState
 import com.threetech.catpuzzle.ui.components.Button3D
+import com.threetech.catpuzzle.ui.components.Button3DHeight
 import com.threetech.catpuzzle.ui.components.ButtonStyle
 import com.threetech.catpuzzle.ui.components.Confetti
 import com.threetech.catpuzzle.ui.components.DialogScrim
@@ -73,6 +77,7 @@ import com.threetech.catpuzzle.ui.components.IconArt
 import com.threetech.catpuzzle.ui.components.HomePlaceholder
 import com.threetech.catpuzzle.ui.components.IconImage
 import com.threetech.catpuzzle.ui.components.PillButton
+import com.threetech.catpuzzle.ui.components.StatusBarIconsEffect
 import com.threetech.catpuzzle.ui.components.Sunburst
 import com.threetech.catpuzzle.ui.theme.FredokaFamily
 import com.threetech.catpuzzle.ui.theme.GameColors
@@ -95,6 +100,8 @@ internal fun OutcomeOverlay(
     onRetry: () -> Unit,
     /** Lose-screen HOME: leave to Home (the lost level restarts fresh on the next launch). */
     onHome: () -> Unit = {},
+    /** Win-screen HOME icon (left of the next-level CTA); hidden for Daily. */
+    onWinHome: () -> Unit = {},
     /** Daily Challenge: "Daily complete!" headline and a "Back to Home" button ([onNextLevel] must go home). */
     daily: Boolean = false,
     /** Lose-screen revive CTA (rewarded ad). null = rewarded not allowed (ad-free level, no consent, off): single Retry CTA. */
@@ -117,6 +124,7 @@ internal fun OutcomeOverlay(
                 heartsLost = (maxHearts - shown.heartsLeft).coerceAtLeast(0),
                 daily = daily,
                 onNextLevel = onNextLevel,
+                onWinHome = onWinHome,
             )
             is OutcomeUi.Lost -> LoseDialog(
                 maxHearts = maxHearts,
@@ -159,12 +167,14 @@ private fun WinDialog(
     heartsLost: Int,
     daily: Boolean,
     onNextLevel: () -> Unit,
+    onWinHome: () -> Unit,
 ) {
     val headline = stringResource(OutcomeLogic.headline(level, daily).res())
     val message = stringResource(OutcomeLogic.message(level, heartsLost, outcome.hintsUsed, daily).res())
     val mascotDescription = stringResource(R.string.win_mascot_description)
 
-    DialogScrim(Modifier.semantics { paneTitle = headline }, scrimColor = GameColors.WinScrim) {
+    DialogScrim(Modifier.semantics { paneTitle = headline }, scrimColor = GameColors.OutcomeScrim) {
+    StatusBarIconsEffect(lightIcons = true)
         Confetti()
         Column(
             Modifier
@@ -197,7 +207,10 @@ private fun WinDialog(
             ScoreCountUp(score = outcome.score)
             Spacer(Modifier.height(12.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                Modifier.fillMaxWidth().widthIn(max = 360.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 StatChip(
                     label = stringResource(R.string.win_stat_time),
                     value = OutcomeLogic.formatElapsed(outcome.elapsedSeconds),
@@ -210,8 +223,7 @@ private fun WinDialog(
                 StatChip(
                     label = stringResource(R.string.win_stat_mistakes),
                     value = heartsLost.toString(),
-                    iconRes = R.drawable.ic_heart_filled,
-                    iconTint = GameColors.Coral,
+                    iconRes = R.drawable.ic_fish_bone,
                     description = stringResource(R.string.win_stat_mistakes_description, heartsLost),
                 )
                 StatChip(
@@ -223,15 +235,31 @@ private fun WinDialog(
             }
             Spacer(Modifier.height(24.dp))
 
-            PillButton(
-                text = if (daily) {
-                    stringResource(R.string.win_back_home)
-                } else {
-                    stringResource(R.string.win_next_level, level + 1)
-                },
-                onClick = onNextLevel,
-                modifier = Modifier.fillMaxWidth().widthIn(max = 360.dp),
-            )
+            Row(
+                Modifier.fillMaxWidth().widthIn(max = 360.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (!daily) {
+                    Button3D(
+                        onClick = onWinHome,
+                        style = ButtonStyle.Secondary,
+                        contentDescription = stringResource(R.string.win_home),
+                        horizontalPadding = 0.dp,
+                        modifier = Modifier.width(Button3DHeight),
+                    ) {
+                        IconImage(R.drawable.ic_home, size = 28.dp, tint = ButtonStyle.Secondary.content)
+                    }
+                }
+                PillButton(
+                    text = if (daily) {
+                        stringResource(R.string.win_back_home)
+                    } else {
+                        stringResource(R.string.win_next_level, level + 1)
+                    },
+                    onClick = onNextLevel,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }
@@ -388,7 +416,7 @@ private fun ScoreCountUp(score: Int) {
 }
 
 @Composable
-private fun StatChip(
+private fun RowScope.StatChip(
     label: String,
     value: String,
     iconRes: Int?,
@@ -397,14 +425,26 @@ private fun StatChip(
 ) {
     Column(
         Modifier
+            .weight(1f)
+            .heightIn(min = 66.dp)
             .background(GameColors.StatCardBg, RoundedCornerShape(16.dp))
-            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .padding(horizontal = 8.dp, vertical = 8.dp)
             .semantics(mergeDescendants = true) { contentDescription = description },
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Text(label, color = GameColors.StatCardLabel, fontSize = 12.sp)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (iconRes != null) IconImage(iconRes, size = 18.dp, tint = iconTint)
+        Text(label, color = GameColors.StatCardLabel, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Row(
+            Modifier.heightIn(min = 26.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (iconRes != null) {
+                // Fixed 26dp slot so icon size never changes card height.
+                Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
+                    IconImage(iconRes, size = 26.dp, tint = iconTint)
+                }
+            }
             Text(value, color = GameColors.StatCardValue, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
     }
@@ -441,7 +481,8 @@ private fun LoseDialog(
         label = "failedSwayDeg",
     )
 
-    DialogScrim(Modifier.semantics { paneTitle = title }, scrimColor = GameColors.LoseScrim) {
+    DialogScrim(Modifier.semantics { paneTitle = title }, scrimColor = GameColors.OutcomeScrim) {
+    StatusBarIconsEffect(lightIcons = true)
         Column(
             Modifier
                 .fillMaxSize()

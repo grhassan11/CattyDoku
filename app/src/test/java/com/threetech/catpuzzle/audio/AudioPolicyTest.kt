@@ -36,4 +36,13 @@ class AudioPolicyTest {
         assertFalse(AudioPolicy.sfxAllowed(false, false))
         assertFalse(AudioPolicy.sfxAllowed(true, true))
     }
+
+    @Test
+    fun catSfxNeverRepeatsAndStaysInRange() {
+        for (prev in -1..6) for (roll in -20..20) {
+            val n = AudioPolicy.nextCatSfx(prev, 7, roll)
+            assertTrue(n in 0..6)
+            if (prev >= 0) assertTrue(n != prev)
+        }
+    }
 }
