@@ -11,6 +11,8 @@ import com.threetech.catpuzzle.data.local.dao.PuzzleCacheDao
 import com.threetech.catpuzzle.data.local.dao.PurchaseGrantDao
 import com.threetech.catpuzzle.data.local.dao.SavedGameDao
 import com.threetech.catpuzzle.data.local.dao.StreakRewardDao
+import com.threetech.catpuzzle.data.local.dao.SudokuProgressDao
+import com.threetech.catpuzzle.data.local.dao.SudokuSavedGameDao
 import com.threetech.catpuzzle.data.local.entity.DailyStreakEntity
 import com.threetech.catpuzzle.data.local.entity.GrantedPurchaseEntity
 import com.threetech.catpuzzle.data.local.entity.InventoryEntity
@@ -18,6 +20,8 @@ import com.threetech.catpuzzle.data.local.entity.LevelProgressEntity
 import com.threetech.catpuzzle.data.local.entity.PuzzleCacheEntity
 import com.threetech.catpuzzle.data.local.entity.SavedGameEntity
 import com.threetech.catpuzzle.data.local.entity.StreakRewardClaimEntity
+import com.threetech.catpuzzle.data.local.entity.SudokuProgressEntity
+import com.threetech.catpuzzle.data.local.entity.SudokuSavedGameEntity
 
 /**
  * MIGRATION POLICY (read before bumping [version]):
@@ -40,8 +44,10 @@ import com.threetech.catpuzzle.data.local.entity.StreakRewardClaimEntity
         InventoryEntity::class,
         GrantedPurchaseEntity::class,
         StreakRewardClaimEntity::class,
+        SudokuProgressEntity::class,
+        SudokuSavedGameEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class MeowdokuDatabase : RoomDatabase() {
@@ -58,6 +64,10 @@ abstract class MeowdokuDatabase : RoomDatabase() {
     abstract fun purchaseGrantDao(): PurchaseGrantDao
 
     abstract fun streakRewardDao(): StreakRewardDao
+
+    abstract fun sudokuProgressDao(): SudokuProgressDao
+
+    abstract fun sudokuSavedGameDao(): SudokuSavedGameDao
 
     companion object {
         const val NAME = "meowdoku.db"
@@ -90,7 +100,31 @@ abstract class MeowdokuDatabase : RoomDatabase() {
             }
         }
 
-        /** Append MIGRATION_3_4 etc. here, in order. */
-        val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+        /**
+         * v3 -> v4 (Sudoku mode): new tables `sudoku_progress` (per-tier stats) and `sudoku_saved_game` (one active game
+         * per tier). Purely additive; no existing table is touched. The SQL must match Room's generated create statements
+         * for SudokuProgressEntity / SudokuSavedGameEntity exactly (compare with schemas/.../4.json after the first build).
+         */
+        val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `sudoku_progress` " +
+                        "(`tierId` INTEGER NOT NULL, `wins` INTEGER NOT NULL, `plays` INTEGER NOT NULL, " +
+                        "`bestTimeMs` INTEGER, `bestScore` INTEGER NOT NULL, PRIMARY KEY(`tierId`))",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `sudoku_saved_game` " +
+                        "(`tierId` INTEGER NOT NULL, `seed` INTEGER NOT NULL, `generatorVersion` INTEGER NOT NULL, " +
+                        "`rating` INTEGER NOT NULL, `matchedTier` INTEGER NOT NULL, `givens` BLOB NOT NULL, " +
+                        "`solution` BLOB NOT NULL, `cellValues` BLOB NOT NULL, `cellNotes` BLOB NOT NULL, " +
+                        "`undo` BLOB NOT NULL, `elapsedMs` INTEGER NOT NULL, `hearts` INTEGER NOT NULL, " +
+                        "`mistakes` INTEGER NOT NULL, `hintsUsed` INTEGER NOT NULL, `score` INTEGER NOT NULL, " +
+                        "`updatedAt` INTEGER NOT NULL, PRIMARY KEY(`tierId`))",
+                )
+            }
+        }
+
+        /** Append MIGRATION_4_5 etc. here, in order. */
+        val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
     }
 }

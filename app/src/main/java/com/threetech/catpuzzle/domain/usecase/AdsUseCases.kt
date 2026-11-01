@@ -66,6 +66,7 @@ class RecordLevelWon(private val tracker: AdSessionTracker) {
 /**
  * Decide with the pure [InterstitialPolicy], show if allowed, record. Returns true when an ad was shown.
  * Always returns (fail open): the caller continues navigation whatever happens.
+ * [persistLevel] false (Sudoku, which has no level numbers) leaves the persisted Queens lastInterstitialLevel untouched.
  */
 class ShowInterstitialIfAllowed(
     private val consent: ConsentRepository,
@@ -76,7 +77,12 @@ class ShowInterstitialIfAllowed(
     private val adsRemoved: AdsRemovedRepository = NoAdsRemoved,
     private val logger: AdLogger = NoopAdLogger,
 ) {
-    suspend operator fun invoke(trigger: AdTrigger, level: Int, isDaily: Boolean = false): Boolean {
+    suspend operator fun invoke(
+        trigger: AdTrigger,
+        level: Int,
+        isDaily: Boolean = false,
+        persistLevel: Boolean = true,
+    ): Boolean {
         return try {
             val f = flags.flags.first()
             val ctx = InterstitialContext(
@@ -112,7 +118,14 @@ class ShowInterstitialIfAllowed(
             logger.log("showIfReady -> $result (level=$level)")
             if (result == AdShowResult.SHOWN) {
                 tracker.recordShown()
-                safely { flags.update { it.copy(lastInterstitialLevel = level, sessionAdCount = it.sessionAdCount + 1) } }
+                safely {
+                    flags.update {
+                        it.copy(
+                            lastInterstitialLevel = if (persistLevel) level else it.lastInterstitialLevel,
+                            sessionAdCount = it.sessionAdCount + 1,
+                        )
+                    }
+                }
                 true
             } else {
                 false

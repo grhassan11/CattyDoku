@@ -28,12 +28,18 @@ object StreakRewardPolicy {
     /** Hardcoded defaults (only the on/off kill switch is remote). */
     val MILESTONES: List<StreakMilestone> = listOf(
         StreakMilestone(3, listOf(RewardLine(Booster.HINT, 1))),
-        StreakMilestone(7, listOf(RewardLine(Booster.CAT, 2), RewardLine(Booster.MOUSE, 1))),
+        StreakMilestone(
+            7,
+            listOf(RewardLine(Booster.CAT, 2), RewardLine(Booster.HINT, 1), RewardLine(Booster.MOUSE, 1)),
+        ),
         StreakMilestone(
             14,
             listOf(RewardLine(Booster.CAT, 1), RewardLine(Booster.HINT, 2), RewardLine(Booster.MOUSE, 1)),
         ),
-        StreakMilestone(20, listOf(RewardLine(Booster.CAT, 2), RewardLine(Booster.MOUSE, 1))),
+        StreakMilestone(
+            20,
+            listOf(RewardLine(Booster.CAT, 2), RewardLine(Booster.HINT, 2), RewardLine(Booster.MOUSE, 1)),
+        ),
         StreakMilestone(
             30,
             listOf(RewardLine(Booster.CAT, 4), RewardLine(Booster.HINT, 4), RewardLine(Booster.MOUSE, 1)),

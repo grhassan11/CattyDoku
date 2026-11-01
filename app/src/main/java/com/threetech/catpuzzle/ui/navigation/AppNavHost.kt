@@ -27,6 +27,8 @@ import com.threetech.catpuzzle.ui.screens.settings.SettingsRoute
 import com.threetech.catpuzzle.ui.screens.shop.ShopRoute
 import com.threetech.catpuzzle.ui.screens.shop.ShopUiMapper
 import com.threetech.catpuzzle.ui.screens.splash.SplashRoute
+import com.threetech.catpuzzle.ui.screens.sudoku.entry.SudokuEntryRoute
+import com.threetech.catpuzzle.ui.screens.sudoku.game.SudokuGameRoute
 import com.threetech.catpuzzle.ui.screens.tutorial.TutorialRoute
 import com.threetech.catpuzzle.ui.screens.welcome.WelcomeRoute
 import com.threetech.catpuzzle.ui.theme.GameColors
@@ -72,6 +74,17 @@ object Routes {
     /** TEMP 9x9 sample: game screen in in-memory sample mode (arg `sample`, read by GameViewModel). Gallery only. */
     const val SAMPLE_9X9 = "game_sample?sample=true"
     internal const val SAMPLE_9X9_PATTERN = "game_sample?sample={sample}"
+
+    /** Sudoku entry screen (difficulty picker). Opened from the Home Sudoku tab. */
+    const val SUDOKU = "sudoku"
+
+    /** Sudoku game route. Args: `tier` = SudokuTier.name (required path segment), `resume` (default true). */
+    const val SUDOKU_GAME_PATTERN = "sudoku_game/{tier}?resume={resume}"
+    const val ARG_SUDOKU_TIER = "tier"
+    const val ARG_SUDOKU_RESUME = "resume"
+
+    /** [tierId] = SudokuTier.name. [resume] false = the entry just cleared the save and wants a fresh puzzle. */
+    fun sudokuGame(tierId: String, resume: Boolean = true): String = "sudoku_game/$tierId?resume=$resume"
 
     /** Shop opened from a booster dialog: scroll to the matching pack section. */
     fun shopFor(booster: Booster): String = "$SHOP?$ARG_SHOP_SECTION=${ShopUiMapper.argFor(booster)}"
@@ -132,6 +145,30 @@ fun AppNavHost(
                 onOpenStreak = { navController.navigate(Routes.STREAK) { launchSingleTop = true } },
                 onOpenShop = { navController.navigate(Routes.SHOP) { launchSingleTop = true } },
                 onOpenAvatar = { navController.navigate(Routes.NODE_GALLERY) { launchSingleTop = true } }, // TEMP node gallery
+                onOpenSudoku = { navController.navigate(Routes.SUDOKU) { launchSingleTop = true } },
+            )
+        }
+        composable(Routes.SUDOKU) {
+            SudokuEntryRoute(
+                onBack = { navController.popBackStack() }, // system back + Levels tab: back to Home
+                onOpenGame = { tierId, resume -> navController.navigate(Routes.sudokuGame(tierId, resume)) { launchSingleTop = true } },
+            )
+        }
+        composable(
+            route = Routes.SUDOKU_GAME_PATTERN,
+            arguments = listOf(
+                navArgument(Routes.ARG_SUDOKU_TIER) { type = NavType.StringType },
+                navArgument(Routes.ARG_SUDOKU_RESUME) {
+                    type = NavType.BoolType
+                    defaultValue = true
+                },
+            ),
+        ) { entry ->
+            SudokuGameRoute(
+                tierId = entry.arguments?.getString(Routes.ARG_SUDOKU_TIER).orEmpty(),
+                resume = entry.arguments?.getBoolean(Routes.ARG_SUDOKU_RESUME) ?: true,
+                onBack = { navController.popBackStack() },
+                onOpenShop = { booster -> navController.navigate(Routes.shopFor(booster)) { launchSingleTop = true } },
             )
         }
         composable(Routes.NODE_GALLERY) { // TEMP node gallery

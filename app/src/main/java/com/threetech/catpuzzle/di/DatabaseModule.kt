@@ -10,6 +10,8 @@ import com.threetech.catpuzzle.data.local.dao.PuzzleCacheDao
 import com.threetech.catpuzzle.data.local.dao.PurchaseGrantDao
 import com.threetech.catpuzzle.data.local.dao.SavedGameDao
 import com.threetech.catpuzzle.data.local.dao.StreakRewardDao
+import com.threetech.catpuzzle.data.local.dao.SudokuProgressDao
+import com.threetech.catpuzzle.data.local.dao.SudokuSavedGameDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -51,4 +53,10 @@ object DatabaseModule {
 
     @Provides
     fun provideStreakRewardDao(db: MeowdokuDatabase): StreakRewardDao = db.streakRewardDao()
+
+    @Provides
+    fun provideSudokuProgressDao(db: MeowdokuDatabase): SudokuProgressDao = db.sudokuProgressDao()
+
+    @Provides
+    fun provideSudokuSavedGameDao(db: MeowdokuDatabase): SudokuSavedGameDao = db.sudokuSavedGameDao()
 }

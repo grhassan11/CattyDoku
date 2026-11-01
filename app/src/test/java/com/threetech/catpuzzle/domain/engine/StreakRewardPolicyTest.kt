@@ -21,7 +21,8 @@ class StreakRewardPolicyTest {
         assertEquals(listOf(3, 7, 14, 20, 30), StreakRewardPolicy.MILESTONES.map { it.day })
         val all = StreakRewardPolicy.MILESTONES.flatMap { it.rewards }
         assertEquals(9, all.filter { it.booster == Booster.CAT }.sumOf { it.amount })
-        assertEquals(7, all.filter { it.booster == Booster.HINT }.sumOf { it.amount })
+        assertEquals(10, all.filter { it.booster == Booster.HINT }.sumOf { it.amount })
+        assertTrue(StreakRewardPolicy.MILESTONES.all { m -> m.rewards.any { it.booster == Booster.HINT } })
         assertEquals(4, all.filter { it.booster == Booster.MOUSE }.sumOf { it.amount })
     }
 

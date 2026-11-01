@@ -78,6 +78,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.threetech.catpuzzle.R
+import com.threetech.catpuzzle.ui.components.HomeMode
+import com.threetech.catpuzzle.ui.components.HomeModeTabs
 import com.threetech.catpuzzle.domain.ads.NativeAdSlotState
 import com.threetech.catpuzzle.ui.ads.NativeAdSlot
 import com.threetech.catpuzzle.ui.components.homeBackground
@@ -245,6 +247,8 @@ fun HomeScreen(
                 }
                 // Sticky mode tabs: never scroll; drawn over the world backdrop, directly above the native ad slot (own surface).
                 HomeModeTabs(
+                    selected = HomeMode.Levels,
+                    onLevels = {},
                     onSudoku = onSudokuTab,
                     modifier = Modifier.windowInsetsPadding(tabsInsets),
                 )
@@ -263,51 +267,6 @@ fun HomeScreen(
                 .align(Alignment.TopCenter)
                 .windowInsetsPadding(WindowInsets.systemBars)
                 .padding(top = 72.dp, start = 16.dp, end = 16.dp),
-        )
-    }
-}
-
-/**
- * Pinned Levels / Sudoku pill tabs. Levels is always the selected one (this is the Classic home); Sudoku only reports
- * a tap via [onSudoku] (screen not built yet), so selection never moves.
- */
-@Composable
-private fun HomeModeTabs(onSudoku: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-    ) {
-        ModeTab(stringResource(R.string.home_tab_classic), R.drawable.ic_game_classic, selected = true, tealTab = true, onClick = {}, modifier = Modifier.weight(1f))
-        ModeTab(stringResource(R.string.home_tab_sudoku), R.drawable.ic_game_sudoku, selected = false, tealTab = false, onClick = onSudoku, modifier = Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun ModeTab(label: String, @DrawableRes icon: Int, selected: Boolean, tealTab: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    // Full colour always: Levels = Teal, Sudoku = Green. Selection is semantics-only. Button3D owns tap cue.
-    val style = if (tealTab) ButtonStyle.Teal else ButtonStyle.Green
-    Button3D(
-        onClick = onClick,
-        modifier = modifier.defaultMinSize(minWidth = 120.dp),
-        style = style,
-        horizontalPadding = 12.dp, // tight so icon + label fit a 140dp tab on 320dp phones
-        totalHeight = 62.dp, // 56dp face + 6dp lip
-        role = Role.Tab,
-        selected = selected,
-    ) {
-        Image(painterResource(icon), contentDescription = null, modifier = Modifier.size(28.dp))
-        Text(
-            label,
-            color = style.content,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FredokaFamily,
-            maxLines = 1,
-            style = androidx.compose.ui.text.TextStyle(
-                shadow = androidx.compose.ui.graphics.Shadow(Color(0x66000000), Offset(0f, 2f), 3f),
-            ),
         )
     }
 }

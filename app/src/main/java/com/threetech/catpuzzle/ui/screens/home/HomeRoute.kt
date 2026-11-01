@@ -35,6 +35,7 @@ fun HomeRoute(
     onOpenShop: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAvatar: () -> Unit, // TEMP node gallery
+    onOpenSudoku: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
     adsViewModel: HomeAdsViewModel = hiltViewModel(),
@@ -47,7 +48,6 @@ fun HomeRoute(
     val requiredLevel = (state.daily as? DailyUi.Locked)?.requiredLevel ?: DailyRules.UNLOCK_LEVEL
     val lockedText = stringResource(R.string.home_daily_locked_snackbar, requiredLevel)
     val doneText = stringResource(R.string.home_daily_done_snackbar)
-    val sudokuSoonText = stringResource(R.string.home_sudoku_coming_soon)
 
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
         viewModel.refresh()
@@ -85,12 +85,7 @@ fun HomeRoute(
         onOpenSettings = onOpenSettings,
         onOpenShop = onOpenShop,
         onOpenAvatar = onOpenAvatar, // TEMP node gallery
-        onSudokuTab = {
-            scope.launch {
-                snackbarHostState.currentSnackbarData?.dismiss()
-                snackbarHostState.showSnackbar(sudokuSoonText)
-            }
-        },
+        onSudokuTab = onOpenSudoku,
         modifier = Modifier.fillMaxSize(),
         nativeAdSlot = nativeAdSlot,
     )
