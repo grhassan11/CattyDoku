@@ -15,3 +15,6 @@
 # added before first commit
 build/
 .kotlin/
+
+# Firebase client config (local only)
+app/google-services.json
