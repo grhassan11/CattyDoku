@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Catty Doku</string>
+    <string name="app_name">Catty Sudoku</string>
 
     <!-- In-app splash (own wording): one tagline -->
     <string name="splash_loading">Loading</string>
@@ -18,18 +18,16 @@
     <string name="notif_title">Daily Challenge reminders</string>
     <string name="notif_body">Want a friendly nudge when your Daily Challenge is ready? You can change this any time in your phone\'s settings.</string>
     <string name="notif_allow">Allow</string>
-    <string name="notif_not_now">Not now</string>
+    <string name="notif_not_now">Not Now</string>
 
     <!-- Home screen -->
     <string name="home_wordmark_line1">CATTY</string>
     <string name="home_wordmark_line2">DOKU</string>
-    <string name="home_play">Play</string>
-    <string name="home_level_button">Level %1$d</string>
     <string name="home_daily_challenge">Daily Challenge</string>
     <string name="home_daily_locked_description">Daily Challenge, locked. Unlocks at Level %1$d</string>
     <string name="home_daily_locked_hint">Unlocks at Level %1$d</string>
     <string name="home_daily_locked_snackbar">Reach Level %1$d to unlock the Daily Challenge</string>
-    <string name="home_daily_done">Done today ✓</string>
+    <string name="home_daily_done">Done Today ✓</string>
     <string name="home_daily_done_description">Daily Challenge, done today</string>
     <string name="home_daily_done_snackbar">Daily done! A new puzzle arrives tomorrow</string>
     <string name="home_streak_open_description">Daily streak: %1$d. Open streak calendar</string>
@@ -99,14 +97,12 @@
     <string name="streak_dot_daily">%1$s, daily challenge done</string>
     <string name="streak_dot_played">%1$s, played</string>
     <string name="streak_dot_missed">%1$s, not played</string>
-    <string name="home_streak_description">Daily streak: %1$d</string>
     <string name="home_streak_open_reward_description">Daily streak: %1$d. Reward ready to claim. Open streak calendar</string>
     <!-- Streak milestone rewards -->
     <string name="streak_rewards_title">Streak rewards</string>
     <string name="streak_rewards_progress">Day %1$d of %2$d</string>
     <string name="streak_reward_day">Day %1$d</string>
     <string name="streak_reward_claim">Claim</string>
-    <string name="streak_reward_claimed">Claimed</string>
     <string name="streak_reward_claim_description">Claim day %1$d reward: %2$s</string>
     <string name="streak_reward_node_locked">Day %1$d reward, locked: %2$s</string>
     <string name="streak_reward_node_claimable">Day %1$d reward, ready to claim: %2$s</string>
@@ -154,7 +150,6 @@
     <string name="home_jump_to_current">Jump to current level</string>
     <string name="home_tab_classic">Levels</string>
     <string name="home_tab_sudoku">Sudoku</string>
-    <string name="home_sudoku_coming_soon">Sudoku coming soon</string>
     <string name="booster_mouse">Mouse, %1$d left</string>
     <string name="booster_no_mouse">No mice left</string>
     <string name="booster_locked">Unlocks at level %1$d</string>
@@ -172,7 +167,7 @@
     <string name="rate_title">Enjoying the game?</string>
     <string name="rate_subtitle">Tap a star to rate your experience</string>
     <string name="rate_submit">Submit</string>
-    <string name="rate_not_now">Not now</string>
+    <string name="rate_not_now">Not Now</string>
     <string name="rate_submitted">Rating Submitted</string>
     <plurals name="rate_star_description">
         <item quantity="one">%d star</item>
@@ -208,7 +203,7 @@
     <string name="hint_rule_column">Each column has exactly one cat.</string>
     <string name="hint_rule_region">Each color has exactly one cat.</string>
     <string name="hint_rule_touch">Cats can\'t touch, even diagonally.</string>
-    <string name="hint_overlay_got_it">Got it</string>
+    <string name="hint_overlay_got_it">Got It</string>
     <string name="hint_overlay_dismiss">Close hint</string>
     <string name="hint_overlay_description">Hint. %1$s</string>
 
@@ -288,7 +283,7 @@
     <!-- Loading / failure -->
     <string name="game_loading">Preparing level…</string>
     <string name="game_load_failed">Could not prepare this level.</string>
-    <string name="game_retry">Try again</string>
+    <string name="game_retry">Try Again</string>
 
     <!-- Win dialog (own wording) -->
     <string name="win_headline_first">First win!</string>
@@ -321,14 +316,11 @@
     <!-- Lose dialog -->
     <string name="lose_title">Out of lives</string>
     <string name="lose_message">The cats are still hiding. Give it another go!</string>
-    <string name="lose_retry">Retry</string>
-    <string name="lose_restart_level">Restart Level</string>
+    <string name="lose_retry">Restart</string>
     <string name="lose_watch_ad">Watch Ad to Continue</string>
     <string name="lose_home">Home</string>
     <string name="lose_fish_bone_description">A fish skeleton: out of lives</string>
     <string name="lose_watch_ad_description">Watch an ad to get one more life and keep playing</string>
-    <string name="lose_cat_description">A sad cat</string>
-    <string name="lose_no_lives_description">No lives left</string>
 
     <!-- Settings dialog -->
     <string name="settings_title">Settings</string>
@@ -351,29 +343,31 @@
     <string name="settings_daily_reminders_hint">A meow every evening at 8 PM</string>
     <string name="settings_feedback">Feedback</string>
     <string name="settings_version">Version</string>
-    <string name="settings_restart">Restart</string>
-    <string name="settings_privacy">Privacy settings</string>
+    <string name="settings_privacy">Privacy Settings</string>
     <string name="settings_feedback_subject">%1$s feedback</string>
     <string name="settings_feedback_no_app">No email app found</string>
 
-    <!-- Tutorial (own wording). **word** = red accent word. -->
-    <string name="tutorial_place_first">Double-tap a cell to place a **cat**. This color has only one cell, so the cat goes here.</string>
-    <string name="tutorial_one_per_color">Great! Every color holds **exactly one cat**.</string>
-    <string name="tutorial_row_column">Cats can\'t share a **row or column**. Tap the empty cells in this row to cross them out.</string>
-    <string name="tutorial_no_touch">Cats **can\'t touch**, not even diagonally. Swipe across these cells to cross them all out.</string>
-    <string name="tutorial_last_spot">Only one cell is left in this row. Double-tap to place the **cat**.</string>
-    <string name="tutorial_hearts">You have **three lives**. A cat in the wrong spot costs one. Crossing out cells is always free.</string>
-    <string name="tutorial_try_hint">Stuck? Tap the **hint** button for a nudge.</string>
-    <string name="tutorial_hint_shown">The hint shows where a cat belongs. Double-tap the **glowing cell**.</string>
-    <string name="tutorial_try_cat_booster">One cat left. The **cat booster** places it for you. Give it a tap!</string>
-    <string name="tutorial_done">You did it! Every cat has a home. Ready for real puzzles?</string>
-    <string name="tutorial_got_it">Got it!</string>
-    <string name="tutorial_lets_play">Let\'s play</string>
-    <string name="tutorial_skip">Skip</string>
-    <string name="tutorial_skip_description">Skip tutorial</string>
+    <!-- Tutorial. **word** = red accent word, ~~word~~ = word in the step's region colour. -->
+    <string name="tutorial_place_first">**Double-tap** to place the cat on a cell.</string>
+    <string name="tutorial_one_per_color">Well done!\nOnly one cat per **color**.</string>
+    <string name="tutorial_row_column">Nice!\nCats can\'t be in the **same row or column**.</string>
+    <string name="tutorial_rose_left">Only the last ~~rose cell~~ remains\n**Double-tap** to place a cat</string>
+    <string name="tutorial_adjacent">No cats can be **adjacent** to each other.</string>
+    <string name="tutorial_blue_left">Only the last ~~blue cell~~ remains\n**Double-tap** to place a cat</string>
+    <string name="tutorial_row_done">No more cats in this row!</string>
+    <string name="tutorial_find_last">Find the **last cat**!</string>
+    <string name="tutorial_find_last_sub">Double-tap the empty cell to place it.</string>
+    <string name="tutorial_excellent">Excellent! You\'ve mastered the rules!</string>
+    <string name="tutorial_bottom_tap_empty">Tap empty cells to exclude them.</string>
+    <string name="tutorial_bottom_swipe">Swipe across these cells to exclude them.</string>
+    <string name="tutorial_hint_pill">Tap here for a hint.</string>
+    <string name="tutorial_got_it">Got It!</string>
+    <string name="tutorial_start_game">Start Game</string>
+    <string name="tutorial_replay">Replay Tutorial</string>
+    <string name="tutorial_pane_title">Tutorial</string>
+    <string name="tutorial_skip">Skip Tutorial</string>
     <string name="tutorial_notice_wrong">Not quite. Follow the finger!</string>
     <string name="tutorial_notice_tap_twice">Tap twice, quickly.</string>
-    <string name="tutorial_progress">Tutorial step %1$d of %2$d</string>
 
     <!-- Shop (own wording) -->
     <string name="shop_title">Shop</string>
@@ -399,7 +393,7 @@
     <string name="shop_cats_title">Cat packs</string>
     <string name="shop_cats_subtitle">Place a cat wherever you are stuck</string>
     <string name="shop_hints_title">Hint packs</string>
-    <string name="shop_hints_subtitle">A gentle nudge when the board gets tricky</string>
+    <string name="shop_hints_subtitle">Hints can be used in Levels &amp; Sudoku both</string>
     <string name="shop_mice_title">Mouse packs</string>
     <string name="shop_mice_subtitle">Marks three empty spots for you</string>
     <string name="shop_pack_cats">%1$d Cats</string>
@@ -410,7 +404,7 @@
     <string name="shop_footer_terms">Terms</string>
     <string name="shop_footer_privacy">Privacy</string>
     <string name="shop_unavailable">The store is not available right now. Prices will appear when it is back.</string>
-    <string name="shop_try_again">Try again</string>
+    <string name="shop_try_again">Try Again</string>
     <string name="shop_link_failed">Couldn\'t open the link. Please try again later.</string>
     <string name="shop_msg_cats_added">%1$d cats added</string>
     <string name="shop_msg_hints_added">%1$d hints added</string>
@@ -435,9 +429,9 @@
     <string name="world_node_done">Level %1$d, completed, %2$d of 3 stars. Tap for details</string>
     <string name="world_node_current">Level %1$d, current level. Tap for details</string>
     <string name="world_node_locked">Level %1$d, locked</string>
-    <string name="world_tail_title">More worlds coming</string>
-    <string name="world_tail_description">More worlds are coming soon</string>
-    <string name="home_node_play_tag">PLAY</string>
+    <string name="world_tail_title">Beat the levels to unlock new Worlds</string>
+    <string name="world_tail_description">Beat the levels to unlock new Worlds</string>
+    <string name="home_node_play_tag">Play</string>
 
     <!-- Home level details sheet -->
     <string name="level_sheet_description">Level %1$d details</string>
@@ -457,8 +451,7 @@
     <string name="level_sheet_play">Play</string>
     <string name="level_sheet_replay">Replay</string>
     <!-- Sudoku entry -->
-    <string name="sudoku_entry_title">CLASSIC SUDOKU</string>
-    <string name="sudoku_entry_subtitle">Select a difficulty below, then tap Play</string>
+    <string name="sudoku_entry_title">CATTY SUDOKU</string>
     <string name="sudoku_back">Back</string>
     <string name="sudoku_choose_difficulty">Choose your difficulty</string>
     <string name="sudoku_tier_easy">Easy</string>
@@ -478,19 +471,19 @@
     <string name="sudoku_stat_best_time">Best time</string>
     <string name="sudoku_stat_best_score">Best score</string>
     <string name="sudoku_stat_wins">Wins</string>
-    <string name="sudoku_continue">CONTINUE</string>
+    <string name="sudoku_continue">Continue</string>
     <string name="sudoku_continue_detail">%1$s - %2$s</string>
-    <string name="sudoku_new_game">NEW GAME - %1$s</string>
+    <string name="sudoku_new_game">New Game</string>
     <string name="sudoku_new_game_confirm_title">Start a new game?</string>
     <string name="sudoku_new_game_confirm_body">Your saved %1$s game will be discarded.</string>
-    <string name="sudoku_new_game_confirm_yes">New game</string>
-    <string name="sudoku_new_game_confirm_no">Keep playing</string>
+    <string name="sudoku_new_game_confirm_yes">New Game</string>
+    <string name="sudoku_new_game_confirm_no">Keep Playing</string>
     <!-- Sudoku game screen -->
     <string name="sudoku_game_title">%1$s - %2$dx%2$d</string>
     <string name="sudoku_game_locked">That difficulty is still locked.</string>
     <string name="sudoku_game_failed">Could not start the puzzle. Try again.</string>
-    <string name="sudoku_help">How to play</string>
-    <string name="sudoku_restart">Restart puzzle</string>
+    <string name="sudoku_help">How to Play</string>
+    <string name="sudoku_restart">Restart Puzzle</string>
     <string name="sudoku_stat_score">Score</string>
     <string name="sudoku_stat_time">Time</string>
     <string name="sudoku_stat_mistakes">Mistakes</string>
@@ -498,6 +491,8 @@
     <string name="sudoku_pause">Pause</string>
     <string name="sudoku_resume">Resume</string>
     <string name="sudoku_hearts_description">%1$d of %2$d hearts left</string>
+    <string name="sudoku_score_description">Score %1$d</string>
+    <string name="sudoku_time_description">Time %1$s</string>
     <string name="sudoku_undo">Undo</string>
     <string name="sudoku_undo_description">Undo last move</string>
     <string name="sudoku_notes">Notes</string>
@@ -522,18 +517,52 @@
     <string name="sudoku_restart_title">Restart %1$s?</string>
     <string name="sudoku_restart_body">The board resets and your time starts over</string>
     <string name="sudoku_restart_confirm">Restart</string>
-    <string name="sudoku_keep_playing">Keep playing</string>
-    <string name="sudoku_help_title">How to play</string>
-    <string name="sudoku_help_body">Fill the grid so every row, every column and every box holds each digit exactly once.\n\nTap a cell, then a number. Turn Notes on to pencil small candidates. A wrong digit costs a heart; lose all three and the puzzle ends.</string>
-    <string name="sudoku_help_ok">Got it</string>
+    <string name="sudoku_keep_playing">Keep Playing</string>
     <string name="sudoku_win_title">Puzzle solved!</string>
     <string name="sudoku_win_best_time">New best time!</string>
     <string name="sudoku_win_best_score">New best score!</string>
     <string name="sudoku_win_unlocked">Unlocked: %1$s</string>
-    <string name="sudoku_win_next">Next puzzle</string>
+    <string name="sudoku_win_next">Next Puzzle</string>
     <string name="sudoku_win_done">Back</string>
     <string name="sudoku_over_title">Out of hearts</string>
-    <string name="sudoku_over_body">%1$d mistakes this time. Try the same puzzle again?</string>
-    <string name="sudoku_over_retry">Retry</string>
+    <plurals name="sudoku_over_body">
+        <item quantity="one">%1$d mistake this time</item>
+        <item quantity="other">%1$d mistakes this time</item>
+    </plurals>
+    <string name="sudoku_over_restart">Restart</string>
     <string name="sudoku_over_quit">Quit</string>
+
+    <!-- Sudoku tutorial (2 lessons, fixed 9x9 boards) -->
+    <string name="sudoku_tut_lesson_title">Lesson %1$d · %2$s</string>
+    <string name="sudoku_tut_lesson_1_name">The Rules</string>
+    <string name="sudoku_tut_lesson_2_name">Solving Tricks</string>
+    <string name="sudoku_tut_skip">Skip</string>
+    <string name="sudoku_tut_success">Excellent!</string>
+    <string name="sudoku_tut_card_intro_1">Learn Sudoku in 3 quick moves!</string>
+    <string name="sudoku_tut_card_intro_2">Learn how the pros find numbers!</string>
+    <string name="sudoku_tut_card_done_1">Great job, you know all 3 rules!</string>
+    <string name="sudoku_tut_card_done_2">Great job, you know both tricks!</string>
+    <string name="sudoku_tut_row_tap">Rule 1 — Each ROW must contain the numbers 1–%1$d, without repetition.\nThis row is missing one number. Tap the empty cell!</string>
+    <string name="sudoku_tut_row_digit">This row already has every number except %1$d. Tap %1$d!</string>
+    <string name="sudoku_tut_col_tap">Rule 2 — Each COLUMN must contain the numbers 1–%1$d, without repetition.\nThis column is missing one number. Tap the empty cell!</string>
+    <string name="sudoku_tut_col_digit">This column already has every number except %1$d. Tap %1$d!</string>
+    <string name="sudoku_tut_block_tap">Rule 3 — Each BLOCK (%1$d rows × %2$d columns, framed by the thick lines) must contain the numbers 1–%3$d, without repetition.\nFind the empty cell in this block and tap it!</string>
+    <string name="sudoku_tut_block_digit">Check the block — only %1$d is missing. Tap %1$d!</string>
+    <string name="sudoku_tut_last_tap">Trick 1 — Last Remaining Cell.\nA %1$d in a cell\'s row or column blocks it: the × cells can\'t be %1$d. Only ONE cell in this block can — tap it!</string>
+    <string name="sudoku_tut_cross_tap">Trick 2 — Cross-Hatching.\nThe %1$ds in the rows and columns crossing this block rule out the × cells. Tap the only cell left for %1$d!</string>
+    <string name="sudoku_tut_trick_digit">Found it — nothing blocks this cell.\nTap %1$d!</string>
+    <string name="sudoku_tut_intro_title_1">Ready for your first Sudoku lesson?</string>
+    <string name="sudoku_tut_intro_body_1">Learn the 3 rules by playing — it only takes a minute!</string>
+    <string name="sudoku_tut_intro_title_2">Ready for real solving tricks?</string>
+    <string name="sudoku_tut_intro_body_2">Learn how the pros find numbers — no guessing needed!</string>
+    <string name="sudoku_tut_start_lesson">Start Lesson</string>
+    <string name="sudoku_tut_skip_all">I Know How to Play Sudoku</string>
+    <string name="sudoku_tut_skip_tricks">Skip the Tricks</string>
+    <string name="sudoku_tut_done_title_1">Lesson Complete!</string>
+    <string name="sudoku_tut_done_body_1">You know all 3 rules:\n✓ 1–%1$d in every row\n✓ 1–%1$d in every column\n✓ 1–%1$d in every block</string>
+    <string name="sudoku_tut_done_title_2">You\'ve Mastered the Tricks!</string>
+    <string name="sudoku_tut_done_body_2">✓ Last Remaining Cell\n✓ Cross-Hatching\n\nUse them to solve without guessing. Happy solving!</string>
+    <string name="sudoku_tut_next_tricks">Next: Solving Tricks</string>
+    <string name="sudoku_tut_start_playing">Start Playing!</string>
+
 </resources>

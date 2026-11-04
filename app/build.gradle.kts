@@ -10,16 +10,16 @@ plugins {
 }
 
 android {
-    // PLACEHOLDER: namespace + applicationId (rename together with package dirs)
-    namespace = "com.threetech.catpuzzle"
+    // namespace and applicationId are both com.tm.meow.sudoku.puzzle
+    namespace = "com.tm.meow.sudoku.puzzle"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.threetech.catpuzzle"
+        applicationId = "com.tm.meow.sudoku.puzzle"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         // ---- Ads / UMP (phase 9). Source holds NO real IDs. ----
         // Debug = Google official TEST IDs. Release = PLACEHOLDERS (all-zero publisher id) until the user supplies the
@@ -75,6 +75,11 @@ android {
         unitTests.isReturnDefaultValues = true
     }
 
+    androidResources {
+        // App ships English only: drop library translations (Material, Play Services, Firebase, ...) from the APK/AAB.
+        localeFilters += "en"
+    }
+
     packaging {
         resources {
             // License/notice duplicates + coroutines debug probes: dead weight in the APK.
@@ -92,7 +97,7 @@ android {
 
 // Baseline Profile (generate: ./gradlew :app:generateBaselineProfile with a device attached, see :baselineprofile).
 // The plugin adds nonMinifiedRelease + benchmarkRelease via initWith(release) (inherits placeholder ad ids = ads off).
-// Normal builds do not need a generated profile: without src/main/baseline-prof.txt the build is unchanged.
+// Normal builds do not need a generated profile: without a generated profile (app/src/main/generated/baselineProfiles/) the build is unchanged.
 baselineProfile {
     // Dex layout optimisation from the startup profile (no-op until the profile is generated).
     dexLayoutOptimization = true

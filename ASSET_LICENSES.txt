@@ -1,7 +1,7 @@
-MEOWDOKU - ASSET LICENSE LOG
+CATTY SUDOKU - ASSET LICENSE LOG
 ============================
 Scope: icon art integrated in phase 5 (res/drawable, res/drawable-nodpi).
-Source folder (all rows): D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Icons
+Source folder (all rows): D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\Icons
 Status (all rows): Original / licensed (user-provided)
 Provenance beyond "user-provided" is not recorded here. User to add per-icon source / license
 detail below if the store listing or a legal review ever needs it.
@@ -70,7 +70,7 @@ Audio
   Used for:  cat placed / cat booster SFX
 
   Added 2026-10-26 (user-supplied game SFX)
-  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Audios
+  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\Audios
   Source / license (all 5 rows): user-provided, provenance unknown - user to confirm license
   File (app/src/main/res/raw/)  Format / length                    Used for
   sfx_wrong_placement.mp3       MP3 stereo 44.1 kHz, 1.6 s         cat placed on non-solution cell
@@ -80,7 +80,7 @@ Audio
   sfx_blocked.ogg               Vorbis mono 44.1 kHz, 1.0 s        refused action (no charges, locked cell, tutorial wrong)
 
 App icon (added 2026-10-26)
-  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\App Icon\AppIcons
+  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\App Icon\AppIcons
   Status: Original / licensed (user-provided)
   File (app/src/main/res/)                    Source file                       Used for
   drawable-nodpi/ic_launcher_foreground.png   android/adaptive-foreground.png   adaptive icon foreground (1024x1024) + splash icon (via drawable/ic_splash_icon.xml inset)
@@ -88,27 +88,27 @@ App icon (added 2026-10-26)
   (playstore.png is Play Console only, not bundled)
 
 ic_mouse (added 2026-10-29)
-  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Icons
+  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\Icons
   Status: Original / licensed (user-provided)
   File (app/src/main/res/)      Source file    Used for
   drawable-nodpi/ic_mouse.png   ic_mouse.png   Mouse booster icon: booster dialog, Shop section header (gradient SVG -> PNG, same as ic_cat_*/ic_yarn_ball)
   drawable-nodpi/ic_mouse_locked.png   ic_mouse_locked.png   Locked mouse booster slot in the game booster row (greyed gradient SVG -> PNG, same as ic_mouse)
 
 ic_cat_1..5 replaced and ic_cat_6..10 added (2026-10-29, 10-cat set)
-  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Icons
+  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\Icons
   Status: Original / licensed (user-provided)
   File (app/src/main/res/)            Source file     Used for
   drawable-nodpi/ic_cat_1..10.png     ic_cat_1..10.png  512x512 gradient art; per-region placed cat (CatVariants.UNIQUE=10) + win-dialog mascots
   (gradient SVG -> PNG, same as ic_mouse/ic_yarn_ball; ic_cat_N.svg kept in the source folder only)
 
 ic_fish_bone_level_failed (added 2026-10-29)
-  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Icons
+  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\Icons
   Status: Original / licensed (user-provided)
   File (app/src/main/res/)                          Source file                       Used for
   drawable-nodpi/ic_fish_bone_level_failed.png      ic_fish_bone_level_failed.png     Level Failed (lose) dialog hero art (gradient SVG -> PNG, same as ic_cat_*/ic_mouse)
 
 ic_cart_store (added 2026-10-29)
-  Source folder: D:TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Design\Icons
+  Source folder: D:TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\Icons
   Status: Original / licensed (user-provided)
   File (app/src/main/res/)                    Source file         Used for
   drawable-nodpi/ic_cart_store.png            ic_cart_store.png   Home screen Shop button (under the avatar), full-colour, untinted (512x512 SVG -> PNG, same as ic_mouse)
@@ -133,7 +133,7 @@ ic_star_island (added 2026-10-29)
 
 AUDIO (added 2026-10-29)
 ------------------------
-Converted to OGG Vorbis in app/src/main/res/raw/ (originals kept in Projects\Meowdoku\Assets\Audios & Sounds\Chosen).
+Converted to OGG Vorbis in app/src/main/res/raw/ (originals kept in Projects\Catty Sudoku\Assets\Audios & Sounds\Chosen).
 
 music_track_1.ogg  (stereo 44.1 kHz, ~q3)
   Source file: andriih-sweet-cat-dog-animal-music-614072.mp3
@@ -168,7 +168,7 @@ sfx_mouse.ogg  (mono 44.1 kHz)
 
 CAT PLACEMENT MEOWS (added 2026-11-01)
 --------------------------------------
-Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Meowdoku\Assets\Audios & Sounds\Chosen\Meow Sounds
+Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Assets\Audios & Sounds\Chosen\Meow Sounds
 Used for: one random meow layered on the correct-placement chime (SfxPlayer, sfx_cat_1..7). Mixkit WAVs converted to mono 44.1 kHz OGG Vorbis (q3), leading silence trimmed, loudness-normalised.
 
 sfx_cat_1.ogg  (unmodified copy of Meow.ogg; mono 44.1 kHz, 0.51 s)

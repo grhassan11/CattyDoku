@@ -23,6 +23,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Meowdoku"
+rootProject.name = "Catty Sudoku"
 include(":app")
 include(":baselineprofile")

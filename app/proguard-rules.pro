@@ -1,6 +1,6 @@
-# Cat Puzzle R8 rules (full mode, AGP default). Hilt, Room, Compose, DataStore, Coroutines, Billing, Firebase, UMP, GMA Next-Gen,
+# Catty Sudoku R8 rules (full mode, AGP default). Hilt, Room, Compose, DataStore, Coroutines, Billing, Firebase, UMP, GMA Next-Gen,
 # Unity Ads and Meta Audience Network ship their own consumer rules: do NOT re-keep their packages here.
-# No blanket keeps of com.threetech.** : the app has no reflection on its own classes (audited: no Class.forName / getDeclared* /
+# No blanket keeps of com.tm.meow.sudoku.puzzle.** : the app has no reflection on its own classes (audited: no Class.forName / getDeclared* /
 # getIdentifier / Gson / Moshi / kotlinx.serialization). Persisted ids use StableIds (explicit ints / string keys), not enum
 # name() or ordinal, so obfuscation cannot change stored data.
 

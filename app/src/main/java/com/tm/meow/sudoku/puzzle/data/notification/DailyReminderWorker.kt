@@ -1,0 +1,58 @@
+package com.tm.meow.sudoku.puzzle.data.notification
+
+import android.content.Context
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
+import com.tm.meow.sudoku.puzzle.domain.config.RemoteConfigRepository
+import com.tm.meow.sudoku.puzzle.domain.engine.DailyReminderPolicy
+import com.tm.meow.sudoku.puzzle.domain.notification.DailyReminderScheduler
+import com.tm.meow.sudoku.puzzle.domain.repository.ProgressRepository
+import com.tm.meow.sudoku.puzzle.domain.repository.SettingsRepository
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import java.time.LocalDateTime
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface DailyReminderEntryPoint {
+    fun dailySettings(): SettingsRepository
+    fun dailyRemoteConfig(): RemoteConfigRepository
+    fun dailyNotifier(): DailyReminderNotifier
+    fun dailyScheduler(): DailyReminderScheduler
+    fun dailyProgress(): ProgressRepository
+}
+
+/** Fire-time check. Gates re-read here: Settings toggle + Remote Config kill switch (permission checked by the notifier). */
+class DailyReminderWorker(
+    context: Context,
+    params: WorkerParameters,
+) : CoroutineWorker(context, params) {
+
+    override suspend fun doWork(): Result {
+        val ep = EntryPointAccessors.fromApplication(applicationContext, DailyReminderEntryPoint::class.java)
+        try {
+            val enabled = ep.dailySettings().settings.first().dailyReminders
+            val remote = ep.dailyRemoteConfig().current().dailyReminderEnabled
+            val now = LocalDateTime.now()
+
+            if (DailyReminderPolicy.shouldNotify(now.hour * 60 + now.minute, enabled, remote)) {
+                // Same source as the Home Daily lock (ObserveDailyStatus): highest completed level.
+                val highest = ep.dailyProgress().observeAll().first().maxOfOrNull { it.levelIndex } ?: 0
+                ep.dailyNotifier().show(now.toLocalDate().toEpochDay(), DailyReminderPolicy.mentionsDaily(highest))
+            }
+            // Always book the next 20:00 while enabled: the chain never ends.
+            if (DailyReminderPolicy.shouldSchedule(enabled, remote)) {
+                ep.dailyScheduler().schedule(DailyReminderPolicy.delayUntilNextFireMs(now), afterRun = true)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            // best effort: the app-start observer re-books on next launch
+        }
+        return Result.success()
+    }
+}

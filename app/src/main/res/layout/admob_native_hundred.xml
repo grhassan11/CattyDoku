@@ -49,6 +49,24 @@
                 android:gravity="center_vertical|start"
                 android:orientation="horizontal">
 
+                <!-- "Ad" attribution badge: fixed 20x20dp, start of the title row (left of headline), static, always visible. -->
+                <TextView
+                    android:id="@+id/ad_attribute_txtv"
+                    android:fontFamily="@font/fredoka"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_native_ad_badge"
+                    android:contentDescription="@string/ad_badge_description"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:padding="0dp"
+                    android:text="@string/ad_badge"
+                    android:textColor="@color/native_ad_badge_text"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
                 <TextView
                     android:id="@+id/ad_headline"
                     android:fontFamily="@font/fredoka"
@@ -59,32 +77,10 @@
                     android:gravity="center_vertical|start"
                     android:includeFontPadding="false"
                     android:maxLines="1"
-                    android:paddingStart="8dp"
+                    android:paddingStart="6dp"
                     android:paddingEnd="5dp"
                     android:textColor="@color/native_ad_headline"
                     android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <!-- "Ad" attribution badge: end of the title row, always visible. -->
-                <TextView
-                    android:id="@+id/ad_attribute_txtv"
-                    android:fontFamily="@font/fredoka"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_native_ad_badge"
-                    android:contentDescription="@string/ad_badge_description"
-                    android:gravity="center"
-                    android:includeFontPadding="false"
-                    android:maxLines="1"
-                    android:minWidth="20dp"
-                    android:minHeight="18dp"
-                    android:paddingStart="6dp"
-                    android:paddingTop="1dp"
-                    android:paddingEnd="6dp"
-                    android:paddingBottom="1dp"
-                    android:text="@string/ad_badge"
-                    android:textColor="@color/native_ad_badge_text"
-                    android:textSize="11sp"
                     android:textStyle="bold" />
             </LinearLayout>
 

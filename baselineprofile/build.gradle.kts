@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.threetech.catpuzzle.baselineprofile"
+    namespace = "com.tm.meow.sudoku.puzzle.baselineprofile"
     compileSdk = 36
 
     defaultConfig {
