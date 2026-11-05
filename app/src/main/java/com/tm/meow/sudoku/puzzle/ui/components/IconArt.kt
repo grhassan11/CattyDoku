@@ -3,10 +3,16 @@ package com.tm.meow.sudoku.puzzle.ui.components
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
+import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -15,8 +21,8 @@ import com.tm.meow.sudoku.puzzle.domain.model.AnimalSet
 
 /**
  * User-supplied icon art (Design\Icons, see ASSET_LICENSES.txt). Which icon plays which role is
- * decided HERE, in one place. ic_cat_1..10, ic_yarn_ball, ic_mouse, ic_mouse_locked and ic_fish_bone_level_failed are PNGs (drawable-nodpi, gradients
- * could not be converted); everything else is a VectorDrawable.
+ * decided HERE, in one place. ic_cat_1..10, ic_animals_1..10, ic_dog_1..10 and ic_ocean_animal_1..10, ic_fish_life and ic_fishbone are WebPs (drawable-nodpi, 680 px for animals/dogs/ocean/fish); ic_yarn_ball, ic_mouse, and ic_mouse_locked are PNGs (drawable-nodpi, gradients
+ * could not be converted); everything else (incl. the one-colour cat/dog silhouettes, tinted via ColorFilter) is a VectorDrawable.
  * Decorative: content descriptions live on the clickable / semantic parent.
  */
 object IconArt {
@@ -58,8 +64,23 @@ object IconArt {
     /** One-colour dog head used as a tinted silhouette (unsolved regions on Dogs boss levels). */
     @DrawableRes val DogSilhouette: Int = R.drawable.ic_dogs_flat_black
 
-    /** Lose-dialog hero: big fish skeleton (PNG, gradient SVG). */
-    @DrawableRes val LevelFailed: Int = R.drawable.ic_fish_bone_level_failed
+    /** A life (happy orange fish, WebP 680 px, drawable-nodpi). Render small via [DownsampledIconImage]. */
+    @DrawableRes val FishLife: Int = R.drawable.ic_fish_life
+
+    /** A lost life / mistake (sad grey fish skeleton, WebP 680 px, drawable-nodpi). Render via [DownsampledIconImage] (stat chip, HUD spent life). */
+    @DrawableRes val FishBone: Int = R.drawable.ic_fishbone
+
+    /** Sad crying cat face (WebP ~1254 px, drawable-nodpi, colour). ONLY for the Out of Lives / Out of Hearts hero ([LoseScreenLayout]). Render via [DownsampledIconImage], never tinted. */
+    @DrawableRes val CatSad: Int = R.drawable.ic_cat_sad_level_failed
+
+    /** Trophy (WebP, drawable-nodpi, colour). Render via [DownsampledIconImage], never tinted. */
+    @DrawableRes val Trophy: Int = R.drawable.ic_trophy
+
+    /** Remove-ads (WebP, drawable-nodpi, colour). Render via [DownsampledIconImage], never tinted. Used by the Home Remove Ads badge. */
+    @DrawableRes val RemoveAds: Int = R.drawable.ic_remove_ads
+
+    /** Store / shop (WebP, drawable-nodpi, colour). Render via [DownsampledIconImage], never tinted. */
+    @DrawableRes val Store: Int = R.drawable.ic_store
 
     /** Win-dialog mascots; rotate by level so repeat wins feel less static. */
     private val mascots: List<Int> = listOf(
@@ -76,22 +97,22 @@ object IconArt {
     )
 
     private val animals: List<Int> = listOf(
-        R.drawable.ic_animals_butterfly, R.drawable.ic_animals_chick, R.drawable.ic_animals_elephant,
-        R.drawable.ic_animals_fox, R.drawable.ic_animals_hippo, R.drawable.ic_animals_ladybug,
-        R.drawable.ic_animals_porcupine, R.drawable.ic_animals_polar_bear, R.drawable.ic_animals_snail,
-        R.drawable.ic_animals_snake, R.drawable.ic_animals_walrus,
+        R.drawable.ic_animals_1, R.drawable.ic_animals_2, R.drawable.ic_animals_3, R.drawable.ic_animals_4,
+        R.drawable.ic_animals_5, R.drawable.ic_animals_6, R.drawable.ic_animals_7, R.drawable.ic_animals_8,
+        R.drawable.ic_animals_9, R.drawable.ic_animals_10,
     )
     private val dogs: List<Int> = listOf(
-        R.drawable.ic_dogs_1, R.drawable.ic_dogs_2, R.drawable.ic_dogs_3, R.drawable.ic_dogs_4, R.drawable.ic_dogs_5,
-        R.drawable.ic_dogs_6, R.drawable.ic_dogs_7, R.drawable.ic_dogs_8, R.drawable.ic_dogs_9, R.drawable.ic_dogs_10,
+        R.drawable.ic_dog_1, R.drawable.ic_dog_2, R.drawable.ic_dog_3, R.drawable.ic_dog_4, R.drawable.ic_dog_5,
+        R.drawable.ic_dog_6, R.drawable.ic_dog_7, R.drawable.ic_dog_8, R.drawable.ic_dog_9, R.drawable.ic_dog_10,
     )
     private val ocean: List<Int> = listOf(
-        R.drawable.ic_ocean_crab, R.drawable.ic_ocean_fish, R.drawable.ic_ocean_fish_2, R.drawable.ic_ocean_lobster,
-        R.drawable.ic_ocean_octopus, R.drawable.ic_ocean_ray_fish, R.drawable.ic_ocean_sea_horse,
-        R.drawable.ic_ocean_shrimp, R.drawable.ic_ocean_squid, R.drawable.ic_ocean_starfish, R.drawable.ic_ocean_turtle,
+        R.drawable.ic_ocean_animal_1, R.drawable.ic_ocean_animal_2, R.drawable.ic_ocean_animal_3,
+        R.drawable.ic_ocean_animal_4, R.drawable.ic_ocean_animal_5, R.drawable.ic_ocean_animal_6,
+        R.drawable.ic_ocean_animal_7, R.drawable.ic_ocean_animal_8, R.drawable.ic_ocean_animal_9,
+        R.drawable.ic_ocean_animal_10,
     )
 
-    /** Boss-level piece art for [set] (VectorDrawables, sizes match [AnimalSet.count]). */
+    /** Boss-level piece art for [set] (sizes match [AnimalSet.count]; all WebPs). */
     fun animalIcons(set: AnimalSet): List<Int> = when (set) {
         AnimalSet.ANIMALS -> animals
         AnimalSet.DOGS -> dogs
@@ -135,10 +156,31 @@ fun CatIcon(
     }
 }
 
-/** Life fish: live fish when [active], bone when spent. */
+/**
+ * Icon for small slots from a large bitmap: decoded once at ~[size] (power-of-two downsample) instead of the full
+ * 680 px source. Falls back to [painterResource] if the manual decode fails. No tint: art keeps its own colours.
+ */
+@Composable
+fun DownsampledIconImage(@DrawableRes res: Int, modifier: Modifier = Modifier, size: Dp = 24.dp) {
+    val resources = LocalContext.current.resources
+    val targetPx = with(LocalDensity.current) { size.roundToPx() }
+    val painter = remember(resources, res, targetPx) {
+        runCatching {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true; inScaled = false }
+            BitmapFactory.decodeResource(resources, res, bounds)
+            var sample = 1
+            while (bounds.outWidth / (sample * 2) >= targetPx) sample *= 2
+            val opts = BitmapFactory.Options().apply { inScaled = false; inSampleSize = sample }
+            BitmapFactory.decodeResource(resources, res, opts)?.let { BitmapPainter(it.asImageBitmap()) }
+        }.getOrNull()
+    } ?: painterResource(res)
+    Image(painter = painter, contentDescription = null, modifier = modifier.size(size))
+}
+
+/** Life fish: happy fish when [active], grey fishbone when spent. Never tinted. */
 @Composable
 fun FishLife(active: Boolean, modifier: Modifier = Modifier, size: Dp = 28.dp) {
-    IconImage(if (active) R.drawable.ic_fish_live else R.drawable.ic_fish_bone, modifier, size)
+    DownsampledIconImage(if (active) IconArt.FishLife else IconArt.FishBone, modifier, size)
 }
 
 @Composable

@@ -18,6 +18,7 @@ object ShopUiMapper {
         entitlement: Entitlement,
         balances: Map<Booster, Int>,
         busy: Boolean,
+        restoring: Boolean = false,
     ): ShopUiState {
         val status = when (catalog) {
             CatalogState.Loading -> CatalogStatus.LOADING
@@ -28,8 +29,8 @@ object ShopUiMapper {
         fun purchasable(product: ShopProduct): Boolean = price(product) != null && !busy
 
         val monthlyOwnership = when {
-            entitlement.monthlyActive -> OfferOwnership.ACTIVE
             entitlement.foreverOwned -> OfferOwnership.NOT_NEEDED
+            entitlement.monthlyActive -> OfferOwnership.ACTIVE
             else -> OfferOwnership.AVAILABLE
         }
         val foreverOwnership = if (entitlement.foreverOwned) OfferOwnership.OWNED else OfferOwnership.AVAILABLE
@@ -40,6 +41,7 @@ object ShopUiMapper {
                 productId = ShopProduct.REMOVE_ADS_MONTHLY.id,
                 price = price(ShopProduct.REMOVE_ADS_MONTHLY),
                 ownership = monthlyOwnership,
+                canManage = entitlement.monthlyActive,
                 buyEnabled = monthlyOwnership == OfferOwnership.AVAILABLE && purchasable(ShopProduct.REMOVE_ADS_MONTHLY),
             ),
             forever = AdsOfferUi(
@@ -64,6 +66,7 @@ object ShopUiMapper {
                 )
             },
             busy = busy,
+            restoring = restoring,
         )
     }
 

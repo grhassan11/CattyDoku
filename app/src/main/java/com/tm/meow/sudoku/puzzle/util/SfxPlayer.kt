@@ -55,7 +55,7 @@ class SfxPlayer(context: Context) {
             load(SfxKind.MOUSE, R.raw.sfx_mouse)
             // Random cat meows layered on the correct-placement chime (see play).
             intArrayOf(
-                R.raw.sfx_cat_1, R.raw.sfx_cat_2, R.raw.sfx_cat_3, R.raw.sfx_cat_4,
+                R.raw.sfx_meow, R.raw.sfx_cat_2, R.raw.sfx_cat_3, R.raw.sfx_cat_4,
                 R.raw.sfx_cat_5, R.raw.sfx_cat_6, R.raw.sfx_cat_7,
             ).forEach { res -> runCatching { p.load(context, res, 1) }.getOrNull()?.takeIf { it > 0 }?.let { catIds.add(it) } }
         }

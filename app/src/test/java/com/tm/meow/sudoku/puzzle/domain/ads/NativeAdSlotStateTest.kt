@@ -79,8 +79,8 @@ class NativeAdSlotStateTest {
     }
 
     @Test
-    fun masterSwitchBlocksBothPlacements() {
-        val off = AdPolicyConfig(enabled = false)
+    fun bothSwitchesOffBlockBothPlacements() {
+        val off = AdPolicyConfig(levelsHomeNativeShow = false, sudokuHomeNativeShow = false)
         assertFalse(useCase(config = off).isAllowed(AdPlacement.LEVELS_HOME))
         assertFalse(useCase(config = off).isAllowed(AdPlacement.SUDOKU_HOME))
     }
@@ -88,7 +88,6 @@ class NativeAdSlotStateTest {
     @Test
     fun hiddenWhenKillSwitchOff() {
         assertFalse(useCase(config = AdPolicyConfig(levelsHomeNativeShow = false)).isAllowed(AdPlacement.LEVELS_HOME))
-        assertFalse(useCase(config = AdPolicyConfig(enabled = false)).isAllowed(AdPlacement.LEVELS_HOME))
     }
 
     @Test

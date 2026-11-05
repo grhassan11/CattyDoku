@@ -95,13 +95,13 @@ fun GameRoute(
     val anyBoosterEmpty = boosters != null && (boosters.catCharges == 0 || boosters.hintCharges == 0 || (!boosters.thirdLocked && boosters.mouseCharges == 0))
     val lastHeart = content != null && content.outcome == null && content.hearts <= 1
     val lostShown = content?.outcome is OutcomeUi.Lost
-    LaunchedEffect(surfaces.rewarded, anyBoosterEmpty, lastHeart, lostShown, rewardedBusy, boosterDialog) {
-        if (surfaces.rewarded && (anyBoosterEmpty || lastHeart || lostShown || boosterDialog != null)) {
-            adsViewModel.preloadRewardedAd()
-        }
+    LaunchedEffect(surfaces.levelsBoosters, surfaces.levelsRevive, anyBoosterEmpty, lastHeart, lostShown, rewardedBusy, boosterDialog) {
+        val want = (surfaces.levelsBoosters && (anyBoosterEmpty || boosterDialog != null)) ||
+            (surfaces.levelsRevive && (lastHeart || lostShown))
+        if (want) adsViewModel.preloadRewardedAd()
     }
-    // Rewarded turned off underneath an open dialog (e.g. consent revoked): close it.
-    LaunchedEffect(surfaces.rewarded) { if (!surfaces.rewarded) boosterDialog = null }
+    // Boosters rewarded turned off underneath an open dialog (e.g. consent revoked): close it.
+    LaunchedEffect(surfaces.levelsBoosters) { if (!surfaces.levelsBoosters) boosterDialog = null }
 
     // Sticky banner: load when allowed, destroy when the surface turns off. Slot width = screen width.
     val bannerWidthDp = LocalConfiguration.current.screenWidthDp
@@ -111,7 +111,8 @@ fun GameRoute(
     // No banner under dialogs (win / lose / booster): the slot stays reserved, the ad view detaches.
     val bannerVisible = content?.outcome == null && boosterDialog == null && !settingsVisible
     val adsUi = GameAdsUi(
-        rewardedSurface = surfaces.rewarded,
+        rewardedSurface = surfaces.levelsBoosters,
+        reviveSurface = surfaces.levelsRevive,
         rewardedLoad = surfaces.rewardedLoad,
         rewardedBusy = rewardedBusy,
         bannerReserved = surfaces.banner,
@@ -235,7 +236,8 @@ fun GameRoute(
                 }
             }
         },
-        // Retry seam (interstitial OFF by default via AdPolicyConfig.showOnLoseRetry). Revive is a separate rewarded CTA.
+        // Retry boundary: interstitial gated by levels_game_restarted_interstitial_ad_show (default on) + the pacing guards.
+        // Revive is a separate rewarded CTA.
         onLoseRetry = { adsViewModel.beforeRetry(adLevel, adIsDaily, onDone = viewModel::onRestart) },
         modifier = Modifier.fillMaxSize(),
         ads = adsUi,

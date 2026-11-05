@@ -52,7 +52,7 @@ fun BannerAdSlot(ad: BannerAdHandle?, modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         val handle = ad as? GmaBannerAdHandle
-        if (handle != null) key(handle) { BannerHost(handle) }
+        if (handle != null && !handle.isDestroyed) key(handle) { BannerHost(handle) }
     }
 }
 
@@ -73,7 +73,12 @@ private fun BannerHost(handle: GmaBannerAdHandle) {
                 Gravity.CENTER,
             ),
         )
-        onDispose { container.removeAllViews() }
+        onDispose {
+            container.removeAllViews()
+            // Activity recreation (dark mode, locale, font scale): the SDK view is bound to the dying Activity and the
+            // handle outlives it in AdsViewModel. Destroy it; AdsViewModel.requestBanner (re-run by the new composition) reloads.
+            if (activity.isChangingConfigurations) handle.destroy()
+        }
     }
     AndroidView(factory = { container }, modifier = Modifier.fillMaxWidth())
 }

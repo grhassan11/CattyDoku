@@ -8,6 +8,7 @@ import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.BannerPlacement
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState
+import com.tm.meow.sudoku.puzzle.domain.ads.RewardedPlacement
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedResult
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentState
@@ -113,11 +114,11 @@ class GameAdUseCasesTest {
     fun surfacesOffThroughLevelNineOnFromTen() = runTest {
         for (l in 0..9) {
             val s = surfaces(flagLevel = l)(MutableStateFlow(l)).first()
-            assertFalse("rewarded L$l", s.rewarded)
+            assertFalse("rewarded L$l", s.levelsBoosters || s.levelsRevive || s.sudokuBoosters || s.sudokuRevive)
             assertFalse("banner L$l", s.banner)
         }
         val s = surfaces(flagLevel = 10)(MutableStateFlow(10)).first()
-        assertTrue(s.rewarded)
+        assertTrue(s.levelsBoosters && s.levelsRevive && s.sudokuBoosters && s.sudokuRevive)
         assertTrue(s.banner)
         assertEquals(10, s.playerLevel)
     }
@@ -134,25 +135,40 @@ class GameAdUseCasesTest {
     @Test
     fun surfacesNeedConsentSdkConfigAndSwitches() = runTest {
         val level = MutableStateFlow(20)
-        assertFalse(surfaces(20, consent = GaConsent(false))(level).first().rewarded)
+        assertFalse(surfaces(20, consent = GaConsent(false))(level).first().levelsBoosters)
         assertFalse(surfaces(20, sdk = GaSdk(false))(level).first().banner)
-        assertFalse(surfaces(20, rewarded = GaRewarded(isConfigured = false))(level).first().rewarded)
+        assertFalse(surfaces(20, rewarded = GaRewarded(isConfigured = false))(level).first().levelsBoosters)
         assertTrue(surfaces(20, rewarded = GaRewarded(isConfigured = false))(level).first().banner)
         assertFalse(surfaces(20, banner = GaBanner(isConfigured = false))(level).first().banner)
-        assertFalse(surfaces(20, config = AdPolicyConfig(enabled = false))(level).first().rewarded)
         assertFalse(surfaces(20, config = AdPolicyConfig(levelsGameBannerShow = false))(level).first().banner)
-        assertTrue(surfaces(20, config = AdPolicyConfig(levelsGameBannerShow = false))(level).first().rewarded)
-        assertFalse(surfaces(20, config = AdPolicyConfig(rewardedShow = false))(level).first().rewarded)
+        assertTrue(surfaces(20, config = AdPolicyConfig(levelsGameBannerShow = false))(level).first().levelsBoosters)
+        assertFalse(surfaces(20, config = AdPolicyConfig(levelsBoostersRewardedShow = false))(level).first().levelsBoosters)
     }
 
     @Test
-    fun masterSwitchBlocksAllSurfacesAndOtherUnitSwitchesDoNotAffectThem() = runTest {
+    fun eachRewardedSwitchBlocksOnlyItsSurface() = runTest {
         val level = MutableStateFlow(20)
-        val off = surfaces(20, config = AdPolicyConfig(enabled = false))(level).first()
-        assertFalse(off.rewarded)
-        assertFalse(off.banner)
-        val unrelated = surfaces(20, config = AdPolicyConfig(interstitialShow = false, levelsHomeNativeShow = false, sudokuHomeNativeShow = false))(level).first()
-        assertTrue(unrelated.rewarded)
+        fun flags(c: AdPolicyConfig) = surfaces(20, config = c)(level).first().let {
+            listOf(it.levelsBoosters, it.levelsRevive, it.sudokuBoosters, it.sudokuRevive)
+        }
+        assertEquals(listOf(false, true, true, true), flags(AdPolicyConfig(levelsBoostersRewardedShow = false)))
+        assertEquals(listOf(true, false, true, true), flags(AdPolicyConfig(levelsReviveRewardedShow = false)))
+        assertEquals(listOf(true, true, false, true), flags(AdPolicyConfig(sudokuBoostersRewardedShow = false)))
+        assertEquals(listOf(true, true, true, false), flags(AdPolicyConfig(sudokuReviveRewardedShow = false)))
+        assertEquals(listOf(true, true, true, true), flags(AdPolicyConfig()))
+    }
+
+    @Test
+    fun otherUnitSwitchesDoNotAffectRewardedOrBanner() = runTest {
+        val level = MutableStateFlow(20)
+        val unrelated = surfaces(
+            20,
+            config = AdPolicyConfig(
+                levelsWinInterstitialShow = false, sudokuWinInterstitialShow = false, levelsRestartInterstitialShow = false,
+                sudokuRestartInterstitialShow = false, levelsHomeNativeShow = false, sudokuHomeNativeShow = false,
+            ),
+        )(level).first()
+        assertTrue(unrelated.levelsBoosters && unrelated.sudokuBoosters)
         assertTrue(unrelated.banner)
     }
 
@@ -166,7 +182,7 @@ class GameAdUseCasesTest {
         rewarded.setLoad(RewardedLoadState.READY)
         assertEquals(RewardedLoadState.READY, uc(level).first().rewardedLoad)
         consent.allow(false)
-        assertFalse(uc(level).first().rewarded)
+        assertFalse(uc(level).first().levelsBoosters)
     }
 
     // ---------------------------------------------------------------- PreloadRewardedAd
@@ -186,7 +202,7 @@ class GameAdUseCasesTest {
         val repo = GaRewarded()
         PreloadRewardedAd(GaConsent(false), GaSdk(), repo, AdPolicyConfig())(30)
         PreloadRewardedAd(GaConsent(), GaSdk(false), repo, AdPolicyConfig())(30)
-        PreloadRewardedAd(GaConsent(), GaSdk(), repo, AdPolicyConfig(rewardedShow = false))(30)
+        PreloadRewardedAd(GaConsent(), GaSdk(), repo, AdPolicyConfig(levelsBoostersRewardedShow = false, sudokuBoostersRewardedShow = false, levelsReviveRewardedShow = false, sudokuReviveRewardedShow = false))(30)
         PreloadRewardedAd(GaConsent(), GaSdk(), GaRewarded(isConfigured = false).also { it.preloadCalls = 0 }, AdPolicyConfig())(30)
         assertEquals(0, repo.preloadCalls)
     }
@@ -204,7 +220,10 @@ class GameAdUseCasesTest {
         val tracker = AdSessionTracker(time)
         var showingDuringShow: Boolean? = null
         val repo = GaRewarded(next = result, onShow = { showingDuringShow = tracker.fullScreenAdShowing }, throwOnShow = throwOnShow)
-        val show = ShowRewardedAd(consent, sdk, repo, tracker, config)
+        private val uc = ShowRewardedAd(consent, sdk, repo, tracker, config)
+
+        suspend fun show(playerLevel: Int, placement: RewardedPlacement = RewardedPlacement.LEVELS_BOOSTERS) =
+            uc(playerLevel, placement)
     }
 
     @Test
@@ -257,8 +276,24 @@ class GameAdUseCasesTest {
     fun noConsentSdkOffOrKillSwitchIsNotReady() = runTest {
         assertEquals(RewardedResult.NOT_READY, ShowRig(consent = GaConsent(false)).show(20))
         assertEquals(RewardedResult.NOT_READY, ShowRig(sdk = GaSdk(false)).show(20))
-        assertEquals(RewardedResult.NOT_READY, ShowRig(config = AdPolicyConfig(enabled = false)).show(20))
-        assertEquals(RewardedResult.NOT_READY, ShowRig(config = AdPolicyConfig(rewardedShow = false)).show(20))
+        assertEquals(RewardedResult.NOT_READY, ShowRig(config = AdPolicyConfig(levelsBoostersRewardedShow = false)).show(20))
+    }
+
+    @Test
+    fun placementSwitchGatesOnlyThatPlacementAtShowTime() = runTest {
+        for (p in RewardedPlacement.values()) {
+            val off = when (p) {
+                RewardedPlacement.LEVELS_BOOSTERS -> AdPolicyConfig(levelsBoostersRewardedShow = false)
+                RewardedPlacement.LEVELS_REVIVE -> AdPolicyConfig(levelsReviveRewardedShow = false)
+                RewardedPlacement.SUDOKU_BOOSTERS -> AdPolicyConfig(sudokuBoostersRewardedShow = false)
+                RewardedPlacement.SUDOKU_REVIVE -> AdPolicyConfig(sudokuReviveRewardedShow = false)
+            }
+            for (q in RewardedPlacement.values()) {
+                val r = ShowRig(config = off)
+                val expected = if (p == q) RewardedResult.NOT_READY else RewardedResult.EARNED
+                assertEquals("off=$p show=$q", expected, r.show(20, q))
+            }
+        }
     }
 
     @Test
@@ -343,8 +378,8 @@ class GameAdUseCasesTest {
     }
 
     @Test
-    fun masterSwitchBlocksBothBanners() = runTest {
-        val off = AdPolicyConfig(enabled = false)
+    fun bothBannerSwitchesOffBlockBothBanners() = runTest {
+        val off = AdPolicyConfig(levelsGameBannerShow = false, sudokuGameBannerShow = false)
         val s = surfaces(20, config = off)(MutableStateFlow(20)).first()
         assertFalse(s.banner)
         assertFalse(s.sudokuBanner)

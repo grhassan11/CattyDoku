@@ -130,11 +130,11 @@ class PurchaseProcessorTest {
     }
 
     @Test
-    fun failedAcknowledgeStillAnnouncesAndIsRetriedByNextSync() = runTest {
+    fun failedAcknowledgeDoesNotAnnounceAndIsRetriedByNextSync() = runTest {
         gateway.acknowledgeResult = StoreResult.Failure(BillingFailure.NETWORK)
         val p = purchase("remove_ads_forever", token = "f")
-        assertEquals(1, processor.process(listOf(p)).size)
-        assertEquals(1, processor.process(listOf(p)).size) // still unacknowledged on Play
+        assertTrue(processor.process(listOf(p)).isEmpty())
+        assertTrue(processor.process(listOf(p)).isEmpty()) // still unacknowledged on Play
         assertEquals(listOf("f", "f"), gateway.acknowledged)
     }
 

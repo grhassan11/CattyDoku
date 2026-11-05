@@ -91,6 +91,9 @@ sealed interface PurchaseEvent {
 
     /** Restore found nothing to restore. */
     data object NothingToRestore : PurchaseEvent
+
+    /** Restore applied the entitlement but a grant / acknowledge did not complete; the next sync retries it. */
+    data object RestoreIncomplete : PurchaseEvent
 }
 
 /** Per-purchase result of [PurchaseProcessor]. */

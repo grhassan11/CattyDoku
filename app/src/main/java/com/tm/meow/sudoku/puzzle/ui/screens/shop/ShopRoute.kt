@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 
 /**
  * The only place that touches [ShopViewModel]: collects state + one-shot events, turns events into snackbar text, wires
- * the link seams (Terms / Privacy placeholders in [LegalLinks]; subscription management = Play subscriptions page), then
+ * the link seams (Privacy URL in [LegalLinks]; subscription management = Play subscriptions page), then
  * hands plain state and lambdas to the stateless [ShopScreen].
  * [initialSection] = pack section to land on (from a booster dialog "Get X in Store"); null = top.
  */
@@ -73,7 +73,6 @@ fun ShopRoute(
         onManageSubscription = {
             open(StoreLinks.manageSubscriptionUrl(context.packageName, ShopProduct.REMOVE_ADS_MONTHLY.id))
         },
-        onTerms = { open(LegalLinks.TERMS_URL) },
         onPrivacy = { open(LegalLinks.PRIVACY_URL) },
         onRetry = viewModel::onScreenStart,
         modifier = modifier,
@@ -90,6 +89,7 @@ private fun messageResolver(): (PurchaseEvent) -> String {
     val pending = stringResource(R.string.shop_msg_pending)
     val restored = stringResource(R.string.shop_msg_restored)
     val nothing = stringResource(R.string.shop_msg_nothing_to_restore)
+    val incomplete = stringResource(R.string.shop_msg_restore_incomplete)
     val canceled = stringResource(R.string.shop_err_canceled)
     val alreadyOwned = stringResource(R.string.shop_err_already_owned)
     val unavailable = stringResource(R.string.shop_err_unavailable)
@@ -98,7 +98,7 @@ private fun messageResolver(): (PurchaseEvent) -> String {
     val developer = stringResource(R.string.shop_err_developer)
     val generic = stringResource(R.string.shop_err_generic)
     return remember(
-        cats, hints, mice, adsRemoved, pending, restored, nothing,
+        cats, hints, mice, adsRemoved, pending, restored, nothing, incomplete,
         canceled, alreadyOwned, unavailable, network, itemUnavailable, developer, generic,
     ) {
         { event ->
@@ -115,6 +115,7 @@ private fun messageResolver(): (PurchaseEvent) -> String {
                 is PurchaseEvent.Pending -> pending
                 PurchaseEvent.Restored -> restored
                 PurchaseEvent.NothingToRestore -> nothing
+                PurchaseEvent.RestoreIncomplete -> incomplete
                 is PurchaseEvent.Failed -> when (event.failure) {
                     BillingFailure.USER_CANCELED -> canceled
                     BillingFailure.ALREADY_OWNED -> alreadyOwned

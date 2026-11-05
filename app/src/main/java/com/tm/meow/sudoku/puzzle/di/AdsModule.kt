@@ -31,6 +31,7 @@ import com.tm.meow.sudoku.puzzle.domain.config.RemoteConfigRepository
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.AppFlagsRepository
 import com.tm.meow.sudoku.puzzle.domain.time.TimeProvider
+import com.tm.meow.sudoku.puzzle.domain.usecase.EnsureConsentAndAdsInit
 import com.tm.meow.sudoku.puzzle.domain.usecase.GatherConsentAndInitAds
 import com.tm.meow.sudoku.puzzle.domain.usecase.IsConsentFormShowing
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadNativeAd
@@ -39,6 +40,7 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadAppOpenAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.ShowAppOpenIfAllowed
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveConsentState
 import com.tm.meow.sudoku.puzzle.domain.usecase.RecordLevelWon
+import com.tm.meow.sudoku.puzzle.domain.usecase.RefreshRemoteConfig
 import com.tm.meow.sudoku.puzzle.domain.usecase.ShowInterstitialIfAllowed
 import com.tm.meow.sudoku.puzzle.domain.usecase.ShowPrivacyOptions
 import dagger.Binds
@@ -90,7 +92,15 @@ object AdsModule {
         consent: ConsentRepository,
         ads: AdsRepository,
         flags: AppFlagsRepository,
-    ): GatherConsentAndInitAds = GatherConsentAndInitAds(consent, ads, flags)
+        tracker: AdSessionTracker,
+    ): GatherConsentAndInitAds = GatherConsentAndInitAds(consent, ads, flags, tracker)
+
+    @Provides
+    fun provideEnsureConsentAndAdsInit(
+        gather: GatherConsentAndInitAds,
+        refreshRemoteConfig: RefreshRemoteConfig,
+        tracker: AdSessionTracker,
+    ): EnsureConsentAndAdsInit = EnsureConsentAndAdsInit(gather, refreshRemoteConfig, tracker)
 
     @Provides
     fun provideIsConsentFormShowing(tracker: AdSessionTracker): IsConsentFormShowing = IsConsentFormShowing(tracker)

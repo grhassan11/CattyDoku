@@ -53,6 +53,8 @@ import com.tm.meow.sudoku.puzzle.R
 import com.tm.meow.sudoku.puzzle.domain.sudoku.model.SudokuTier
 import com.tm.meow.sudoku.puzzle.ui.components.Button3D
 import com.tm.meow.sudoku.puzzle.ui.components.ButtonStyle
+import com.tm.meow.sudoku.puzzle.ui.components.DownsampledIconImage
+import com.tm.meow.sudoku.puzzle.ui.components.IconArt
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.PillButton
 import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState
@@ -179,7 +181,7 @@ fun SudokuEntryScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             PillText(
                                 stringResource(R.string.sudoku_new_game),
-                                cappedSp(if (state.canContinue) 17f else 22f),
+                                cappedSp(20f),
                                 ButtonStyle.Primary.content,
                                 shadow = true,
                             )
@@ -367,7 +369,7 @@ private fun StatsCard(state: SudokuEntryUiState, tierName: String, modifier: Mod
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            IconImage(R.drawable.ic_trophy, size = 40.dp)
+            DownsampledIconImage(IconArt.Trophy, size = 40.dp)
             if (stats == null) {
                 Column {
                     Text(

@@ -129,7 +129,7 @@ abstract class HomeAdsViewModel(
     }
 }
 
-/** Levels Home bottom native ad (`levels_home_native_ad_show`). */
+/** Levels Home bottom native ad (`level_home_native_ad_show`). */
 @HiltViewModel
 class LevelsHomeAdsViewModel @Inject constructor(
     loadNativeAd: LoadNativeAd,

@@ -1,6 +1,11 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.game
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -50,6 +55,10 @@ import com.tm.meow.sudoku.puzzle.domain.model.Pos
 import com.tm.meow.sudoku.puzzle.ui.components.drawXMark
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 
+private const val INTRO_TOTAL_MS = 1500f
+private const val INTRO_CELL_MS = 600f
+private const val INTRO_STAGGER_MS = INTRO_TOTAL_MS - INTRO_CELL_MS
+
 /**
  * Board card + cell grid. Stateless apart from the transient swipe preview (pure UI state).
  * Gestures go through [BoardGestureResolver]; this composable only translates pointer events.
@@ -69,6 +78,8 @@ fun BoardView(
     lastCorrectPlacement: CorrectPlacementUi? = null,
     /** Cats (default) or, on a boss level, one animal set: each placed piece shows a fixed pseudo-random animal of it. */
     pieceSkin: PieceSkin = PieceSkin.cats(),
+    /** Identity of the level being shown (level number / daily day). A new non-null key plays the intro wave once. Null = no wave. */
+    introKey: Long? = null,
 ) {
     val n = board.size
     val gridSideDp = metrics.gridSideDp(n)
@@ -90,8 +101,10 @@ fun BoardView(
         with(density) { (metrics.cellDp.dp.toPx() * 0.84f).toInt() },
     )
     // Boss levels: animal painters + one animal per region (same source as the RegionTab icon, so they always match).
-    val animalPainters = pieceSkin.set?.let { rememberAnimalPainters(it) }
     val regionAnimal = remember(pieceSkin, n) { IntArray(n) { pieceSkin.regionIndex(it) } }
+    val animalPainters = pieceSkin.set?.let {
+        rememberAnimalPainters(it, regionAnimal, with(density) { (metrics.cellDp.dp.toPx() * 0.84f).toInt() })
+    }
 
     // Correct-placement effect. `done` starts at the token already present on first composition, so rotation /
     // re-entry / restored state never replays; only a token that arrives later plays. Skipped when animations are off.
@@ -104,6 +117,18 @@ fun BoardView(
         if (animationsOn) fx.run(p.token)
         doneToken = p.token
     }
+    // New-level intro wave: corner-diagonal sweep, per-cell scale + alpha read in the layer phase (no per-frame recomposition).
+    // Saveable per key so rotation / resume / undo / revive never replay it; only a changed key (new level) does.
+    var introDone by rememberSaveable(introKey) { mutableStateOf(false) }
+    val introRunning = introKey != null && animationsOn && !introDone
+    val introProgress = remember(introKey) { Animatable(0f) }
+    LaunchedEffect(introKey, introRunning) {
+        if (!introRunning) return@LaunchedEffect
+        introProgress.animateTo(INTRO_TOTAL_MS, tween(INTRO_TOTAL_MS.toInt(), easing = LinearEasing))
+        introDone = true
+    }
+    val introMaxStep = (2 * (n - 1)).coerceAtLeast(1)
+
     val fxToken = if (animationsOn && lastCorrectPlacement != null && lastCorrectPlacement.token != doneToken) lastCorrectPlacement.token else 0
     val fxIdx = if (fxToken != 0 && lastCorrectPlacement != null) lastCorrectPlacement.row * n + lastCorrectPlacement.col else -1
 
@@ -209,11 +234,23 @@ fun BoardView(
                             catPainter = when {
                                 cell.mark != CellMarkUi.CAT -> null
                                 animalPainters != null -> animalPainters[regionAnimal[cell.region.mod(regionAnimal.size)].mod(animalPainters.size)]
+                                    ?: catPainters[cell.catVariant.mod(CatVariants.UNIQUE)]
                                 else -> catPainters[cell.catVariant.mod(CatVariants.UNIQUE)]
                             },
                             placementFx = if (r * n + c == fxIdx) fx else null,
                             placementToken = fxToken,
-                            modifier = Modifier.semantics {
+                            modifier = (if (introRunning) {
+                                val delayMs = INTRO_STAGGER_MS * (r + c) / introMaxStep
+                                Modifier.graphicsLayer {
+                                    val t = ((introProgress.value - delayMs) / INTRO_CELL_MS).coerceIn(0f, 1f)
+                                    val inv = 1f - t
+                                    val e = 1f - inv * inv * inv
+                                    val sc = 0.6f + 0.4f * e
+                                    scaleX = sc
+                                    scaleY = sc
+                                    alpha = t
+                                }
+                            } else Modifier).semantics {
                                 contentDescription = description
                                 role = Role.Button
                                 onClick(label = toggleLabel) {
@@ -252,7 +289,7 @@ private fun BoardCell(
 ) {
     Canvas(modifier.size(sideDp.dp)) {
         val s = this.size.minDimension
-        val radius = 8.dp.toPx()
+        val radius = BoardLayoutCalc.cellCornerPx(s, 1.dp.toPx())
         val base = GameColors.region(cell.region)
         drawRoundRect(base, size = Size(s, s), cornerRadius = CornerRadius(radius))
 
@@ -298,7 +335,7 @@ private fun BoardCell(
                 GameColors.Conflict,
                 topLeft = Offset(w / 2f, w / 2f),
                 size = Size(s - w, s - w),
-                cornerRadius = CornerRadius(radius),
+                cornerRadius = CornerRadius((radius - w / 2f).coerceAtLeast(0f)),
                 style = Stroke(w),
             )
         }
@@ -309,7 +346,7 @@ private fun BoardCell(
                     GameColors.HintTarget,
                     topLeft = Offset(w / 2f, w / 2f),
                     size = Size(s - w, s - w),
-                    cornerRadius = CornerRadius(radius),
+                    cornerRadius = CornerRadius((radius - w / 2f).coerceAtLeast(0f)),
                     style = Stroke(w),
                 )
             }
@@ -319,7 +356,7 @@ private fun BoardCell(
                     GameColors.HintReason,
                     topLeft = Offset(w / 2f, w / 2f),
                     size = Size(s - w, s - w),
-                    cornerRadius = CornerRadius(radius),
+                    cornerRadius = CornerRadius((radius - w / 2f).coerceAtLeast(0f)),
                     style = Stroke(w),
                 )
             }

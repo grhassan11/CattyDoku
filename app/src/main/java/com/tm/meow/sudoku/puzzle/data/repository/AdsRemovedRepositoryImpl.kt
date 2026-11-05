@@ -6,14 +6,15 @@ import androidx.datastore.preferences.core.edit
 import com.tm.meow.sudoku.puzzle.data.local.prefs.ioSafe
 import com.tm.meow.sudoku.puzzle.data.local.prefs.toEntitlement
 import com.tm.meow.sudoku.puzzle.data.local.prefs.write
+import com.tm.meow.sudoku.puzzle.di.DefaultDispatcher
 import com.tm.meow.sudoku.puzzle.domain.billing.AdsRemovedRepository
 import com.tm.meow.sudoku.puzzle.domain.billing.Entitlement
 import com.tm.meow.sudoku.puzzle.domain.billing.EntitlementPolicy
 import com.tm.meow.sudoku.puzzle.domain.time.TimeProvider
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -34,9 +35,10 @@ import kotlinx.coroutines.flow.stateIn
 class AdsRemovedRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     private val time: TimeProvider,
+    @DefaultDispatcher dispatcher: CoroutineDispatcher,
 ) : AdsRemovedRepository {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
     override val entitlement: StateFlow<Entitlement> = dataStore.data.ioSafe()
         .map { it.toEntitlement() }

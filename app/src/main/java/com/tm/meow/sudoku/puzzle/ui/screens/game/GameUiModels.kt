@@ -89,10 +89,11 @@ data class SettingsUi(
     val patternMode: Boolean,
     val streakReminders: Boolean = true,
     val dailyReminders: Boolean = true,
+    val sudokuReminders: Boolean = true,
 )
 
 /** Which setting a dialog toggle flips. */
-enum class SettingToggle { MUSIC, SFX, VOICE, HAPTICS, PATTERN_MODE, STREAK_REMINDERS, DAILY_REMINDERS }
+enum class SettingToggle { MUSIC, SFX, VOICE, HAPTICS, PATTERN_MODE, STREAK_REMINDERS, DAILY_REMINDERS, SUDOKU_REMINDERS }
 
 @Immutable
 data class GameContentUi(
@@ -120,6 +121,8 @@ data class GameContentUi(
     val lastCorrectPlacement: CorrectPlacementUi? = null,
     /** What the pieces look like: cats, or one animal set on a boss level (board pieces + Cat booster icon + region row). */
     val pieceSkin: PieceSkin = PieceSkin.cats(),
+    /** Bumped on every Retry of the same level so the board intro wave replays. */
+    val restartCount: Int = 0,
 )
 
 /**
@@ -201,8 +204,10 @@ sealed interface GameUiEvent {
 /** Ad surfaces the game screen may draw right now. Policy is already folded in (ad-free levels, consent, kill switches). */
 @Immutable
 data class GameAdsUi(
-    /** Booster play badge / rewarded dialog / lose revive CTA allowed. */
+    /** Booster play badge / rewarded dialog allowed (remote `levels_game_boosters_rewarded_ad_show`). */
     val rewardedSurface: Boolean = false,
+    /** Lose-screen revive CTA allowed (remote `levels_game_revive_rewarded_ad_show`). */
+    val reviveSurface: Boolean = false,
     val rewardedLoad: com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState = com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState.IDLE,
     /** A rewarded request / ad is in flight: CTAs inert. */
     val rewardedBusy: Boolean = false,

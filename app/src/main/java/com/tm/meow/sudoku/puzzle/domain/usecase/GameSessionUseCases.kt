@@ -52,6 +52,12 @@ class UpdateSettings(private val repo: SettingsRepository) {
     suspend operator fun invoke(transform: (Settings) -> Settings) = repo.update(transform)
 }
 
+/** Persist all reminder toggles OFF (notification permission denied). */
+class DisableReminders(private val repo: SettingsRepository) {
+    suspend operator fun invoke() =
+        repo.update { it.copy(streakReminders = false, dailyReminders = false, sudokuReminders = false) }
+}
+
 /** Current booster stock, every [Booster] present (0 when none). */
 class GetBoosterCharges(private val inventory: InventoryRepository) {
     suspend operator fun invoke(): Map<Booster, Int> = inventory.observeAll().first()

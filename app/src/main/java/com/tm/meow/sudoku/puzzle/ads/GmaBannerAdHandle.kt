@@ -10,6 +10,8 @@ import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle
 class GmaBannerAdHandle(val ad: BannerAd) : BannerAdHandle {
     @Volatile private var destroyed = false
 
+    override val isDestroyed: Boolean get() = destroyed
+
     override fun destroy() {
         if (destroyed) return
         destroyed = true

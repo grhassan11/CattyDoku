@@ -97,7 +97,7 @@ internal fun HintOverlay(
             val gap = metrics.gapDp.dp.toPx()
             val pitch = cell + gap
             val grow = gap / 2f
-            val radius = 8.dp.toPx() + grow
+            val radius = BoardLayoutCalc.cellCornerPx(cell, 1.dp.toPx()) + grow
             val left = b.left - origin.value.x + pad
             val top = b.top - origin.value.y + pad
             for (i in overlay.spotlight) {

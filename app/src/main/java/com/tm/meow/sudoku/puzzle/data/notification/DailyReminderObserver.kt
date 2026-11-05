@@ -1,5 +1,6 @@
 package com.tm.meow.sudoku.puzzle.data.notification
 
+import com.tm.meow.sudoku.puzzle.di.DefaultDispatcher
 import com.tm.meow.sudoku.puzzle.domain.config.RemoteConfigRepository
 import com.tm.meow.sudoku.puzzle.domain.engine.DailyReminderPolicy
 import com.tm.meow.sudoku.puzzle.domain.notification.DailyReminderScheduler
@@ -9,8 +10,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -25,9 +26,10 @@ class DailyReminderObserver @Inject constructor(
     private val settings: SettingsRepository,
     private val remoteConfig: RemoteConfigRepository,
     private val scheduler: DailyReminderScheduler,
+    @DefaultDispatcher dispatcher: CoroutineDispatcher,
 ) {
     private val started = AtomicBoolean(false)
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
     fun start() {
         if (!started.compareAndSet(false, true)) return

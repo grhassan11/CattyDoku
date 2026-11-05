@@ -99,12 +99,15 @@ class ShopRepositoryImpl(
     }
 
     override suspend fun restore() {
-        when (val outcome = sync()) {
+        when (val outcome = sync(announceAllPending = true)) {
             is SyncOutcome.Failed -> emit(PurchaseEvent.Failed(outcome.failure))
             is SyncOutcome.Done ->
-                // Specific events (pack granted / ads removal active) already told the story when there were any.
-                if (outcome.events == 0) {
-                    emit(if (outcome.ownedCount > 0) PurchaseEvent.Restored else PurchaseEvent.NothingToRestore)
+                when {
+                    // Entitlement is applied, but a step failed: never claim a plain "restored".
+                    outcome.incomplete > 0 -> emit(PurchaseEvent.RestoreIncomplete)
+                    // Specific events (pack granted / ads removal active / pending) already told the story when there were any.
+                    outcome.events == 0 ->
+                        emit(if (outcome.ownedCount > 0) PurchaseEvent.Restored else PurchaseEvent.NothingToRestore)
                 }
         }
     }
@@ -116,20 +119,25 @@ class ShopRepositoryImpl(
     // ---------------------------------------------------------------- internals
 
     private sealed interface SyncOutcome {
-        data class Done(val ownedCount: Int, val events: Int) : SyncOutcome
+        data class Done(val ownedCount: Int, val events: Int, val incomplete: Int) : SyncOutcome
         data class Failed(val failure: BillingFailure) : SyncOutcome
     }
 
     /** Re-query Play, process every purchase, then apply the entitlement derived from the FULL list. */
-    private suspend fun sync(): SyncOutcome = mutex.withLock {
+    private suspend fun sync(announceAllPending: Boolean = false): SyncOutcome = mutex.withLock {
         when (val query = gateway.queryPurchases()) {
             is StoreResult.Failure -> SyncOutcome.Failed(query.failure)
             is StoreResult.Success -> {
                 val purchases = query.value
-                val outcomes = processor.process(purchases)
+                var incomplete = 0
+                val outcomes = processor.process(purchases, announceAllPending) { incomplete++ }
                 adsRemoved.apply(EntitlementPolicy.derive(purchases, time.nowMillis()))
                 outcomes.forEach { emit(it.toEvent()) }
-                SyncOutcome.Done(ownedCount = purchases.countRecognisedPurchased(), events = outcomes.size)
+                SyncOutcome.Done(
+                    ownedCount = purchases.countRecognisedPurchased(),
+                    events = outcomes.size,
+                    incomplete = incomplete,
+                )
             }
         }
     }

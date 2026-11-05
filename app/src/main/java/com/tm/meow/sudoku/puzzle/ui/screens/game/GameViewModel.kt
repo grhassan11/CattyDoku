@@ -139,6 +139,8 @@ class GameViewModel @Inject constructor(
         val mouseRun: MouseRunUi? = null,
         /** Latest correct placement; set only by [applyStep], never by load / restore / undo. */
         val correctPlacement: CorrectPlacementUi? = null,
+        /** Lose-dialog restarts of this level this VM session; part of the board intro-wave key. */
+        val restartCount: Int = 0,
     )
 
     private var mouseRunSeq = 0
@@ -206,7 +208,7 @@ class GameViewModel @Inject constructor(
             analytics.log(AnalyticsEvent.LevelRestart(levelContext(s.puzzle), attemptStats(s))) // restart is NOT a quit
             elapsedBaseMs = 0L
             val fresh = applyStarterCat(s.puzzle, GameState.initial(s.puzzle.size, charges))
-            session = Session(s.puzzle, fresh)
+            session = Session(s.puzzle, fresh, restartCount = s.restartCount + 1)
             logStart(s.puzzle)
             resumeTimer()
             enqueueSave()
@@ -228,6 +230,7 @@ class GameViewModel @Inject constructor(
                         SettingToggle.PATTERN_MODE -> it.copy(patternMode = enabled)
                         SettingToggle.STREAK_REMINDERS -> it.copy(streakReminders = enabled)
                         SettingToggle.DAILY_REMINDERS -> it.copy(dailyReminders = enabled)
+                        SettingToggle.SUDOKU_REMINDERS -> it.copy(sudokuReminders = enabled)
                     }
                 }
             }
@@ -693,7 +696,7 @@ class GameViewModel @Inject constructor(
             GameUiMapper.content(
                 s.puzzle, s.state, analysis, s.hint, score, settings, s.outcome,
                 daily = isDaily, hintOverlayOpen = s.hintOverlay,
-            ).copy(mouseRun = s.mouseRun, lastCorrectPlacement = s.correctPlacement),
+            ).copy(mouseRun = s.mouseRun, lastCorrectPlacement = s.correctPlacement, restartCount = s.restartCount),
         )
     }
 

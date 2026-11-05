@@ -55,6 +55,7 @@ object GameUiMapper {
             patternMode = settings.patternMode,
             streakReminders = settings.streakReminders,
             dailyReminders = settings.dailyReminders,
+            sudokuReminders = settings.sudokuReminders,
         ),
         outcome = outcome,
         isDaily = daily,

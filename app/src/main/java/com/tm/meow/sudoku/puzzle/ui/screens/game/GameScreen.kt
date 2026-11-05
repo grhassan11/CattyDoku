@@ -283,6 +283,8 @@ private fun GameContent(
             LivesRow(content, onUndo)
             Spacer(Modifier.height(12.dp))
             RulesStrip(content.pieceSkin)
+            // Fixed gap so the colour tab never touches the rules row on tight screens; the board box below shrinks to fit.
+            Spacer(Modifier.height(12.dp))
 
             BoxWithConstraints(
                 Modifier.weight(1f).fillMaxWidth(),
@@ -308,6 +310,8 @@ private fun GameContent(
                         onDragCross = onDragCross,
                         lastCorrectPlacement = content.lastCorrectPlacement,
                         pieceSkin = content.pieceSkin,
+                        introKey = (if (content.isDaily) content.dailyEpochDay?.let { 1_000_000L + it } else content.levelNumber.toLong())
+                            ?.let { it + content.restartCount * 10_000_000_000L },
                         modifier = Modifier.onGloballyPositioned { boardGeo.value = BoardGeo(it.boundsInRoot(), metrics) },
                     )
                 }
@@ -367,7 +371,7 @@ private fun GameContent(
             onWinHome = onWinHome,
             daily = content.isDaily,
             pieceSkin = content.pieceSkin,
-            onWatchRevive = if (ads.rewardedSurface) onWatchReviveAd else null,
+            onWatchRevive = if (ads.reviveSurface) onWatchReviveAd else null,
             rewardedLoad = ads.rewardedLoad,
             rewardedBusy = ads.rewardedBusy,
             onRetryRewardedLoad = onRetryRewardedLoad,
@@ -740,7 +744,7 @@ internal const val BOOSTER_SHADOW_ROOM_DP = 8f
 private fun Modifier.boosterCircleShadow(): Modifier = shadow(3.dp, CircleShape)
 
 /** Gap kept between the booster buttons and the banner slot (AdMob accidental-click policy). */
-private val BANNER_CLEARANCE = 24.dp
+private val BANNER_CLEARANCE = 48.dp
 
 private class LastBooster {
     var value: Booster? = null

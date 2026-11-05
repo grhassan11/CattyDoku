@@ -14,6 +14,8 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
 import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdHandle
 import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdRepository
+import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
+import com.tm.meow.sudoku.puzzle.domain.crash.NoopCrashReporter
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -33,6 +35,7 @@ import kotlin.coroutines.resume
 class NativeAdRepositoryImpl @Inject constructor(
     private val status: AdsSdkStatus,
     private val tracker: AdSessionTracker,
+    private val crash: CrashReporter = NoopCrashReporter,
 ) : NativeAdRepository {
 
     override val isConfigured: Boolean
@@ -47,6 +50,7 @@ class NativeAdRepositoryImpl @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
+            crash.recordNonFatal(t, "native.load")
             null
         }
     }

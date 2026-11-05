@@ -164,6 +164,14 @@ object BoardLayoutCalc {
     /** Outer card corner radius, dp: 24 up to 7x7, then -6 per size above 7 (8x8 = 18, 9x9 = 12). */
     fun cardCornerDp(size: Int): Float = (24f - 6f * (size - 7).coerceAtLeast(0)).coerceAtLeast(12f)
 
+    /** Cell (coloured block) corner radius, dp. Tune here. Capped at [CELL_CORNER_MAX_FRACTION] of the cell side. */
+    const val CELL_CORNER_DP = 14f
+    const val CELL_CORNER_MAX_FRACTION = 0.35f
+
+    /** Cell corner radius in px for a cell of [cellPx] side; [dpToPx] = density px per dp. */
+    fun cellCornerPx(cellPx: Float, dpToPx: Float): Float =
+        minOf(CELL_CORNER_DP * dpToPx, cellPx * CELL_CORNER_MAX_FRACTION)
+
     /** Top corner radius, dp: square (0) for 9x9+, otherwise same as [cardCornerDp]. */
     fun cardTopCornerDp(size: Int): Float = if (size >= 9) 0f else cardCornerDp(size)
 

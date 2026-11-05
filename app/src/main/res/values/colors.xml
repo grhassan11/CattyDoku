@@ -11,6 +11,7 @@
     <color name="ad_button_color">#FFC46A00</color>
     <color name="native_ad_cta_text">#FFFFFFFF</color>
     <color name="native_ad_cta_ripple">#33FFFFFF</color>
-    <color name="native_ad_badge_background">#FFA67C00</color>
+    <!-- Same red as AdBadgeRed (Button3D.kt). -->
+    <color name="native_ad_badge_background">#FFE53935</color>
     <color name="native_ad_badge_text">#FFFFFFFF</color>
 </resources>

@@ -69,6 +69,8 @@ import com.tm.meow.sudoku.puzzle.R
 import com.tm.meow.sudoku.puzzle.domain.sudoku.tutorial.SudokuTutorialPhase
 import com.tm.meow.sudoku.puzzle.ui.components.ButtonStyle
 import com.tm.meow.sudoku.puzzle.ui.components.CatIcon
+import com.tm.meow.sudoku.puzzle.ui.components.DownsampledIconImage
+import com.tm.meow.sudoku.puzzle.ui.components.IconArt
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.PillButton
 import com.tm.meow.sudoku.puzzle.ui.components.homePattern
@@ -436,7 +438,7 @@ private fun CompleteDialog(lesson: Int, n: Int, onNext: () -> Unit, onFinish: ()
     val first = lesson == 1
     val title = stringResource(if (first) R.string.sudoku_tut_done_title_1 else R.string.sudoku_tut_done_title_2)
     DialogCard(title, onScrimTap = null) {
-        IconImage(R.drawable.ic_trophy, size = 64.dp, tint = LocalSudokuTierTheme.current.accentStrong)
+        DownsampledIconImage(IconArt.Trophy, size = 64.dp)
         Spacer(Modifier.height(10.dp))
         DialogTitle(title)
         Spacer(Modifier.height(8.dp))

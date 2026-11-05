@@ -255,6 +255,33 @@ class SudokuUseCasesTest {
         assertNotNull(repo.getActiveGame(SudokuTier.EASY))
     }
 
+    @Test
+    fun idleExitDecision() {
+        val s = SudokuGameEngine.newGame(puzzleFor(SudokuTier.EASY, 1L))
+        assertTrue(SudokuIdleExit.shouldDiscard(s))
+        assertTrue(SudokuIdleExit.shouldDiscard(s.copy(elapsedMs = 4_999L)))
+        assertFalse(SudokuIdleExit.shouldDiscard(s.copy(elapsedMs = 5_000L)))
+        val moved = SudokuGameEngine.enterDigit(SudokuGameEngine.select(s, 0), 1, 1_000L)
+        assertFalse(SudokuIdleExit.shouldDiscard(moved))
+        assertFalse(SudokuIdleExit.shouldDiscard(s.copy(hintsUsed = 1)))
+        assertFalse(SudokuIdleExit.shouldDiscard(s.copy(mistakes = 1)))
+        assertFalse(SudokuIdleExit.shouldDiscard(s.copy(status = SudokuStatus.GAME_OVER)))
+    }
+
+    @Test
+    fun saveOrDiscardClearsIdleKeepsMoved() = runTest {
+        val repo = FakeSudokuRepository()
+        val s = SudokuGameEngine.newGame(puzzleFor(SudokuTier.EASY, 1L))
+        repo.saveActiveGame(s)
+        SaveOrDiscardSudokuGame(repo)(s.copy(elapsedMs = 2_000L))
+        assertNull(repo.getActiveGame(SudokuTier.EASY))
+        SaveOrDiscardSudokuGame(repo)(s.copy(elapsedMs = 5_000L))
+        assertNotNull(repo.getActiveGame(SudokuTier.EASY))
+        repo.clearActiveGame(SudokuTier.EASY)
+        SaveOrDiscardSudokuGame(repo)(SudokuGameEngine.enterDigit(SudokuGameEngine.select(s, 0), 1, 1_000L))
+        assertNotNull(repo.getActiveGame(SudokuTier.EASY))
+    }
+
     // ---- hint ----
 
     @Test

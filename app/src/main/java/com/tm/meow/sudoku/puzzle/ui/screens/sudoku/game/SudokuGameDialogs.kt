@@ -41,6 +41,7 @@ import com.tm.meow.sudoku.puzzle.ui.components.DialogScrim
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.PillButton
 import com.tm.meow.sudoku.puzzle.ui.components.StatusBarIconsEffect
+import com.tm.meow.sudoku.puzzle.ui.screens.game.LoseScreenLayout
 import com.tm.meow.sudoku.puzzle.ui.screens.game.rememberAnimationsEnabled
 import com.tm.meow.sudoku.puzzle.ui.screens.sudoku.entry.labelRes
 import com.tm.meow.sudoku.puzzle.ui.theme.FredokaFamily
@@ -228,76 +229,21 @@ internal fun SudokuGameOverDialog(
     val title = stringResource(R.string.sudoku_over_title)
     val armed = rememberInputArmed()
     val resources = LocalContext.current.resources
-    DialogCard(title, onScrimTap = null, scrimColor = GameColors.OutcomeScrim, lightStatusIcons = true) {
-        if (onWatchRevive != null) {
-            val ready = rewardedLoad == RewardedLoadState.READY && !rewardedBusy
-            val failed = rewardedLoad == RewardedLoadState.FAILED && !rewardedBusy
-            val reviveDescription = stringResource(R.string.lose_watch_ad_description)
-            val style = if (ready || failed) ButtonStyle.Red else ButtonStyle.Locked
-            Button3D(
-                onClick = {
-                    if (armed) {
-                        when {
-                            ready -> onWatchRevive()
-                            failed -> onRetryRewardedLoad()
-                            else -> Unit // loading / busy: inert
-                        }
-                    }
-                },
-                style = style,
-                contentDescription = if (ready) reviveDescription else null,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                when {
-                    failed -> Text(
-                        stringResource(R.string.reward_try_again),
-                        color = style.content,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                    )
-                    ready -> {
-                        IconImage(R.drawable.ic_play, size = 20.dp, tint = style.content)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            stringResource(R.string.lose_watch_ad),
-                            color = style.content,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                        )
-                    }
-                    else -> Text(
-                        stringResource(R.string.reward_loading),
-                        color = style.content,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                    )
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-        DialogTitle(title)
-        Spacer(Modifier.height(6.dp))
-        DialogBody(resources.getQuantityString(R.plurals.sudoku_over_body, mistakes, mistakes))
-        Spacer(Modifier.height(20.dp))
-        PillButton(
-            text = stringResource(R.string.sudoku_over_restart),
-            onClick = { if (armed) onRestart() },
-            leadingIconRes = R.drawable.ic_reloading,
-            textSize = 18.sp,
-            horizontalPadding = 16.dp,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(10.dp))
-        PillButton(
-            text = stringResource(R.string.sudoku_over_quit),
-            onClick = { if (armed) onQuit() },
-            filled = false,
-            textSize = 18.sp,
-            horizontalPadding = 16.dp,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
+    // Same screen as Levels "Out of lives" (shared LoseScreenLayout): sad-cat hero, revive CTA, Home + Restart row.
+    LoseScreenLayout(
+        title = title,
+        message = resources.getQuantityString(R.plurals.sudoku_over_body, mistakes, mistakes),
+        heroDescription = stringResource(R.string.sudoku_over_hero_description),
+        reviveDescription = stringResource(R.string.sudoku_over_watch_ad_description),
+        reviveLabel = stringResource(R.string.lose_watch_ad),
+        homeLabel = stringResource(R.string.sudoku_over_home),
+        retryLabel = stringResource(R.string.sudoku_over_restart),
+        onRetry = onRestart,
+        onHome = onQuit,
+        onWatchRevive = onWatchRevive,
+        rewardedLoad = rewardedLoad,
+        rewardedBusy = rewardedBusy,
+        onRetryRewardedLoad = onRetryRewardedLoad,
+        inputArmed = armed,
+    )
 }

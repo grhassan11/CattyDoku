@@ -84,6 +84,7 @@ fun HomeRoute(
         onOpenStreak = onOpenStreak,
         onOpenSettings = onOpenSettings,
         onOpenShop = onOpenShop,
+        onRemoveAds = viewModel::onRemoveAdsClick,
         onSudokuTab = {
             viewModel.onModeTab(AttemptMode.SUDOKU)
             onOpenSudoku()

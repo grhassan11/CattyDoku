@@ -19,10 +19,10 @@ junit = "4.13.2"
 turbine = "1.2.1"
 mockk = "1.14.5"
 # Ads / consent (phase 9). Versions per user instruction (Bangla App 2026-09-02); newer exist (docs show ads-mobile-sdk 1.6.0): bump SDK + adapters TOGETHER.
-adsMobileSdk = "1.4.0"
-metaAdapter = "6.22.0.0"
-unityAds = "4.20.0"
-unityAdapter = "4.20.0.1"
+adsMobileSdk = "1.6.0"
+metaAdapter = "6.22.0.1"
+unityAds = "4.21.0"
+unityAdapter = "4.21.0.0"
 # UNSURE: explicit UMP pin; Next-Gen SDK may already pull it transitively (Gradle picks the higher). Verify on sync.
 ump = "3.2.0"
 # Play Billing (Shop). 9.1.0 is the newest billing-ktx found in the local Gradle cache (aar + javadoc inspected). UNSURE it is the latest stable: check the Play Billing release notes; keep core + ktx on the same version.
@@ -63,7 +63,6 @@ hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.re
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
-androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }

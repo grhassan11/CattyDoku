@@ -40,7 +40,7 @@ internal fun rememberBoardCatPainters(board: BoardUi, targetPx: Int): Array<Pain
     val resources = LocalContext.current.resources
     val variants = remember(board) { CatBitmapSampling.variantsOf(board) }
     val decoded = remember(resources, variants, targetPx) {
-        variants.map { v -> decodeCatPainter(resources, IconArt.placedCatFor(v), targetPx) }
+        variants.map { v -> decodeDownsampledPainter(resources, IconArt.placedCatFor(v), targetPx) }
     }
     val out = arrayOfNulls<Painter>(CatVariants.UNIQUE)
     variants.forEachIndexed { i, v ->
@@ -49,7 +49,7 @@ internal fun rememberBoardCatPainters(board: BoardUi, targetPx: Int): Array<Pain
     return out
 }
 
-private fun decodeCatPainter(resources: Resources, @DrawableRes id: Int, targetPx: Int): Painter? = runCatching {
+private fun decodeDownsampledPainter(resources: Resources, @DrawableRes id: Int, targetPx: Int): Painter? = runCatching {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true; inScaled = false }
     BitmapFactory.decodeResource(resources, id, bounds)
     val opts = BitmapFactory.Options().apply {
@@ -59,7 +59,19 @@ private fun decodeCatPainter(resources: Resources, @DrawableRes id: Int, targetP
     BitmapFactory.decodeResource(resources, id, opts)?.let { BitmapPainter(it.asImageBitmap()) }
 }.getOrNull()
 
-/** Painters for every icon of boss-level [set], index-aligned with [IconArt.animalIcons]. Vector drawables, no decode. */
+/**
+ * Painters for boss-level [set], index-aligned with [IconArt.animalIcons]. Only the indices in [used] (the animals the
+ * regions on this board show) are decoded, at ~[targetPx]; others are null. Falls back to [painterResource] on decode failure.
+ */
 @Composable
-internal fun rememberAnimalPainters(set: AnimalSet): List<Painter> =
-    IconArt.animalIcons(set).map { painterResource(it) }
+internal fun rememberAnimalPainters(set: AnimalSet, used: IntArray, targetPx: Int): Array<Painter?> {
+    val resources = LocalContext.current.resources
+    val icons = IconArt.animalIcons(set)
+    val indices = remember(set, used.toList()) { used.map { it.mod(icons.size) }.distinct() }
+    val decoded = remember(resources, set, indices, targetPx) {
+        indices.map { decodeDownsampledPainter(resources, icons[it], targetPx) }
+    }
+    val out = arrayOfNulls<Painter>(icons.size)
+    indices.forEachIndexed { i, idx -> out[idx] = decoded[i] ?: painterResource(icons[idx]) }
+    return out
+}

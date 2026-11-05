@@ -6,6 +6,7 @@ import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSurfaces
+import com.tm.meow.sudoku.puzzle.domain.ads.RewardedPlacement
 import com.tm.meow.sudoku.puzzle.domain.ads.AdTrigger
 import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle
 import com.tm.meow.sudoku.puzzle.domain.ads.BannerPlacement
@@ -87,14 +88,14 @@ class AdsViewModel @Inject constructor(
 
     // ------------------------------------------------------------ interstitial
 
-    /** Call when a level is WON (counts toward every-Nth-win). Daily wins are ignored. */
+    /** Call when a level is WON (diagnostic win counter). Daily wins are ignored. */
     fun onLevelWon(isDaily: Boolean) = recordLevelWon(isDaily)
 
     /** Win dialog "Level N+1": maybe show an interstitial BEFORE [onDone] (navigates). Ad-free through Lv 9. */
     fun afterWin(level: Int, isDaily: Boolean, onDone: () -> Unit) =
         run(AdTrigger.LEVEL_WON_CONTINUE, level, isDaily, onDone)
 
-    /** Lose dialog Retry: policy keeps this OFF by default; still routed so the seam is live. */
+    /** Lose dialog Retry: maybe an interstitial (remote `levels_game_restarted_interstitial_ad_show`, default on) BEFORE [onDone]. */
     fun beforeRetry(level: Int, isDaily: Boolean, onDone: () -> Unit) =
         run(AdTrigger.LOSE_RETRY, level, isDaily, onDone)
 
@@ -122,29 +123,41 @@ class AdsViewModel @Inject constructor(
      */
     fun preloadRewardedAd() = preloadRewarded(surfaces.value.playerLevel.coerceAtLeast(screenLevel.value))
 
-    /** Booster dialog "Watch Video": on EARNED grant +1 [booster] to inventory, then [onGranted] (game refreshes charges). */
-    fun watchBoosterAd(booster: Booster, onGranted: () -> Unit) {
-        watch(placement = "booster_${booster.name.lowercase()}", onEarned = {
+    /** Levels booster dialog "Watch Video": on EARNED grant +1 [booster] to inventory, then [onGranted] (game refreshes charges). */
+    fun watchBoosterAd(booster: Booster, onGranted: () -> Unit) =
+        watchBooster(booster, RewardedPlacement.LEVELS_BOOSTERS, onGranted)
+
+    /** Sudoku out-of-hints dialog "Watch": on EARNED grant +1 hint, then [onGranted]. Gated by the Sudoku boosters switch. */
+    fun watchSudokuHintAd(onGranted: () -> Unit) =
+        watchBooster(Booster.HINT, RewardedPlacement.SUDOKU_BOOSTERS, onGranted)
+
+    private fun watchBooster(booster: Booster, rewardedPlacement: RewardedPlacement, onGranted: () -> Unit) {
+        watch(placement = "booster_${booster.name.lowercase()}", rewardedPlacement = rewardedPlacement, onEarned = {
             grantBoosterReward(booster)
             analytics.log(AnalyticsEvent.RewardedEarned("booster_${booster.name.lowercase()}"))
             onGranted()
         })
     }
 
-    /** Lose dialog "Watch Ad": on EARNED call [onGranted] (game revives with +1 life and continues). */
-    fun watchReviveAd(onGranted: () -> Unit) {
-        watch(placement = "revive", onEarned = {
+    /** Levels lose dialog "Watch Ad": on EARNED call [onGranted] (game revives with +1 life and continues). */
+    fun watchReviveAd(onGranted: () -> Unit) = watchRevive(RewardedPlacement.LEVELS_REVIVE, onGranted)
+
+    /** Sudoku game-over "Watch Ad": on EARNED call [onGranted] (game revives). Gated by the Sudoku revive switch. */
+    fun watchSudokuReviveAd(onGranted: () -> Unit) = watchRevive(RewardedPlacement.SUDOKU_REVIVE, onGranted)
+
+    private fun watchRevive(rewardedPlacement: RewardedPlacement, onGranted: () -> Unit) {
+        watch(placement = "revive", rewardedPlacement = rewardedPlacement, onEarned = {
             analytics.log(AnalyticsEvent.RewardedEarned("revive"))
             onGranted()
         })
     }
 
-    private fun watch(placement: String, onEarned: suspend () -> Unit) {
+    private fun watch(placement: String, rewardedPlacement: RewardedPlacement, onEarned: suspend () -> Unit) {
         if (!busy.compareAndSet(false, true)) return
         _rewardedBusy.value = true
         viewModelScope.launch {
             try {
-                when (showRewarded(surfaces.value.playerLevel.coerceAtLeast(screenLevel.value))) {
+                when (showRewarded(surfaces.value.playerLevel.coerceAtLeast(screenLevel.value), rewardedPlacement)) {
                     RewardedResult.EARNED -> onEarned()
                     RewardedResult.DISMISSED -> _events.trySend(AdsUiEvent.RewardNotEarned)
                     RewardedResult.NOT_READY, RewardedResult.FAILED -> {
@@ -177,6 +190,8 @@ class AdsViewModel @Inject constructor(
 
     /** Load the banner once for [widthDp] and [placement] (no-op when held / loading / failed within the last minute). */
     fun requestBanner(widthDp: Int, placement: BannerPlacement = BannerPlacement.LEVELS_GAME) {
+        // The UI host destroys the banner on Activity recreation (it binds the view to the old Activity): drop it and reload.
+        if (_banner.value?.isDestroyed == true) _banner.value = null
         if (_banner.value != null || bannerJob?.isActive == true) return
         val failedAt = bannerFailedAtMs
         if (failedAt != null && time.monotonicMillis() - failedAt < BANNER_RETRY_AFTER_FAIL_MS) return

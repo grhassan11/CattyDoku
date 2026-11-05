@@ -11,11 +11,13 @@ import com.tm.meow.sudoku.puzzle.data.repository.StreakRewardRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.platform.AndroidSdkLevelProvider
 import com.tm.meow.sudoku.puzzle.data.notification.SystemNotificationStatus
 import com.tm.meow.sudoku.puzzle.data.notification.WorkDailyReminderScheduler
+import com.tm.meow.sudoku.puzzle.data.notification.WorkSudokuReminderScheduler
 import com.tm.meow.sudoku.puzzle.data.notification.WorkStreakReminderScheduler
 import com.tm.meow.sudoku.puzzle.data.time.SystemTimeProvider
 import com.tm.meow.sudoku.puzzle.domain.notification.DailyReminderScheduler
 import com.tm.meow.sudoku.puzzle.domain.notification.NotificationStatus
 import com.tm.meow.sudoku.puzzle.domain.notification.StreakReminderScheduler
+import com.tm.meow.sudoku.puzzle.domain.notification.SudokuReminderScheduler
 import com.tm.meow.sudoku.puzzle.domain.repository.AppFlagsRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.InventoryRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.ProgressRepository
@@ -60,4 +62,5 @@ abstract class RepositoryModule {
     @Binds abstract fun bindNotificationStatus(impl: SystemNotificationStatus): NotificationStatus
 
     @Binds abstract fun bindDailyReminderScheduler(impl: WorkDailyReminderScheduler): DailyReminderScheduler
+    @Binds abstract fun bindSudokuReminderScheduler(impl: WorkSudokuReminderScheduler): SudokuReminderScheduler
 }

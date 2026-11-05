@@ -20,6 +20,7 @@ import com.tm.meow.sudoku.puzzle.domain.sudoku.model.SudokuGameState
 import com.tm.meow.sudoku.puzzle.domain.sudoku.model.SudokuStatus
 import com.tm.meow.sudoku.puzzle.domain.sudoku.model.SudokuTier
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.CompleteSudoku
+import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SaveOrDiscardSudokuGame
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SaveSudokuGame
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.ShowSudokuInterstitialIfAllowed
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.StartOrResumeSudoku
@@ -70,6 +71,7 @@ class SudokuGameViewModel @Inject constructor(
     savedState: SavedStateHandle,
     private val startOrResume: StartOrResumeSudoku,
     private val saveGame: SaveSudokuGame,
+    private val saveOrDiscard: SaveOrDiscardSudokuGame,
     private val useHint: UseSudokuHint,
     private val completeSudoku: CompleteSudoku,
     private val showInterstitial: ShowSudokuInterstitialIfAllowed,
@@ -603,7 +605,7 @@ class SudokuGameViewModel @Inject constructor(
         maybeLogQuit(QuitReason.SYSTEM_BACK)
         applyHolds()
         viewModelScope.launch {
-            persist()
+            persist(idleExit = true) // idle (no moves, < 5 s): clears the save, so no CONTINUE
             exit(SudokuExitReason.NONE)
         }
     }
@@ -628,17 +630,17 @@ class SudokuGameViewModel @Inject constructor(
 
     private fun flushSave() {
         saveJob?.cancel()
-        viewModelScope.launch { persist() }
+        viewModelScope.launch { persist(idleExit = true) }
     }
 
     /** Saves the LATEST state (re-read under the lock). Skips finished games and anything after [completed]. */
-    private suspend fun persist() {
+    private suspend fun persist(idleExit: Boolean = false) {
         try {
             withContext(NonCancellable) {
                 ioLock.withLock {
                     val g = game ?: return@withLock
                     if (completed || g.status != SudokuStatus.PLAYING) return@withLock
-                    saveGame(g)
+                    if (idleExit) saveOrDiscard(g) else saveGame(g)
                 }
             }
         } catch (e: CancellationException) {

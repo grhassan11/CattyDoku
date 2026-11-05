@@ -1,5 +1,8 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.home
 
+import com.tm.meow.sudoku.puzzle.domain.billing.CatalogState
+import com.tm.meow.sudoku.puzzle.domain.billing.ProductPrice
+import com.tm.meow.sudoku.puzzle.domain.billing.ShopProduct
 import com.tm.meow.sudoku.puzzle.domain.engine.DailyAvailability
 import com.tm.meow.sudoku.puzzle.domain.engine.DailyRules
 import com.tm.meow.sudoku.puzzle.domain.engine.StreakCalendarBuilder
@@ -71,11 +74,25 @@ class HomeUiMapperTest {
     }
 
     @Test
+    fun removeAdsBadgeNeedsAdsOnAndForeverPrice() {
+        val forever = ShopProduct.REMOVE_ADS_FOREVER.id
+        val monthly = ShopProduct.REMOVE_ADS_MONTHLY.id
+        val ready = CatalogState.Ready(mapOf(forever to ProductPrice(forever, "$1")))
+        assertTrue(HomeUiMapper.removeAdsBadgeVisible(false, ready))
+        assertFalse(HomeUiMapper.removeAdsBadgeVisible(true, ready))
+        assertFalse(HomeUiMapper.removeAdsBadgeVisible(false, CatalogState.Loading))
+        assertFalse(HomeUiMapper.removeAdsBadgeVisible(false, CatalogState.Unavailable(null)))
+        assertFalse(
+            HomeUiMapper.removeAdsBadgeVisible(false, CatalogState.Ready(mapOf(monthly to ProductPrice(monthly, "$1")))),
+        )
+    }
+
+    @Test
     fun withToggleFlipsOnlyThatSetting() {
         for (toggle in SettingToggle.entries) {
-            val base = Settings(music = false, sfx = false, voice = false, haptics = false, patternMode = false, streakReminders = false, dailyReminders = false)
+            val base = Settings(music = false, sfx = false, voice = false, haptics = false, patternMode = false, streakReminders = false, dailyReminders = false, sudokuReminders = false)
             val on = base.withToggle(toggle, true)
-            val flipped = listOf(on.music, on.sfx, on.voice, on.haptics, on.patternMode, on.streakReminders, on.dailyReminders).count { it }
+            val flipped = listOf(on.music, on.sfx, on.voice, on.haptics, on.patternMode, on.streakReminders, on.dailyReminders, on.sudokuReminders).count { it }
             assertEquals("toggle $toggle", 1, flipped)
             assertEquals(base, on.withToggle(toggle, false))
         }

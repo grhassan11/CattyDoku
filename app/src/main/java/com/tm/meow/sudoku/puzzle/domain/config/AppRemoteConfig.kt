@@ -6,18 +6,21 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AppOpenConfig
 
 /** Remote Config key names. STABLE: they are the contract with the Firebase console. */
 object RemoteConfigKeys {
-    /** Master ads switch. false always wins over every per-unit switch. */
-    const val ADS_SHOW = "ads_show"
     const val AD_FREE_THROUGH_LEVEL = "ad_free_through_level"
-    const val LEVELS_HOME_NATIVE_AD_SHOW = "levels_home_native_ad_show"
+    const val APP_OPEN_AD_SHOW = "app_open_ad_show"
+    const val LEVEL_HOME_NATIVE_AD_SHOW = "level_home_native_ad_show"
     const val SUDOKU_HOME_NATIVE_AD_SHOW = "sudoku_home_native_ad_show"
     const val LEVELS_GAME_BANNER_AD_SHOW = "levels_game_banner_ad_show"
     const val SUDOKU_GAME_BANNER_AD_SHOW = "sudoku_game_banner_ad_show"
-    const val INTERSTITIAL_SHOW = "interstitial_show"
-    const val REWARDED_SHOW = "rewarded_show"
-    const val APP_OPEN_SHOW = "app_open_show"
-    const val INTERSTITIAL_EVERY_NTH_WIN = "interstitial_every_nth_win"
-    const val INTERSTITIAL_MIN_INTERVAL_SEC = "interstitial_min_interval_sec"
+    const val SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW = "sudoku_game_completed_interstitial_ad_show"
+    const val LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW = "levels_game_completed_interstitial_ad_show"
+    const val LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY = "levels_game_completed_interstitial_ad_frequency"
+    const val SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW = "sudoku_game_restarted_interstitial_ad_show"
+    const val LEVELS_GAME_RESTARTED_INTERSTITIAL_AD_SHOW = "levels_game_restarted_interstitial_ad_show"
+    const val SUDOKU_GAME_BOOSTERS_REWARDED_AD_SHOW = "sudoku_game_boosters_rewarded_ad_show"
+    const val LEVELS_GAME_BOOSTERS_REWARDED_AD_SHOW = "levels_game_boosters_rewarded_ad_show"
+    const val LEVELS_GAME_REVIVE_REWARDED_AD_SHOW = "levels_game_revive_rewarded_ad_show"
+    const val SUDOKU_GAME_REVIVE_REWARDED_AD_SHOW = "sudoku_game_revive_rewarded_ad_show"
 
     /** Kill switch for streak milestone rewards (amounts are hardcoded, never remote). */
     const val STREAK_REWARDS_ENABLED = "streak_rewards_enabled"
@@ -32,20 +35,26 @@ object RemoteConfigKeys {
 /**
  * Typed Remote Config snapshot. Defaults here ARE the in-app defaults (they equal the shipped ad policy), so a missing
  * or failing config changes nothing. Difficulty curve is deliberately NOT remote (puzzle determinism, generatorVersion).
+ * No master ads switch: each surface has its own key. Interstitial min interval is a hardcoded constant.
  */
 data class AppRemoteConfig(
-    /** Master ads kill switch (gates every format). */
-    val adsShow: Boolean = AdPolicyConfig.DEFAULT_ENABLED,
     val adFreeThroughLevel: Int = AdFreePolicy.AD_FREE_THROUGH_LEVEL,
-    val levelsHomeNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    /** App-wide app-open kill switch. */
+    val appOpenAdShow: Boolean = AppOpenConfig.DEFAULT_ENABLED,
+    val levelHomeNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val sudokuHomeNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val levelsGameBannerAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val sudokuGameBannerAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
-    val interstitialShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
-    val rewardedShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
-    val appOpenShow: Boolean = AppOpenConfig.DEFAULT_ENABLED,
-    val interstitialEveryNthWin: Int = AdPolicyConfig.DEFAULT_EVERY_NTH_WIN,
-    val interstitialMinIntervalSec: Int = (AdPolicyConfig.DEFAULT_MIN_INTERVAL_MS / 1000L).toInt(),
+    val sudokuGameCompletedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    val levelsGameCompletedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    /** Levels win ad on every Nth completed level (level % N == 0), 1..50. */
+    val levelsGameCompletedInterstitialAdFrequency: Int = AdPolicyConfig.DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY,
+    val sudokuGameRestartedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    val levelsGameRestartedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    val sudokuGameBoostersRewardedAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    val levelsGameBoostersRewardedAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    val levelsGameReviveRewardedAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    val sudokuGameReviveRewardedAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     /** Streak milestone rewards on/off. false hides the reward UI and refuses claims. */
     val streakRewardsEnabled: Boolean = true,
     /** Streak-at-risk evening notification on/off. false = nothing scheduled, nothing shown. */
@@ -54,27 +63,30 @@ data class AppRemoteConfig(
     val dailyReminderEnabled: Boolean = true,
 ) {
     fun toAdPolicyConfig(): AdPolicyConfig = AdPolicyConfig(
-        enabled = adsShow,
         adFreeThroughLevel = adFreeThroughLevel,
-        everyNthWin = interstitialEveryNthWin,
-        minIntervalMs = interstitialMinIntervalSec * 1000L,
-        levelsHomeNativeShow = levelsHomeNativeAdShow,
+        levelsInterstitialFrequency = levelsGameCompletedInterstitialAdFrequency,
+        levelsHomeNativeShow = levelHomeNativeAdShow,
         sudokuHomeNativeShow = sudokuHomeNativeAdShow,
         levelsGameBannerShow = levelsGameBannerAdShow,
         sudokuGameBannerShow = sudokuGameBannerAdShow,
-        rewardedShow = rewardedShow,
-        interstitialShow = interstitialShow,
+        levelsWinInterstitialShow = levelsGameCompletedInterstitialAdShow,
+        sudokuWinInterstitialShow = sudokuGameCompletedInterstitialAdShow,
+        levelsRestartInterstitialShow = levelsGameRestartedInterstitialAdShow,
+        sudokuRestartInterstitialShow = sudokuGameRestartedInterstitialAdShow,
+        levelsBoostersRewardedShow = levelsGameBoostersRewardedAdShow,
+        sudokuBoostersRewardedShow = sudokuGameBoostersRewardedAdShow,
+        levelsReviveRewardedShow = levelsGameReviveRewardedAdShow,
+        sudokuReviveRewardedShow = sudokuGameReviveRewardedAdShow,
     )
 
     fun toAppOpenConfig(): AppOpenConfig = AppOpenConfig(
-        enabled = adsShow && appOpenShow,
+        enabled = appOpenAdShow,
         adFreeThroughLevel = adFreeThroughLevel,
     )
 
     companion object {
         val AD_FREE_LEVEL_RANGE = 0..50
-        val EVERY_NTH_WIN_RANGE = 1..10
-        val MIN_INTERVAL_SEC_RANGE = 30..600
+        val INTERSTITIAL_FREQUENCY_RANGE = 1..50
     }
 }
 
@@ -84,22 +96,42 @@ object RemoteConfigParser {
     fun parse(read: (String) -> String?): AppRemoteConfig {
         val d = AppRemoteConfig()
         return AppRemoteConfig(
-            adsShow = bool(read(RemoteConfigKeys.ADS_SHOW), d.adsShow),
             adFreeThroughLevel = int(
                 read(RemoteConfigKeys.AD_FREE_THROUGH_LEVEL), d.adFreeThroughLevel, AppRemoteConfig.AD_FREE_LEVEL_RANGE,
             ),
-            levelsHomeNativeAdShow = bool(read(RemoteConfigKeys.LEVELS_HOME_NATIVE_AD_SHOW), d.levelsHomeNativeAdShow),
+            appOpenAdShow = bool(read(RemoteConfigKeys.APP_OPEN_AD_SHOW), d.appOpenAdShow),
+            levelHomeNativeAdShow = bool(read(RemoteConfigKeys.LEVEL_HOME_NATIVE_AD_SHOW), d.levelHomeNativeAdShow),
             sudokuHomeNativeAdShow = bool(read(RemoteConfigKeys.SUDOKU_HOME_NATIVE_AD_SHOW), d.sudokuHomeNativeAdShow),
             levelsGameBannerAdShow = bool(read(RemoteConfigKeys.LEVELS_GAME_BANNER_AD_SHOW), d.levelsGameBannerAdShow),
             sudokuGameBannerAdShow = bool(read(RemoteConfigKeys.SUDOKU_GAME_BANNER_AD_SHOW), d.sudokuGameBannerAdShow),
-            interstitialShow = bool(read(RemoteConfigKeys.INTERSTITIAL_SHOW), d.interstitialShow),
-            rewardedShow = bool(read(RemoteConfigKeys.REWARDED_SHOW), d.rewardedShow),
-            appOpenShow = bool(read(RemoteConfigKeys.APP_OPEN_SHOW), d.appOpenShow),
-            interstitialEveryNthWin = int(
-                read(RemoteConfigKeys.INTERSTITIAL_EVERY_NTH_WIN), d.interstitialEveryNthWin, AppRemoteConfig.EVERY_NTH_WIN_RANGE,
+            sudokuGameCompletedInterstitialAdShow = bool(
+                read(RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW), d.sudokuGameCompletedInterstitialAdShow,
             ),
-            interstitialMinIntervalSec = int(
-                read(RemoteConfigKeys.INTERSTITIAL_MIN_INTERVAL_SEC), d.interstitialMinIntervalSec, AppRemoteConfig.MIN_INTERVAL_SEC_RANGE,
+            levelsGameCompletedInterstitialAdShow = bool(
+                read(RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW), d.levelsGameCompletedInterstitialAdShow,
+            ),
+            levelsGameCompletedInterstitialAdFrequency = int(
+                read(RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY),
+                d.levelsGameCompletedInterstitialAdFrequency,
+                AppRemoteConfig.INTERSTITIAL_FREQUENCY_RANGE,
+            ),
+            sudokuGameRestartedInterstitialAdShow = bool(
+                read(RemoteConfigKeys.SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW), d.sudokuGameRestartedInterstitialAdShow,
+            ),
+            levelsGameRestartedInterstitialAdShow = bool(
+                read(RemoteConfigKeys.LEVELS_GAME_RESTARTED_INTERSTITIAL_AD_SHOW), d.levelsGameRestartedInterstitialAdShow,
+            ),
+            sudokuGameBoostersRewardedAdShow = bool(
+                read(RemoteConfigKeys.SUDOKU_GAME_BOOSTERS_REWARDED_AD_SHOW), d.sudokuGameBoostersRewardedAdShow,
+            ),
+            levelsGameBoostersRewardedAdShow = bool(
+                read(RemoteConfigKeys.LEVELS_GAME_BOOSTERS_REWARDED_AD_SHOW), d.levelsGameBoostersRewardedAdShow,
+            ),
+            levelsGameReviveRewardedAdShow = bool(
+                read(RemoteConfigKeys.LEVELS_GAME_REVIVE_REWARDED_AD_SHOW), d.levelsGameReviveRewardedAdShow,
+            ),
+            sudokuGameReviveRewardedAdShow = bool(
+                read(RemoteConfigKeys.SUDOKU_GAME_REVIVE_REWARDED_AD_SHOW), d.sudokuGameReviveRewardedAdShow,
             ),
             streakRewardsEnabled = bool(read(RemoteConfigKeys.STREAK_REWARDS_ENABLED), d.streakRewardsEnabled),
             streakReminderEnabled = bool(read(RemoteConfigKeys.STREAK_REMINDER_ENABLED), d.streakReminderEnabled),
@@ -111,17 +143,21 @@ object RemoteConfigParser {
     fun defaults(): Map<String, String> {
         val d = AppRemoteConfig()
         return mapOf(
-            RemoteConfigKeys.ADS_SHOW to d.adsShow.toString(),
             RemoteConfigKeys.AD_FREE_THROUGH_LEVEL to d.adFreeThroughLevel.toString(),
-            RemoteConfigKeys.LEVELS_HOME_NATIVE_AD_SHOW to d.levelsHomeNativeAdShow.toString(),
+            RemoteConfigKeys.APP_OPEN_AD_SHOW to d.appOpenAdShow.toString(),
+            RemoteConfigKeys.LEVEL_HOME_NATIVE_AD_SHOW to d.levelHomeNativeAdShow.toString(),
             RemoteConfigKeys.SUDOKU_HOME_NATIVE_AD_SHOW to d.sudokuHomeNativeAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_BANNER_AD_SHOW to d.levelsGameBannerAdShow.toString(),
             RemoteConfigKeys.SUDOKU_GAME_BANNER_AD_SHOW to d.sudokuGameBannerAdShow.toString(),
-            RemoteConfigKeys.INTERSTITIAL_SHOW to d.interstitialShow.toString(),
-            RemoteConfigKeys.REWARDED_SHOW to d.rewardedShow.toString(),
-            RemoteConfigKeys.APP_OPEN_SHOW to d.appOpenShow.toString(),
-            RemoteConfigKeys.INTERSTITIAL_EVERY_NTH_WIN to d.interstitialEveryNthWin.toString(),
-            RemoteConfigKeys.INTERSTITIAL_MIN_INTERVAL_SEC to d.interstitialMinIntervalSec.toString(),
+            RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to d.sudokuGameCompletedInterstitialAdShow.toString(),
+            RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to d.levelsGameCompletedInterstitialAdShow.toString(),
+            RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY to d.levelsGameCompletedInterstitialAdFrequency.toString(),
+            RemoteConfigKeys.SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW to d.sudokuGameRestartedInterstitialAdShow.toString(),
+            RemoteConfigKeys.LEVELS_GAME_RESTARTED_INTERSTITIAL_AD_SHOW to d.levelsGameRestartedInterstitialAdShow.toString(),
+            RemoteConfigKeys.SUDOKU_GAME_BOOSTERS_REWARDED_AD_SHOW to d.sudokuGameBoostersRewardedAdShow.toString(),
+            RemoteConfigKeys.LEVELS_GAME_BOOSTERS_REWARDED_AD_SHOW to d.levelsGameBoostersRewardedAdShow.toString(),
+            RemoteConfigKeys.LEVELS_GAME_REVIVE_REWARDED_AD_SHOW to d.levelsGameReviveRewardedAdShow.toString(),
+            RemoteConfigKeys.SUDOKU_GAME_REVIVE_REWARDED_AD_SHOW to d.sudokuGameReviveRewardedAdShow.toString(),
             RemoteConfigKeys.STREAK_REWARDS_ENABLED to d.streakRewardsEnabled.toString(),
             RemoteConfigKeys.STREAK_REMINDER_ENABLED to d.streakReminderEnabled.toString(),
             RemoteConfigKeys.DAILY_REMINDER_ENABLED to d.dailyReminderEnabled.toString(),

@@ -50,6 +50,9 @@ interface RewardedAdRepository {
 interface BannerAdHandle {
     /** Release the SDK ad. Idempotent. */
     fun destroy()
+
+    /** True once [destroy] ran (also when the UI host destroyed it on Activity recreation). Destroyed handles must not be hosted. */
+    val isDestroyed: Boolean get() = false
 }
 
 /** Which screen hosts a banner. Each placement has its own remote kill switch and gate (see LoadBannerAd / ObserveAdSurfaces). */
@@ -77,8 +80,14 @@ interface BannerAdRepository {
 data class AdSurfaces(
     /** Level used for the ad-free rule (max of the screen's level and the last played level). */
     val playerLevel: Int = 0,
-    /** Booster play badge / dialog and lose-screen revive CTA may appear. */
-    val rewarded: Boolean = false,
+    /** Levels booster play badge / dialog may appear. */
+    val levelsBoosters: Boolean = false,
+    /** Levels lose-screen revive CTA may appear. */
+    val levelsRevive: Boolean = false,
+    /** Sudoku out-of-hints dialog Watch button may appear. */
+    val sudokuBoosters: Boolean = false,
+    /** Sudoku game-over revive CTA may appear. */
+    val sudokuRevive: Boolean = false,
     val rewardedLoad: RewardedLoadState = RewardedLoadState.IDLE,
     /** Sticky banner slot may be reserved on the game screen. */
     val banner: Boolean = false,
@@ -86,4 +95,10 @@ data class AdSurfaces(
     val sudokuBanner: Boolean = false,
     /** Remove Ads owned. Banner is already folded to false; rewarded is unaffected. Informational for the UI. */
     val adsRemoved: Boolean = false,
-)
+) {
+    /** Any Levels rewarded surface is live (drives Levels preload). */
+    val levelsRewarded: Boolean get() = levelsBoosters || levelsRevive
+
+    /** Any Sudoku rewarded surface is live (drives Sudoku preload). */
+    val sudokuRewarded: Boolean get() = sudokuBoosters || sudokuRevive
+}

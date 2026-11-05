@@ -104,6 +104,36 @@ class SaveSudokuGame(private val repo: SudokuRepository) {
     }
 }
 
+/**
+ * Idle-exit rule: a game left with NO moves in under [MIN_PLAY_MS] of play time is not a game. Pure.
+ * "Move" = any digit / note / erase (each pushes an undo step), a hint, or a mistake. Time = game clock (monotonic, pauses
+ * excluded), never wall clock. Only a PLAYING game can be discarded.
+ */
+object SudokuIdleExit {
+    const val MIN_PLAY_MS: Long = 5_000L
+
+    fun hasMoves(state: SudokuGameState): Boolean =
+        state.undo.isNotEmpty() || state.hintsUsed > 0 || state.mistakes > 0
+
+    fun shouldDiscard(state: SudokuGameState): Boolean =
+        state.status == SudokuStatus.PLAYING && !hasMoves(state) && state.elapsedMs < MIN_PLAY_MS
+}
+
+/**
+ * Save on leave / app stop / user pause: an idle game ([SudokuIdleExit.shouldDiscard]) clears the save instead, so the entry
+ * shows no CONTINUE. Stats, loss and streak are untouched on abandon anyway (only [CompleteSudoku] writes them); the
+ * start-time `plays` count is also the puzzle seed index, so it is kept (next puzzle differs).
+ */
+class SaveOrDiscardSudokuGame(private val repo: SudokuRepository) {
+    suspend operator fun invoke(state: SudokuGameState) {
+        when {
+            state.status != SudokuStatus.PLAYING -> Unit
+            SudokuIdleExit.shouldDiscard(state) -> repo.clearActiveGame(state.tier)
+            else -> repo.saveActiveGame(state)
+        }
+    }
+}
+
 /** Drop the saved game of [tier] (abandon). The play stays counted. */
 class ResetActiveSudokuGame(private val repo: SudokuRepository) {
     suspend operator fun invoke(tier: SudokuTier) = repo.clearActiveGame(tier)

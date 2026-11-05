@@ -123,7 +123,7 @@ internal fun DrawScope.drawPlacementFx(fx: PlacementFx, token: Int, idx: Int, bo
     val flash = FLASH_ALPHA * (1f - t / FLASH_END)
     if (flash > 0f) {
         val c = Color.White.copy(alpha = flash)
-        val corner = CornerRadius(8.dp.toPx())
+        val corner = CornerRadius(BoardLayoutCalc.cellCornerPx(cell, 1.dp.toPx()))
         val sq = Size(cell, cell)
         val cells = board.cells
         for (i in cells.indices) {

@@ -75,6 +75,7 @@ import com.tm.meow.sudoku.puzzle.ui.components.Button3DHeight
 import com.tm.meow.sudoku.puzzle.ui.components.ButtonStyle
 import com.tm.meow.sudoku.puzzle.ui.components.Confetti
 import com.tm.meow.sudoku.puzzle.ui.components.DialogScrim
+import com.tm.meow.sudoku.puzzle.ui.components.DownsampledIconImage
 import com.tm.meow.sudoku.puzzle.ui.components.IconArt
 import com.tm.meow.sudoku.puzzle.ui.components.HomePlaceholder
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
@@ -247,7 +248,8 @@ private fun WinDialog(
                 StatChip(
                     label = stringResource(R.string.win_stat_mistakes),
                     value = heartsLost.toString(),
-                    iconRes = R.drawable.ic_fish_bone,
+                    iconRes = IconArt.FishBone,
+                    downsampleIcon = true,
                     description = stringResource(R.string.win_stat_mistakes_description, heartsLost),
                 )
                 StatChip(
@@ -446,6 +448,7 @@ private fun RowScope.StatChip(
     iconRes: Int?,
     description: String,
     iconTint: Color? = null,
+    downsampleIcon: Boolean = false,
 ) {
     Column(
         Modifier
@@ -466,7 +469,11 @@ private fun RowScope.StatChip(
             if (iconRes != null) {
                 // Fixed 26dp slot so icon size never changes card height.
                 Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
-                    IconImage(iconRes, size = 26.dp, tint = iconTint)
+                    if (downsampleIcon) {
+                        DownsampledIconImage(iconRes, size = 26.dp)
+                    } else {
+                        IconImage(iconRes, size = 26.dp, tint = iconTint)
+                    }
                 }
             }
             Text(value, color = GameColors.StatCardValue, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -477,7 +484,7 @@ private fun RowScope.StatChip(
 // ------------------------------------------------------------------ lose
 
 /**
- * Out of lives. Layout: fish-skeleton hero, title, message, then
+ * Out of lives. Layout: sad-cat hero, title, message, then
  *  a) full-width "Watch Ad to Continue" (rewarded revive: +1 life, same level; only when [onWatchRevive] != null),
  *  b) one row: HOME (secondary, [onHome]) left, RETRY (primary, [onRetry]) right.
  * [onRetry] is the seam for restarting the level (an interstitial may sit in front via AdsViewModel.beforeRetry).
@@ -493,8 +500,45 @@ private fun LoseDialog(
     rewardedBusy: Boolean,
     onRetryRewardedLoad: () -> Unit,
 ) {
-    val title = stringResource(R.string.lose_title)
-    val heroDescription = stringResource(R.string.lose_fish_bone_description)
+    LoseScreenLayout(
+        title = stringResource(R.string.lose_title),
+        message = stringResource(R.string.lose_message),
+        heroDescription = stringResource(R.string.lose_fish_bone_description),
+        reviveDescription = stringResource(R.string.lose_watch_ad_description),
+        reviveLabel = stringResource(R.string.lose_watch_ad),
+        homeLabel = stringResource(R.string.lose_home),
+        retryLabel = stringResource(R.string.lose_retry),
+        onRetry = onRetry,
+        onHome = onHome,
+        onWatchRevive = onWatchRevive,
+        rewardedLoad = rewardedLoad,
+        rewardedBusy = rewardedBusy,
+        onRetryRewardedLoad = onRetryRewardedLoad,
+    )
+}
+
+/**
+ * Shared "failed" screen layout (Levels "Out of lives" + Sudoku "Out of hearts"). Text comes in as params; the layout,
+ * art, colors and motion are the Levels ones. [inputArmed] false = buttons inert (Sudoku guards against a stray tap
+ * landing right as the screen appears); Levels keeps the default true.
+ */
+@Composable
+internal fun LoseScreenLayout(
+    title: String,
+    message: String,
+    heroDescription: String,
+    reviveDescription: String,
+    reviveLabel: String,
+    homeLabel: String,
+    retryLabel: String,
+    onRetry: () -> Unit,
+    onHome: () -> Unit,
+    onWatchRevive: (() -> Unit)?,
+    rewardedLoad: RewardedLoadState,
+    rewardedBusy: Boolean,
+    onRetryRewardedLoad: () -> Unit,
+    inputArmed: Boolean = true,
+) {
 
     val sway = rememberInfiniteTransition(label = "failedSway")
     val swayDeg by sway.animateFloat(
@@ -515,12 +559,12 @@ private fun LoseDialog(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            androidx.compose.foundation.Image(
-                painter = painterResource(IconArt.LevelFailed),
-                contentDescription = heroDescription,
+            DownsampledIconImage(
+                res = IconArt.CatSad,
                 modifier = Modifier
-                    .size(200.dp)
+                    .semantics { contentDescription = heroDescription }
                     .rotate(swayDeg),
+                size = 220.dp,
             )
             Spacer(Modifier.height(8.dp))
             Text(
@@ -532,7 +576,7 @@ private fun LoseDialog(
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = stringResource(R.string.lose_message),
+                text = message,
                 color = GameColors.WinMessage,
                 fontSize = 20.sp,
                 lineHeight = 26.sp,
@@ -544,7 +588,6 @@ private fun LoseDialog(
             if (onWatchRevive != null) {
                 val ready = rewardedLoad == RewardedLoadState.READY && !rewardedBusy
                 val failed = rewardedLoad == RewardedLoadState.FAILED && !rewardedBusy
-                val reviveDescription = stringResource(R.string.lose_watch_ad_description)
                 val style = when {
                     ready -> ButtonStyle.Red
                     failed -> ButtonStyle.Blue
@@ -552,7 +595,7 @@ private fun LoseDialog(
                 }
                 Button3D(
                     onClick = {
-                        when {
+                        if (inputArmed) when {
                             ready -> onWatchRevive()
                             failed -> onRetryRewardedLoad()
                             else -> Unit // loading / busy: inert
@@ -573,7 +616,7 @@ private fun LoseDialog(
                         ready -> {
                             IconImage(R.drawable.ic_play, size = 22.dp, tint = style.content)
                             Text(
-                                stringResource(R.string.lose_watch_ad),
+                                reviveLabel,
                                 color = style.content,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
@@ -597,14 +640,14 @@ private fun LoseDialog(
             ) {
                 // HOME: secondary (cream) so RETRY stays the primary action.
                 Button3D(
-                    onClick = onHome,
+                    onClick = { if (inputArmed) onHome() },
                     style = ButtonStyle.Secondary,
                     horizontalPadding = 12.dp,
                     modifier = Modifier.weight(1f),
                 ) {
                     HomePlaceholder(color = ButtonStyle.Secondary.content)
                     Text(
-                        stringResource(R.string.lose_home),
+                        homeLabel,
                         color = ButtonStyle.Secondary.content,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
@@ -613,8 +656,8 @@ private fun LoseDialog(
                     )
                 }
                 PillButton(
-                    text = stringResource(R.string.lose_retry),
-                    onClick = onRetry,
+                    text = retryLabel,
+                    onClick = { if (inputArmed) onRetry() },
                     leadingIconRes = R.drawable.ic_reloading,
                     style = ButtonStyle.Primary,
                     textSize = 20.sp,

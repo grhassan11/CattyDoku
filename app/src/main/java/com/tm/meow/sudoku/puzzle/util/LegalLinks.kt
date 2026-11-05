@@ -6,13 +6,11 @@ import android.content.Intent
 import android.net.Uri
 
 /**
- * Terms of Service + Privacy Policy. The ONE place that knows the URLs.
- * TBD by the user: replace both placeholders (reserved .invalid TLD, never resolves) with the hosted
- * HTTPS pages before release. Bump TermsPolicy.CURRENT_VERSION when the text changes materially.
+ * Privacy Policy. The ONE place that knows the URL.
+ * Bump TermsPolicy.CURRENT_VERSION when the policy changes materially.
  */
 object LegalLinks {
-    const val TERMS_URL: String = "https://example.invalid/terms"
-    const val PRIVACY_URL: String = "https://example.invalid/privacy"
+    const val PRIVACY_URL: String = "https://toolsmania3.blogspot.com/2026/11/privacy-policy-of-catty-sudoku-game-on.html"
 
     /** Opens [url] in the browser. False when nothing can handle it. */
     fun open(context: Context, url: String): Boolean {

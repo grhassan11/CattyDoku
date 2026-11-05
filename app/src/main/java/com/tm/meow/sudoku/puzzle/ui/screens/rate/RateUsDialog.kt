@@ -2,7 +2,12 @@ package com.tm.meow.sudoku.puzzle.ui.screens.rate
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.graphicsLayer
@@ -106,7 +111,7 @@ internal fun RateUsDialog(
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
                 for (i in 1..RateUsPolicy.MAX_STARS) {
-                    StarButton(index = i, filled = i <= stars, onClick = { stars = i })
+                    StarButton(index = i, filled = i <= stars, pulse = i == RateUsPolicy.MAX_STARS && stars == 0, onClick = { stars = i })
                 }
             }
             Spacer(Modifier.height(20.dp))
@@ -139,11 +144,21 @@ internal fun RateUsDialog(
 }
 
 @Composable
-private fun StarButton(index: Int, filled: Boolean, onClick: () -> Unit) {
+private fun StarButton(index: Int, filled: Boolean, pulse: Boolean, onClick: () -> Unit) {
     val description = pluralStringResource(R.plurals.rate_star_description, index, index)
     val tap = rememberTapClick(onClick)
     val pop = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
+    val infinite = rememberInfiniteTransition(label = "starPulse")
+    val pulseValue by infinite.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+        label = "starPulseValue",
+    )
+    val pulseFraction = if (pulse) pulseValue else 0f
+    // Blink hint shows the star filled (yellow); pulse is only true while no rating is picked.
+    val showFilled = filled || pulse
     // Outer 52dp box = touch target + circular (unbounded) ripple; no star clip. Inner box scales the provided star art as-is.
     Box(
         Modifier
@@ -167,11 +182,13 @@ private fun StarButton(index: Int, filled: Boolean, onClick: () -> Unit) {
             modifier = Modifier
                 .size(46.dp)
                 .graphicsLayer {
-                    scaleX = pop.value
-                    scaleY = pop.value
+                    val s = pop.value * (1f + 0.15f * pulseFraction)
+                    scaleX = s
+                    scaleY = s
+                    alpha = 1f - 0.4f * pulseFraction
                 },
-            alpha = if (filled) 1f else 0.5f,
-            colorFilter = if (filled) null else ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
+            alpha = if (showFilled) 1f else 0.5f,
+            colorFilter = if (showFilled) null else ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
         )
     }
 }

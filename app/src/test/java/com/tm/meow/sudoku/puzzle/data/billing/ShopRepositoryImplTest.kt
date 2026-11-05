@@ -315,4 +315,34 @@ class ShopRepositoryImplTest {
             assertEquals(PurchaseEvent.Failed(BillingFailure.NETWORK), awaitItem())
         }
     }
+
+    @Test
+    fun restoreReportsPendingEvenWhenAlreadyAnnouncedButRefreshStaysQuiet() = runTest {
+        gateway.purchasesResult = StoreResult.Success(
+            listOf(purchase("hint_pack_5", token = "p", status = PurchaseStatus.PENDING)),
+        )
+        val r = repo()
+        r.events.test {
+            r.refresh() // announces once
+            assertEquals(PurchaseEvent.Pending(ShopProduct.HINT_PACK_5), awaitItem())
+            r.refresh() // announce-once rule: silent
+            r.restore() // explicit restore: reported again, never "Nothing to restore"
+            assertEquals(PurchaseEvent.Pending(ShopProduct.HINT_PACK_5), awaitItem())
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun restoreWithFailedAcknowledgeIsIncompleteButEntitlementStaysApplied() = runTest {
+        val ads = newAds()
+        gateway.acknowledgeResult = StoreResult.Failure(BillingFailure.NETWORK)
+        gateway.purchasesResult = StoreResult.Success(listOf(purchase("remove_ads_forever", token = "f")))
+        val r = repo(ads)
+        r.events.test {
+            r.restore()
+            assertEquals(PurchaseEvent.RestoreIncomplete, awaitItem())
+            expectNoEvents()
+        }
+        assertTrue(ads.entitlement.value.foreverOwned)
+    }
 }

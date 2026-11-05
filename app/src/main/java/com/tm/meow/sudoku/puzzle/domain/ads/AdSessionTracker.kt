@@ -47,6 +47,9 @@ class AdSessionTracker(private val time: TimeProvider) {
     /** UMP form is on screen right now. Blocks app-open. */
     @Volatile var consentFormShowing: Boolean = false
 
+    /** The consent gather + ads init startup step has begun this process (in-app splash, or the restored-back-stack fallback). */
+    @Volatile var startupGatherStarted: Boolean = false
+
     /** Home reached this process = Splash / Terms / consent / notification prompt / Tutorial are all behind us. */
     @Volatile var startFlowComplete: Boolean = false
 

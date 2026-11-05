@@ -24,7 +24,8 @@ class ShopUiMapperTest {
         entitlement: Entitlement = Entitlement.NONE,
         balances: Map<Booster, Int> = emptyMap(),
         busy: Boolean = false,
-    ) = ShopUiMapper.map(catalog, entitlement, balances, busy)
+        restoring: Boolean = false,
+    ) = ShopUiMapper.map(catalog, entitlement, balances, busy, restoring)
 
     @Test
     fun pricesAreExactlyThePlayStrings() {
@@ -72,6 +73,14 @@ class ShopUiMapperTest {
     }
 
     @Test
+    fun restoringIsSeparateFromBusy() {
+        assertFalse(map(busy = true).restoring)
+        val s = map(busy = true, restoring = true)
+        assertTrue(s.restoring && s.busy)
+        assertTrue(s.sections.flatMap { it.packs }.none { it.buyEnabled })
+    }
+
+    @Test
     fun threeSectionsInOrderWithBadgesAndLiveBalances() {
         val s = map(balances = mapOf(Booster.CAT to 7, Booster.HINT to 3))
         assertEquals(listOf(Booster.CAT, Booster.HINT, Booster.MOUSE), s.sections.map { it.booster })
@@ -102,7 +111,9 @@ class ShopUiMapperTest {
     @Test
     fun foreverOwnedAndMonthlyStillActiveShowsBothAsHeld() {
         val s = map(entitlement = Entitlement(monthlyActive = true, foreverOwned = true, verifiedAtMs = 1L))
-        assertEquals(OfferOwnership.ACTIVE, s.monthly.ownership)
+        assertEquals(OfferOwnership.NOT_NEEDED, s.monthly.ownership)
+        assertTrue(s.monthly.canManage) // live sub can still be cancelled
+        assertFalse(s.monthly.buyEnabled)
         assertEquals(OfferOwnership.OWNED, s.forever.ownership)
     }
 

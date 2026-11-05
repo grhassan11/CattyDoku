@@ -18,6 +18,8 @@ import com.tm.meow.sudoku.puzzle.domain.ads.RewardedAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedResult
 import java.util.concurrent.atomic.AtomicBoolean
+import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
+import com.tm.meow.sudoku.puzzle.domain.crash.NoopCrashReporter
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -40,6 +42,7 @@ class RewardedAdRepositoryImpl @Inject constructor(
     private val status: AdsSdkStatus,
     private val activities: CurrentActivityProvider,
     private val tracker: AdSessionTracker,
+    private val crash: CrashReporter = NoopCrashReporter,
 ) : RewardedAdRepository {
 
     private val unitId: String get() = BuildConfig.ADMOB_REWARDED_ID
@@ -72,6 +75,7 @@ class RewardedAdRepositoryImpl @Inject constructor(
                 }
             }
         } catch (t: Throwable) {
+            crash.recordNonFatal(t, "rewarded.preload")
             _loadState.value = RewardedLoadState.FAILED
         }
     }
@@ -140,6 +144,7 @@ class RewardedAdRepositoryImpl @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
+            crash.recordNonFatal(t, "rewarded.show")
             RewardedResult.FAILED
         }
     }

@@ -40,14 +40,13 @@ import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 private val LinkGreen = Color(0xFF2F7D3C)
 
 /**
- * Stateless Welcome / Terms screen: cream background, wordmark, dialog-style card.
+ * Stateless Welcome / Privacy-acceptance screen: cream background, wordmark, dialog-style card.
  * No decline path by design: back leaves the app, Accept continues.
  * Says nothing about ads or consent (that is its own step later).
  */
 @Composable
 fun WelcomeScreen(
     onAccept: () -> Unit,
-    onOpenTerms: () -> Unit,
     onOpenPrivacy: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
@@ -95,7 +94,6 @@ fun WelcomeScreen(
                     lineHeight = 24.sp,
                     textAlign = TextAlign.Center,
                 )
-                LinkRow(stringResource(R.string.welcome_terms), onOpenTerms)
                 LinkRow(stringResource(R.string.welcome_privacy), onOpenPrivacy)
                 PillButton(
                     text = stringResource(R.string.welcome_accept),

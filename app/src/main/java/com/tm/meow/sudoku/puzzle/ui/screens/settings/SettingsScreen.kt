@@ -1,5 +1,6 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.settings
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -36,6 +38,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tm.meow.sudoku.puzzle.R
@@ -62,7 +65,8 @@ fun SettingsScreen(
     onSettingChanged: (SettingToggle, Boolean) -> Unit,
     onFeedback: () -> Unit,
     onPrivacyPolicy: () -> Unit,
-    versionName: String,
+    onHowToPlay: () -> Unit,
+    onAbout: () -> Unit,
     modifier: Modifier = Modifier,
     onPrivacyOptions: (() -> Unit)? = null,
 ) {
@@ -77,34 +81,48 @@ fun SettingsScreen(
                     .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                SoundAndGameplayGroups(settings, onSettingChanged)
+                SoundAndGameplayGroups(
+                    settings,
+                    onSettingChanged,
+                    gameplayExtra = { LinkRow(stringResource(R.string.settings_how_to_play), onHowToPlay, R.drawable.ic_game_tutorials, showChevron = true, hint = stringResource(R.string.settings_how_to_play_hint)) },
+                )
 
                 Group(stringResource(R.string.settings_group_notifications)) {
                     ToggleRow(
                         label = stringResource(R.string.settings_streak_reminders),
                         hint = stringResource(R.string.settings_streak_reminders_hint),
+                        hintSize = REMINDER_HINT_SIZE,
                         checked = settings.streakReminders,
                         onCheckedChange = { onSettingChanged(SettingToggle.STREAK_REMINDERS, it) },
-                    ) { IconImage(R.drawable.ic_bell, size = 28.dp, tint = GameColors.Body) }
+                    ) { IconImage(R.drawable.ic_bell, size = SETTINGS_ICON_SIZE, tint = GameColors.Body) }
                     RowDivider()
                     ToggleRow(
                         label = stringResource(R.string.settings_daily_reminders),
                         hint = stringResource(R.string.settings_daily_reminders_hint),
+                        hintSize = REMINDER_HINT_SIZE,
                         checked = settings.dailyReminders,
                         onCheckedChange = { onSettingChanged(SettingToggle.DAILY_REMINDERS, it) },
-                    ) { IconImage(R.drawable.ic_bell, size = 28.dp, tint = GameColors.Body) }
+                    ) { IconImage(R.drawable.ic_bell, size = SETTINGS_ICON_SIZE, tint = GameColors.Body) }
+                    RowDivider()
+                    ToggleRow(
+                        label = stringResource(R.string.settings_sudoku_reminders),
+                        hint = stringResource(R.string.settings_sudoku_reminders_hint),
+                        hintSize = REMINDER_HINT_SIZE,
+                        checked = settings.sudokuReminders,
+                        onCheckedChange = { onSettingChanged(SettingToggle.SUDOKU_REMINDERS, it) },
+                    ) { IconImage(R.drawable.ic_bell, size = SETTINGS_ICON_SIZE, tint = GameColors.Body) }
                 }
 
                 Group(stringResource(R.string.settings_group_support)) {
-                    LinkRow(stringResource(R.string.settings_feedback), onFeedback)
+                    LinkRow(stringResource(R.string.settings_feedback), onFeedback, R.drawable.ic_feedback, showChevron = true)
                     if (onPrivacyOptions != null) {
                         RowDivider()
-                        LinkRow(stringResource(R.string.settings_privacy), onPrivacyOptions)
+                        LinkRow(stringResource(R.string.settings_privacy), onPrivacyOptions, R.drawable.ic_privacy, showChevron = true)
                     }
                     RowDivider()
-                    LinkRow(stringResource(R.string.shop_footer_privacy), onPrivacyPolicy)
+                    LinkRow(stringResource(R.string.shop_footer_privacy), onPrivacyPolicy, R.drawable.ic_policy, showChevron = true)
                     RowDivider()
-                    InfoRow(stringResource(R.string.settings_version), versionName)
+                    LinkRow(stringResource(R.string.settings_about), onAbout, R.drawable.ic_info, showChevron = true)
                 }
             }
         }
@@ -124,6 +142,7 @@ internal fun SoundAndGameplayGroups(
     settings: SettingsUi,
     onSettingChanged: (SettingToggle, Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    gameplayExtra: (@Composable () -> Unit)? = null,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Group(stringResource(R.string.settings_group_sound)) {
@@ -131,25 +150,25 @@ internal fun SoundAndGameplayGroups(
                     label = stringResource(R.string.settings_music),
                     checked = settings.music,
                     onCheckedChange = { onSettingChanged(SettingToggle.MUSIC, it) },
-                ) { MusicNotePlaceholder(color = GameColors.Body, size = 28.dp) }
+                ) { MusicNotePlaceholder(color = GameColors.Body, size = SETTINGS_ICON_SIZE) }
                 RowDivider()
                 ToggleRow(
                     label = stringResource(R.string.settings_sfx),
                     checked = settings.sfx,
                     onCheckedChange = { onSettingChanged(SettingToggle.SFX, it) },
-                ) { IconImage(R.drawable.ic_speaker, size = 28.dp, tint = GameColors.Body) }
+                ) { IconImage(R.drawable.ic_speaker, size = SETTINGS_ICON_SIZE, tint = GameColors.Body) }
                 RowDivider()
                 ToggleRow(
                     label = stringResource(R.string.settings_voice),
                     checked = settings.voice,
                     onCheckedChange = { onSettingChanged(SettingToggle.VOICE, it) },
-                ) { MicPlaceholder(color = GameColors.Body, size = 28.dp) }
+                ) { MicPlaceholder(color = GameColors.Body, size = SETTINGS_ICON_SIZE) }
                 RowDivider()
                 ToggleRow(
                     label = stringResource(R.string.settings_haptics),
                     checked = settings.haptics,
                     onCheckedChange = { onSettingChanged(SettingToggle.HAPTICS, it) },
-                ) { IconImage(R.drawable.ic_vibrate, size = 28.dp, tint = GameColors.Body) }
+                ) { IconImage(R.drawable.ic_vibrate, size = SETTINGS_ICON_SIZE, tint = GameColors.Body) }
             }
 
             Group(stringResource(R.string.settings_group_gameplay)) {
@@ -158,7 +177,11 @@ internal fun SoundAndGameplayGroups(
                     hint = stringResource(R.string.settings_pattern_hint),
                     checked = settings.patternMode,
                     onCheckedChange = { onSettingChanged(SettingToggle.PATTERN_MODE, it) },
-                ) { IconImage(R.drawable.ic_pattern_mode, size = 28.dp, tint = GameColors.Body) }
+                ) { IconImage(R.drawable.ic_pattern_mode, size = SETTINGS_ICON_SIZE, tint = GameColors.Body) }
+                if (gameplayExtra != null) {
+                    RowDivider()
+                    gameplayExtra()
+                }
             }
     }
 }
@@ -209,6 +232,23 @@ private fun Group(title: String, content: @Composable () -> Unit) {
     }
 }
 
+/** Every Settings row icon sits in the same 40 dp rounded container and is drawn at the same 24 dp size. */
+private val SETTINGS_ICON_SIZE = 24.dp
+
+@Composable
+private fun SettingsIconBox(content: @Composable () -> Unit) {
+    Box(
+        Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(GameColors.Body.copy(alpha = 0.12f)),
+        contentAlignment = Alignment.Center,
+    ) { content() }
+}
+
+/** Smaller subtext for the three reminder rows (default hint size is 13 sp). */
+private val REMINDER_HINT_SIZE = 11.sp
+
 @Composable
 private fun RowDivider() = HorizontalDivider(color = GameColors.RuleCard)
 
@@ -219,6 +259,7 @@ private fun ToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     hint: String? = null,
+    hintSize: TextUnit = 13.sp,
     icon: @Composable () -> Unit,
 ) {
     val stateText = stringResource(if (checked) R.string.settings_on else R.string.settings_off)
@@ -237,11 +278,11 @@ private fun ToggleRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) { icon() }
+        SettingsIconBox { icon() }
         Column(Modifier.weight(1f)) {
             Text(label, color = GameColors.Title, fontSize = 18.sp, fontWeight = FontWeight.Normal)
             if (hint != null) {
-                Text(hint, color = GameColors.Body, fontSize = 13.sp, lineHeight = 17.sp)
+                Text(hint, color = GameColors.Body, fontSize = hintSize, lineHeight = hintSize * 1.3f)
             }
         }
         Switch(
@@ -259,43 +300,31 @@ private fun ToggleRow(
     }
 }
 
-/** Non-interactive label + right-aligned value. */
 @Composable
-private fun InfoRow(label: String, value: String) {
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.weight(1f),
-            color = GameColors.Title,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Normal,
-        )
-        Text(
-            text = value,
-            color = GameColors.Body,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Normal,
-        )
-    }
-}
-
-@Composable
-private fun LinkRow(label: String, onClick: () -> Unit) {
+private fun LinkRow(label: String, onClick: () -> Unit, @DrawableRes icon: Int? = null, showChevron: Boolean = false, hint: String? = null) {
     Surface(onClick = onClick, color = Color.Transparent) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (icon != null) Arrangement.spacedBy(14.dp) else Arrangement.Start,
         ) {
-            Text(
-                text = label,
-                modifier = Modifier.weight(1f),
-                color = GameColors.Title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Normal,
-            )
+            if (icon != null) {
+                SettingsIconBox { IconImage(icon, size = SETTINGS_ICON_SIZE, tint = GameColors.Body) }
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    color = GameColors.Title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Normal,
+                )
+                if (hint != null) {
+                    Text(hint, color = GameColors.Body, fontSize = REMINDER_HINT_SIZE, lineHeight = REMINDER_HINT_SIZE * 1.3f)
+                }
+            }
+            if (showChevron) {
+                IconImage(R.drawable.ic_chevron_forward, size = 24.dp, tint = GameColors.Body)
+            }
         }
     }
 }

@@ -13,6 +13,8 @@ data class Settings(
     val streakReminders: Boolean = true,
     /** Daily 20:00 "Daily Challenge" notification. Default ON (still needs the OS permission). */
     val dailyReminders: Boolean = true,
+    /** "Unfinished Sudoku game" notification (~4 h after leaving). Default ON (still needs the OS permission). */
+    val sudokuReminders: Boolean = true,
 )
 
 /**

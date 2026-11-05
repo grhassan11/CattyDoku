@@ -23,6 +23,8 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
 import com.tm.meow.sudoku.puzzle.domain.billing.AdsRemovedRepository
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
+import com.tm.meow.sudoku.puzzle.domain.crash.NoopCrashReporter
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -56,6 +58,7 @@ class AdsRepositoryImpl @Inject constructor(
     private val adsRemoved: AdsRemovedRepository,
     private val policy: AdPolicyConfig,
     @IoDispatcher private val io: CoroutineDispatcher,
+    private val crash: CrashReporter = NoopCrashReporter,
 ) : AdsRepository, AdsSdkStatus {
 
     private val initMutex = Mutex()
@@ -112,8 +115,8 @@ class AdsRepositoryImpl @Inject constructor(
 
     private fun startPreload() {
         if (preloading) return
-        // Remote kill switches (ads_show / interstitial_show): never request an interstitial.
-        if (!policy.enabled || !policy.interstitialShow) return
+        // All four per-surface interstitial switches off: never request an interstitial.
+        if (!policy.anyInterstitialShow) return
         preloading = true
         lastPreloadFailed = false
         val request = AdRequest.Builder(unitId).build()
@@ -181,6 +184,7 @@ class AdsRepositoryImpl @Inject constructor(
             throw e
         } catch (t: Throwable) {
             dbg("showIfReady FAILED: $t")
+            crash.recordNonFatal(t, "interstitial.show")
             AdShowResult.FAILED
         }
     }

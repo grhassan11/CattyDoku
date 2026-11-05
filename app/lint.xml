@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Lint severity pins (A-024). Picked up automatically: lint reads <module>/lint.xml by default, no Gradle wiring needed.
+    abortOnError=true (app/build.gradle.kts) turns every "error" below into a release-build failure.
+    If a third-party library manifest ever trips ExportedReceiver / ExportedService, downgrade that one id here
+    (or add a <ignore path=...>) rather than deleting the file.
+-->
+<lint>
+    <!-- Calls that need a runtime permission without a check (POST_NOTIFICATIONS, etc.). -->
+    <issue id="MissingPermission" severity="error" />
+    <!-- API above minSdk 26 used without a guard. -->
+    <issue id="NewApi" severity="error" />
+    <!-- Exported components without a permission (target 31+ requires explicit android:exported). -->
+    <issue id="ExportedReceiver" severity="error" />
+    <issue id="ExportedService" severity="error" />
+    <issue id="ExportedContentProvider" severity="error" />
+    <!-- PendingIntent without FLAG_IMMUTABLE / FLAG_MUTABLE (crash on target 31+). -->
+    <issue id="UnspecifiedImmutableFlag" severity="error" />
+    <!-- android:debuggable hard-coded in the manifest. -->
+    <issue id="HardcodedDebugMode" severity="error" />
+    <!-- Leftover debug-only markers (STOPSHIP comments). -->
+    <issue id="StopShip" severity="error" />
+</lint>

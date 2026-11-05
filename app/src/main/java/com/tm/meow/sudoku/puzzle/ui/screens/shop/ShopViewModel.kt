@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.billing.BillingFailure
 import com.tm.meow.sudoku.puzzle.domain.billing.CatalogState
 import com.tm.meow.sudoku.puzzle.domain.billing.PurchaseEvent
 import com.tm.meow.sudoku.puzzle.domain.usecase.BuyProduct
@@ -47,14 +48,16 @@ class ShopViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val busy = MutableStateFlow(false)
+    private val restoring = MutableStateFlow(false)
 
     val state: StateFlow<ShopUiState> = combine(
         observeCatalog(),
         observeEntitlement(),
         observeBalances(),
         busy,
-    ) { catalog, entitlement, balances, isBusy ->
-        ShopUiMapper.map(catalog, entitlement, balances, isBusy)
+        restoring,
+    ) { catalog, entitlement, balances, isBusy, isRestoring ->
+        ShopUiMapper.map(catalog, entitlement, balances, isBusy, isRestoring)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ShopUiMapper.initial())
 
     private val _events = Channel<PurchaseEvent>(Channel.BUFFERED)
@@ -78,16 +81,23 @@ class ShopViewModel @Inject constructor(
         viewModelScope.launch { safely { loadCatalog() } }
     }
 
-    /** Product of the Play sheet opened last; the failure event itself carries no product. */
+    /**
+     * Product of the Play sheet opened last; the failure event itself carries no product. Set by [onBuy], cleared by
+     * [onRestore] and by every terminal purchase event, so it can never leak into a later failure.
+     */
     private var lastCheckout: String? = null
 
     private fun logOutcome(event: PurchaseEvent) {
         when (event) {
-            is PurchaseEvent.Failed ->
-                analytics.log(AnalyticsEvent.PurchaseFail(lastCheckout ?: "unknown", event.failure.name.lowercase()))
+            is PurchaseEvent.Failed -> {
+                // No checkout in flight (restore clears it) = a restore / background failure.
+                analytics.log(AnalyticsEvent.PurchaseFail(lastCheckout ?: "restore", event.failure.name.lowercase()))
+                lastCheckout = null
+            }
+            PurchaseEvent.RestoreIncomplete -> Unit
             PurchaseEvent.Restored -> analytics.log(AnalyticsEvent.RestorePurchases(1)) // count not exposed: 1 = "at least one"
             PurchaseEvent.NothingToRestore -> analytics.log(AnalyticsEvent.RestorePurchases(0))
-            is PurchaseEvent.PackGranted, is PurchaseEvent.AdsRemovalActive, is PurchaseEvent.Pending -> Unit
+            is PurchaseEvent.PackGranted, is PurchaseEvent.AdsRemovalActive, is PurchaseEvent.Pending -> lastCheckout = null
         }
     }
 
@@ -98,7 +108,7 @@ class ShopViewModel @Inject constructor(
         analytics.log(AnalyticsEvent.BeginCheckout(productId, price?.value, price?.currencyCode))
         viewModelScope.launch {
             try {
-                safely { buyProduct(productId) }
+                safely(onError = ::reportUnexpectedFailure) { buyProduct(productId) }
             } finally {
                 busy.value = false
             }
@@ -107,23 +117,34 @@ class ShopViewModel @Inject constructor(
 
     fun onRestore() {
         if (!busy.compareAndSet(expect = false, update = true)) return
+        lastCheckout = null
+        restoring.value = true
         viewModelScope.launch {
             try {
-                safely { restorePurchases() }
+                safely(onError = ::reportUnexpectedFailure) { restorePurchases() }
             } finally {
+                restoring.value = false
                 busy.value = false
             }
         }
     }
 
-    private suspend inline fun safely(block: () -> Unit) {
+    /** Cancellation is rethrown; any other throwable goes to [onError] (default: silent, e.g. quiet catalog refresh). */
+    private suspend inline fun safely(noinline onError: (Throwable) -> Unit = {}, block: () -> Unit) {
         try {
             block()
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
-            // billing is best effort: failures surface through events
+            onError(t)
         }
+    }
+
+    /** A use case threw instead of reporting through events: show a generic failure so the tap never ends silently. */
+    private fun reportUnexpectedFailure(@Suppress("UNUSED_PARAMETER") t: Throwable) {
+        val event = PurchaseEvent.Failed(BillingFailure.ERROR)
+        logOutcome(event)
+        _events.trySend(event)
     }
 
     private companion object {

@@ -16,6 +16,8 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdShowResult
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
 import com.tm.meow.sudoku.puzzle.domain.ads.AppOpenAdRepository
+import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
+import com.tm.meow.sudoku.puzzle.domain.crash.NoopCrashReporter
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -35,6 +37,7 @@ class AppOpenAdRepositoryImpl @Inject constructor(
     private val status: AdsSdkStatus,
     private val activities: CurrentActivityProvider,
     private val tracker: AdSessionTracker,
+    private val crash: CrashReporter = NoopCrashReporter,
 ) : AppOpenAdRepository {
 
     @Volatile private var ad: AppOpenAd? = null
@@ -67,6 +70,7 @@ class AppOpenAdRepositoryImpl @Inject constructor(
                 },
             )
         } catch (t: Throwable) {
+            crash.recordNonFatal(t, "appopen.preload")
             loading = false
         }
     }
@@ -109,6 +113,7 @@ class AppOpenAdRepositoryImpl @Inject constructor(
                 try {
                     taken.show(activity)
                 } catch (t: Throwable) {
+                    crash.recordNonFatal(t, "appopen.show")
                     taken.destroy()
                     return@withContext AdShowResult.FAILED
                 }
@@ -124,6 +129,7 @@ class AppOpenAdRepositoryImpl @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
+            crash.recordNonFatal(t, "appopen.show.outer")
             AdShowResult.FAILED
         }
     }

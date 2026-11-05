@@ -61,7 +61,7 @@ fun SudokuGameRoute(
     val rewardNotEarnedText = stringResource(R.string.reward_not_earned)
     val lockedText = stringResource(R.string.sudoku_game_locked)
     val failedText = stringResource(R.string.sudoku_game_failed)
-    val rewardedAllowed by rememberUpdatedState(surfaces.rewarded)
+    val rewardedAllowed by rememberUpdatedState(surfaces.sudokuBoosters)
     val rewardedBusyLatest by rememberUpdatedState(rewardedBusy)
     val onBackLatest by rememberUpdatedState(onBack)
 
@@ -72,14 +72,14 @@ fun SudokuGameRoute(
     // Keep a rewarded ad ready while the hint stock is empty, the out-of-hints dialog is open or the game-over dialog is open.
     val hintDialogOpen = state.dialog == SudokuDialogUi.HintNeeded
     val gameOverOpen = state.dialog is SudokuDialogUi.GameOver
-    LaunchedEffect(surfaces.rewarded, state.hintCharges, hintDialogOpen, gameOverOpen, rewardedBusy) {
-        if (surfaces.rewarded && !state.loading && (state.hintCharges == 0 || hintDialogOpen || gameOverOpen)) {
-            adsViewModel.preloadRewardedAd()
-        }
+    LaunchedEffect(surfaces.sudokuBoosters, surfaces.sudokuRevive, state.hintCharges, hintDialogOpen, gameOverOpen, rewardedBusy) {
+        val want = (surfaces.sudokuBoosters && (state.hintCharges == 0 || hintDialogOpen)) ||
+            (surfaces.sudokuRevive && gameOverOpen)
+        if (want && !state.loading) adsViewModel.preloadRewardedAd()
     }
-    // Rewarded turned off underneath the open dialog (consent revoked etc): close it.
-    LaunchedEffect(surfaces.rewarded, hintDialogOpen) {
-        if (!surfaces.rewarded && hintDialogOpen) viewModel.onHintDialog(false)
+    // Hint rewarded turned off underneath the open dialog (consent revoked etc): close it.
+    LaunchedEffect(surfaces.sudokuBoosters, hintDialogOpen) {
+        if (!surfaces.sudokuBoosters && hintDialogOpen) viewModel.onHintDialog(false)
     }
 
     // Sticky banner (Sudoku placement, no level gate): load when allowed, destroy when the surface turns off or on leave.
@@ -161,11 +161,11 @@ fun SudokuGameRoute(
         onWinDone = viewModel::onWinDone,
         // Reward lands in inventory ONLY on the earned-reward result; the hint badge follows the inventory flow.
         onWatchHintAd = {
-            adsViewModel.watchBoosterAd(Booster.HINT) { viewModel.onHintDialog(false) }
+            adsViewModel.watchSudokuHintAd { viewModel.onHintDialog(false) }
         },
         // Game-over continue: +1 heart and resume, ONLY on the earned-reward result. null hides the CTA (rewarded not allowed).
-        onWatchRevive = if (surfaces.rewarded) {
-            { adsViewModel.watchReviveAd(onGranted = viewModel::onRevive) }
+        onWatchRevive = if (surfaces.sudokuRevive) {
+            { adsViewModel.watchSudokuReviveAd(onGranted = viewModel::onRevive) }
         } else {
             null
         },

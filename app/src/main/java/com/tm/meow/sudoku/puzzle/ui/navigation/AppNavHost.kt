@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
@@ -20,6 +21,7 @@ import androidx.navigation.navArgument
 import com.tm.meow.sudoku.puzzle.domain.model.Booster
 import com.tm.meow.sudoku.puzzle.domain.startup.StartFlow
 import com.tm.meow.sudoku.puzzle.domain.startup.StartStep
+import com.tm.meow.sudoku.puzzle.ui.screens.about.AboutRoute
 import com.tm.meow.sudoku.puzzle.ui.screens.game.GameRoute
 import com.tm.meow.sudoku.puzzle.ui.screens.game.GameViewModel
 import com.tm.meow.sudoku.puzzle.ui.screens.home.HomeRoute
@@ -70,6 +72,9 @@ object Routes {
 
     /** Full-screen Settings (from Home only; in a game, Settings is a dialog on the game screen). */
     const val SETTINGS = "settings"
+
+    /** Full-screen About (from Settings). */
+    const val ABOUT = "about"
 
     /** Sudoku entry screen (difficulty picker). Opened from the Home Sudoku tab. */
     const val SUDOKU = "sudoku"
@@ -129,6 +134,12 @@ fun AppNavHost(
     }
 
     val navController = rememberNavController()
+    // Restored back stack (process death) has no splash, so consent + ads init would never run: run them once when resumed.
+    val startupRecovery: StartupRecoveryViewModel = hiltViewModel()
+    LifecycleResumeEffect(navController, startupRecovery) {
+        startupRecovery.onResumed(navController.currentBackStackEntry?.destination?.route)
+        onPauseOrDispose { }
+    }
     // screen_view per destination change. The VM dedupes, so rotation (listener re-attach) does not re-log.
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
@@ -158,7 +169,12 @@ fun AppNavHost(
         composable(Routes.TUTORIAL) {
             TutorialRoute(
                 onFinished = {
-                    navController.goTo(StartFlow.after(StartStep.TUTORIAL, inputs), from = Routes.TUTORIAL)
+                    // Replay from Settings (How to Play): just return there. First run: continue the start flow.
+                    if (navController.previousBackStackEntry?.destination?.route == Routes.SETTINGS) {
+                        navController.popIfResumed()
+                    } else {
+                        navController.goTo(StartFlow.after(StartStep.TUTORIAL, inputs), from = Routes.TUTORIAL)
+                    }
                 },
             )
         }
@@ -256,7 +272,14 @@ fun AppNavHost(
             )
         }
         composable(Routes.SETTINGS) {
-            SettingsRoute(onBack = { navController.popIfResumed() })
+            SettingsRoute(
+                onBack = { navController.popIfResumed() },
+                onHowToPlay = { navController.navigate(Routes.TUTORIAL) { launchSingleTop = true } },
+                onAbout = { navController.navigate(Routes.ABOUT) { launchSingleTop = true } },
+            )
+        }
+        composable(Routes.ABOUT) {
+            AboutRoute(onBack = { navController.popIfResumed() })
         }
         composable(
             route = Routes.SHOP_PATTERN,

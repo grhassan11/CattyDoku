@@ -7,7 +7,6 @@
 
     <!-- Ads: network + advertising ID (Android 13+). Declare "Advertising ID: yes (ads)" in Play Console. -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <application

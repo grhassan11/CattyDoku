@@ -30,8 +30,9 @@ ic_cat_9             PNG     Placed cat (per-region variant); win mascot   ic_ca
 ic_cat_10            PNG     Placed cat (per-region variant); win mascot   ic_cat_10.svg / ic_cat_10.png
 ic_cat_black_flat   VD      Tinted cat silhouette (unsolved region,       ic_cat_black_flat.svg
                              locked booster)
-ic_fish_live         VD      Life fish (active)                            ic_fish_live.svg
-ic_fish_bone         VD      Life fish (spent); lose dialog bones          ic_fish_bone.svg
+ic_fish_life         WEBP    Life fish (active)                            ic_fish_life.webp
+ic_fishbone          WEBP    Life fish (spent), mistakes stat chip         ic_fishbone.webp
+ic_cat_sad_level_failed WEBP Out of Lives / Out of Hearts hero (sad cat)   ic_cat_sad_level_failed.webp
 ic_heart_filled      VD      Win dialog "mistakes" stat icon (tinted)      ic_heart_filled.svg
 ic_hint              VD      Hint booster, hint bar, win dialog hints stat ic_hint.svg
 ic_undo              VD      Undo button                                   ic_undo.svg
@@ -84,7 +85,7 @@ App icon (added 2026-10-26)
   Status: Original / licensed (user-provided)
   File (app/src/main/res/)                    Source file                       Used for
   drawable-nodpi/ic_launcher_foreground.png   android/adaptive-foreground.png   adaptive icon foreground (1024x1024) + splash icon (via drawable/ic_splash_icon.xml inset)
-  mipmap-{m,h,xh,xxh,xxxh}dpi/ic_launcher.png android/mipmap-*/ic_launcher.png  legacy launcher icon (copied as ic_launcher_round.png too)
+  (legacy mipmap-*dpi/ic_launcher*.png removed 2026-11-05: minSdk 26 uses mipmap-anydpi-v26 adaptive icons only)
   (playstore.png is Play Console only, not bundled)
 
 ic_mouse (added 2026-10-29)
@@ -101,17 +102,13 @@ ic_cat_1..5 replaced and ic_cat_6..10 added (2026-10-29, 10-cat set)
   drawable-nodpi/ic_cat_1..10.png     ic_cat_1..10.png  512x512 gradient art; per-region placed cat (CatVariants.UNIQUE=10) + win-dialog mascots
   (gradient SVG -> PNG, same as ic_mouse/ic_yarn_ball; ic_cat_N.svg kept in the source folder only)
 
-ic_fish_bone_level_failed (added 2026-10-29)
-  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\Icons
-  Status: Original / licensed (user-provided)
-  File (app/src/main/res/)                          Source file                       Used for
-  drawable-nodpi/ic_fish_bone_level_failed.png      ic_fish_bone_level_failed.png     Level Failed (lose) dialog hero art (gradient SVG -> PNG, same as ic_cat_*/ic_mouse)
-
-ic_cart_store (added 2026-10-29)
+ic_trophy / ic_store / ic_remove_ads (added 2026-11-06; replace ic_cart_store.png and the ic_trophy VectorDrawable)
   Source folder: D:TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\Icons
   Status: Original / licensed (user-provided)
   File (app/src/main/res/)                    Source file         Used for
-  drawable-nodpi/ic_cart_store.png            ic_cart_store.png   Home screen Shop button (under the avatar), full-colour, untinted (512x512 SVG -> PNG, same as ic_mouse)
+  drawable-nodpi/ic_store.webp                ic_store.webp       Home screen Shop button, full-colour, untinted
+  drawable-nodpi/ic_trophy.webp               ic_trophy.webp      Sudoku entry stats card; tutorial complete dialog, full-colour, untinted
+  drawable-nodpi/ic_remove_ads.webp           ic_remove_ads.webp  Mapped in IconArt.RemoveAds; used by Home Remove Ads badge
 
 ic_lock (added 2026-10-29)
   Source: user-supplied own art (Design\Icons\ic_lock.svg), single flat path -> VectorDrawable. No third-party artwork.
@@ -130,6 +127,12 @@ ic_star_island (added 2026-10-29)
   Status: Original (project-owned)
   File (app/src/main/res/)       Used for
   drawable/ic_star_island.xml    Rate Us dialog stars (selected = full colour; unselected = greyscale + reduced alpha at use site)
+
+ic_game_tutorials (added 2026-11-05)
+  Source: user-supplied art (Design\Icons\ic_game_tutorials.svg), single flat colour, 1 path -> VectorDrawable. No third-party artwork.
+  Status: Original (project-owned)
+  File (app/src/main/res/)            Used for
+  drawable/ic_game_tutorials.xml      Settings: How to Play row leading icon (tinted at use site)
 
 AUDIO (added 2026-10-29)
 ------------------------
@@ -171,7 +174,7 @@ CAT PLACEMENT MEOWS (added 2026-11-01)
 Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Assets\Audios & Sounds\Chosen\Meow Sounds
 Used for: one random meow layered on the correct-placement chime (SfxPlayer, sfx_cat_1..7). Mixkit WAVs converted to mono 44.1 kHz OGG Vorbis (q3), leading silence trimmed, loudness-normalised.
 
-sfx_cat_1.ogg  (unmodified copy of Meow.ogg; mono 44.1 kHz, 0.51 s)
+sfx_cat_1.ogg  (REMOVED 2026-11-05: byte-identical to sfx_meow.ogg, SfxPlayer now loads sfx_meow.ogg in that slot; was unmodified copy of Meow.ogg; mono 44.1 kHz, 0.51 s)
   Source file: Meow.ogg (user-provided)
   License: user-provided, license to be confirmed by user
   (note: res/raw/sfx_meow.ogg is credited above as IgnasD / CC0; confirm whether this is the same file)

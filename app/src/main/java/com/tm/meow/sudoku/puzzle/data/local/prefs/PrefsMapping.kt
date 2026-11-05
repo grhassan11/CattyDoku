@@ -26,6 +26,7 @@ internal object PrefKeys {
     val PATTERN_MODE = booleanPreferencesKey("pattern_mode")
     val STREAK_REMINDERS = booleanPreferencesKey("streak_reminders")
     val DAILY_REMINDERS = booleanPreferencesKey("daily_reminders")
+    val SUDOKU_REMINDERS = booleanPreferencesKey("sudoku_reminders")
 
     val TERMS_ACCEPTED = booleanPreferencesKey("terms_accepted")
     val TERMS_VERSION = intPreferencesKey("terms_version")
@@ -74,6 +75,7 @@ internal fun Preferences.toSettings(): Settings {
         patternMode = this[PrefKeys.PATTERN_MODE] ?: d.patternMode,
         streakReminders = this[PrefKeys.STREAK_REMINDERS] ?: d.streakReminders,
         dailyReminders = this[PrefKeys.DAILY_REMINDERS] ?: d.dailyReminders,
+        sudokuReminders = this[PrefKeys.SUDOKU_REMINDERS] ?: d.sudokuReminders,
     )
 }
 
@@ -85,6 +87,7 @@ internal fun MutablePreferences.write(s: Settings) {
     this[PrefKeys.PATTERN_MODE] = s.patternMode
     this[PrefKeys.STREAK_REMINDERS] = s.streakReminders
     this[PrefKeys.DAILY_REMINDERS] = s.dailyReminders
+    this[PrefKeys.SUDOKU_REMINDERS] = s.sudokuReminders
 }
 
 internal fun Preferences.toAppFlags(): AppFlags {

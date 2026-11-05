@@ -42,6 +42,7 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.ClaimStreakReward
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreak
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreakRewards
 import com.tm.meow.sudoku.puzzle.domain.usecase.AcceptTerms
+import com.tm.meow.sudoku.puzzle.domain.usecase.DisableReminders
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkNotificationPromptAsked
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveTermsAccepted
 import com.tm.meow.sudoku.puzzle.domain.usecase.ReadStartInputs
@@ -215,6 +216,8 @@ object UseCaseModule {
     @Provides fun provideObserveSettings(repo: SettingsRepository): ObserveSettings = ObserveSettings(repo)
 
     @Provides fun provideUpdateSettings(repo: SettingsRepository): UpdateSettings = UpdateSettings(repo)
+
+    @Provides fun provideDisableReminders(repo: SettingsRepository): DisableReminders = DisableReminders(repo)
 
     @Provides
     fun provideGetBoosterCharges(inventory: InventoryRepository): GetBoosterCharges =

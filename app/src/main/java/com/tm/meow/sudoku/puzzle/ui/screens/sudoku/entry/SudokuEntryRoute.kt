@@ -13,6 +13,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.tm.meow.sudoku.puzzle.R
 import com.tm.meow.sudoku.puzzle.domain.sudoku.model.SudokuSize
 import com.tm.meow.sudoku.puzzle.ui.ads.SudokuHomeAdsViewModel
@@ -62,7 +63,9 @@ fun SudokuEntryRoute(
                         event.winsHave,
                     )
                     snackbarHostState.currentSnackbarData?.dismiss()
-                    snackbarHostState.showSnackbar(text)
+                    // Separate coroutine: showSnackbar suspends until the snackbar vanishes and would block this
+                    // collector, queueing OpenGame events (NEW GAME / CONTINUE dead while the message shows).
+                    launch { snackbarHostState.showSnackbar(text) }
                 }
                 // First play of this board size: its tutorial first (skippable), then the game. Leaving the tutorial in any way
                 // sets that size's flag, so this cannot loop.

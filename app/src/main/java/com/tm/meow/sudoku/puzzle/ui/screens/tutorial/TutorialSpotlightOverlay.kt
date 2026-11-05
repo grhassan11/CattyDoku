@@ -69,7 +69,7 @@ import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-private const val CELL_CORNER_DP = 8f
+private const val RING_INFLATE_DP = 1.5f
 private const val SIDE_MARGIN_DP = 20f
 private const val BLOCK_GAP_DP = 40f
 private const val CTA_WIDTH_DP = 230f
@@ -130,17 +130,20 @@ internal fun TutorialSpotlightOverlay(
                     row = i / n,
                     col = i % n,
                 )
-                val corner = CornerRadius(CELL_CORNER_DP * d)
+                val cellCorner = com.tm.meow.sudoku.puzzle.ui.screens.game.BoardLayoutCalc.cellCornerPx(m.cellDp * d, d)
+                val corner = CornerRadius(cellCorner)
+                // Ring/glow centreline sits RING_INFLATE_DP outside the cell, so radius grows by the same amount (concentric).
+                val ringCorner = CornerRadius(cellCorner + RING_INFLATE_DP * d)
                 for (i in bright) {
                     val r = cell(i)
                     drawRoundRect(Color.Black, r.topLeft, r.size, corner, blendMode = BlendMode.Clear)
                 }
                 for (i in state.spotlight) {
-                    val r = cell(i).inflate(1.5f * d)
+                    val r = cell(i).inflate(RING_INFLATE_DP * d)
                     drawRoundRect(
-                        RingColor.copy(alpha = 0.28f), r.topLeft, r.size, corner, style = Stroke(GLOW_WIDTH_DP * d),
+                        RingColor.copy(alpha = 0.28f), r.topLeft, r.size, ringCorner, style = Stroke(GLOW_WIDTH_DP * d),
                     )
-                    drawRoundRect(RingColor, r.topLeft, r.size, corner, style = Stroke(RING_WIDTH_DP * d))
+                    drawRoundRect(RingColor, r.topLeft, r.size, ringCorner, style = Stroke(RING_WIDTH_DP * d))
                 }
             }
         }

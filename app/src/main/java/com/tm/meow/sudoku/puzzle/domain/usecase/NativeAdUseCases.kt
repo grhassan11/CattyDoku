@@ -26,7 +26,6 @@ class LoadNativeAd(
 ) {
     /** Single policy gate: false = no slot at all (kill switch, Remove Ads, no consent, SDK off / placeholder ID). */
     fun isAllowed(placement: AdPlacement): Boolean {
-        if (!config.enabled) return false
         val unitOn = when (placement) {
             AdPlacement.LEVELS_HOME -> config.levelsHomeNativeShow
             AdPlacement.SUDOKU_HOME -> config.sudokuHomeNativeShow

@@ -11,7 +11,7 @@ import android.net.Uri
  */
 object FeedbackEmail {
     /** PLACEHOLDER address (reserved .invalid TLD, can never receive mail). */
-    const val ADDRESS: String = "feedback@placeholder.invalid"
+    const val ADDRESS: String = "toolsmania3@gmail.com"
 
     /**
      * Opens the user's email app with a pre-filled draft. Returns false when no email app handles

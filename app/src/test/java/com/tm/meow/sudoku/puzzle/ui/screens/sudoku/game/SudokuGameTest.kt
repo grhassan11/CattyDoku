@@ -14,6 +14,7 @@ import com.tm.meow.sudoku.puzzle.domain.sudoku.model.SudokuTechnique
 import com.tm.meow.sudoku.puzzle.domain.sudoku.model.SudokuTier
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.CompleteSudoku
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.FakeSudokuRepository
+import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SaveOrDiscardSudokuGame
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SaveSudokuGame
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.ShowSudokuInterstitialIfAllowed
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.StartOrResumeSudoku
@@ -150,6 +151,7 @@ class SudokuGameTest {
             savedState = SavedStateHandle(mapOf(Routes.ARG_SUDOKU_TIER to SudokuTier.EASY.name)),
             startOrResume = StartOrResumeSudoku(repo, UnconfinedTestDispatcher(scheduler)),
             saveGame = SaveSudokuGame(repo),
+            saveOrDiscard = SaveOrDiscardSudokuGame(repo),
             useHint = UseSudokuHint(ConsumeBooster(inv)),
             completeSudoku = CompleteSudoku(repo, RecordPlayedToday(FakeStreakRepository(), time), RecordSudokuWon(tracker)),
             showInterstitial = ads,

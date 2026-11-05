@@ -47,7 +47,6 @@ fun WelcomeRoute(
 
     WelcomeScreen(
         onAccept = viewModel::onAccept,
-        onOpenTerms = { open(LegalLinks.TERMS_URL) },
         onOpenPrivacy = { open(LegalLinks.PRIVACY_URL) },
         snackbarHostState = snackbarHostState,
         modifier = modifier,

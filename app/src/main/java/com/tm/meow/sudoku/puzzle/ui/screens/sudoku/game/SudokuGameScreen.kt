@@ -54,7 +54,7 @@ import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 private val ContentMaxWidth = 480.dp
 
 /** Gap kept between the number pad and the banner slot (AdMob accidental-click policy). Same as the Levels screen. */
-private val BANNER_CLEARANCE = 24.dp
+private val BANNER_CLEARANCE = 48.dp
 
 /**
  * Sudoku game screen. Stateless: state + lambdas only ([SudokuGameRoute] owns the ViewModel).

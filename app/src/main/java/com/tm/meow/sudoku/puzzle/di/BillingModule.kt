@@ -27,8 +27,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /** Shop + Play Billing wiring. Impls with `@Inject` are singletons themselves. */
@@ -62,12 +63,13 @@ object BillingModule {
         processor: PurchaseProcessor,
         adsRemoved: AdsRemovedRepository,
         time: TimeProvider,
+        @DefaultDispatcher dispatcher: CoroutineDispatcher,
     ): ShopRepository = ShopRepositoryImpl(
         gateway = gateway,
         processor = processor,
         adsRemoved = adsRemoved,
         time = time,
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+        scope = CoroutineScope(SupervisorJob() + dispatcher + CoroutineExceptionHandler { _, _ -> /* never crash on billing */ }),
     )
 
     @Provides

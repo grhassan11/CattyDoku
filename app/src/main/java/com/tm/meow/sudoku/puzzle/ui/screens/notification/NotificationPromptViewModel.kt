@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.usecase.DisableReminders
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkNotificationPromptAsked
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.concurrent.atomic.AtomicBoolean
@@ -27,6 +28,7 @@ sealed interface NotificationPromptEvent {
 @HiltViewModel
 class NotificationPromptViewModel @Inject constructor(
     private val markAsked: MarkNotificationPromptAsked,
+    private val disableReminders: DisableReminders,
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) : ViewModel() {
 
@@ -39,6 +41,15 @@ class NotificationPromptViewModel @Inject constructor(
         if (!busy.compareAndSet(false, true)) return
         analytics.log(AnalyticsEvent.NotificationPermission(granted))
         viewModelScope.launch {
+            if (!granted) {
+                try {
+                    disableReminders()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (t: Throwable) {
+                    // best effort: Settings still shows them OFF while permission is missing
+                }
+            }
             try {
                 markAsked()
             } catch (e: CancellationException) {

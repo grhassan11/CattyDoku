@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -75,7 +76,6 @@ fun ShopScreen(
     onRestore: () -> Unit,
     onBuy: (productId: String) -> Unit,
     onManageSubscription: () -> Unit,
-    onTerms: () -> Unit,
     onPrivacy: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
@@ -84,6 +84,13 @@ fun ShopScreen(
     Box(modifier.fillMaxSize().background(GameColors.ScreenBackground)) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
             ShopTopBar(restoreEnabled = !state.busy, onBack = onBack, onRestore = onRestore)
+            if (state.restoring) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    color = GameColors.CtaGreenLip,
+                    trackColor = GameColors.RuleCard,
+                )
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -105,7 +112,7 @@ fun ShopScreen(
                     }
                 }
                 item(key = "footer") {
-                    ShopFooter(restoreEnabled = !state.busy, onRestore = onRestore, onTerms = onTerms, onPrivacy = onPrivacy)
+                    ShopFooter(restoreEnabled = !state.busy, onRestore = onRestore, onPrivacy = onPrivacy)
                 }
             }
         }
@@ -160,15 +167,13 @@ private fun ShopTopBar(restoreEnabled: Boolean, onBack: () -> Unit, onRestore: (
 }
 
 @Composable
-private fun ShopFooter(restoreEnabled: Boolean, onRestore: () -> Unit, onTerms: () -> Unit, onPrivacy: () -> Unit) {
+private fun ShopFooter(restoreEnabled: Boolean, onRestore: () -> Unit, onPrivacy: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         FooterLink(stringResource(R.string.shop_footer_restore), onRestore, enabled = restoreEnabled)
-        FooterDot()
-        FooterLink(stringResource(R.string.shop_footer_terms), onTerms)
         FooterDot()
         FooterLink(stringResource(R.string.shop_footer_privacy), onPrivacy)
     }
@@ -218,16 +223,26 @@ private fun UnavailableNotice(onRetry: () -> Unit) {
 
 // ------------------------------------------------------------------ remove ads
 
+/** Set true to offer "Remove Ads Forever" for purchase. Rendering only; billing/entitlement logic untouched. */
+private const val SHOW_FOREVER_OFFER = true
+
+/** Set true to re-offer the Monthly subscription for purchase. Rendering only; billing/entitlement logic untouched. */
+private const val SHOW_MONTHLY_OFFER = false
+
 @Composable
 private fun RemoveAdsCard(state: ShopUiState, onBuy: (String) -> Unit, onManage: () -> Unit) {
+    // Existing monthly subscribers always keep their row (Active chip + Manage), even while the offer is hidden.
+    val showMonthly = SHOW_MONTHLY_OFFER || state.monthly.ownership == OfferOwnership.ACTIVE || state.monthly.canManage
+    // Forever: purchase offer gated by flag; existing owners still see their Owned row.
+    val showForever = SHOW_FOREVER_OFFER || state.forever.ownership == OfferOwnership.OWNED
     Column {
         SectionLabel(stringResource(R.string.shop_remove_ads_header).uppercase())
         Spacer(Modifier.height(8.dp))
         Surface(shape = CardShape, color = GameColors.Card, shadowElevation = 1.dp) {
             Column {
-                MonthlyRow(state.monthly, state.catalog, onBuy, onManage)
-                HorizontalDivider(color = GameColors.RuleCard)
-                ForeverRow(state.forever, state.catalog, onBuy)
+                if (showMonthly) MonthlyRow(state.monthly, state.catalog, onBuy, onManage)
+                if (showMonthly && showForever) HorizontalDivider(color = GameColors.RuleCard)
+                if (showForever) ForeverRow(state.forever, state.catalog, onBuy)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -252,10 +267,10 @@ private fun MonthlyRow(offer: AdsOfferUi, catalog: CatalogStatus, onBuy: (String
         price = priceText,
         catalog = catalog,
         priceColor = GameColors.CtaGreenLip,
-        showPrice = offer.ownership != OfferOwnership.ACTIVE,
+        showPrice = !offer.canManage && offer.ownership != OfferOwnership.ACTIVE,
     ) {
-        when (offer.ownership) {
-            OfferOwnership.ACTIVE -> {
+        when {
+            offer.ownership == OfferOwnership.ACTIVE || offer.canManage -> {
                 val manageDescription = stringResource(R.string.shop_manage_description)
                 StateChip(stringResource(R.string.shop_active))
                 Spacer(Modifier.width(8.dp))

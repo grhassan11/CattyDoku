@@ -38,6 +38,8 @@ data class AdsOfferUi(
     val price: String?,
     val ownership: OfferOwnership,
     val buyEnabled: Boolean,
+    /** A live subscription exists (even when Forever makes it NOT_NEEDED): show Manage so it can be cancelled. */
+    val canManage: Boolean = false,
 )
 
 @Immutable
@@ -65,4 +67,6 @@ data class ShopUiState(
     val sections: List<PackSectionUi>,
     /** A buy / restore call is in flight: every buy + restore control is disabled. */
     val busy: Boolean,
+    /** The in-flight call is a restore: show the progress indicator. Implies [busy]. */
+    val restoring: Boolean = false,
 )

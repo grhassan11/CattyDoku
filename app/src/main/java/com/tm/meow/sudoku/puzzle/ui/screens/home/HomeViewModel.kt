@@ -5,6 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.billing.CatalogState
+import com.tm.meow.sudoku.puzzle.domain.billing.ShopProduct
+import com.tm.meow.sudoku.puzzle.domain.usecase.BuyProduct
+import com.tm.meow.sudoku.puzzle.domain.usecase.LoadShopCatalog
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsRemoved
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveShopCatalog
 import com.tm.meow.sudoku.puzzle.domain.model.WorldRules
 import com.tm.meow.sudoku.puzzle.domain.model.DailyStatus
 import com.tm.meow.sudoku.puzzle.domain.model.LevelDetail
@@ -52,8 +58,20 @@ class HomeViewModel @Inject constructor(
     private val observeLevelDetail: ObserveLevelDetail,
     observeSettings: ObserveSettings,
     private val updateSettings: UpdateSettings,
+    observeAdsRemoved: ObserveAdsRemoved,
+    private val observeShopCatalog: ObserveShopCatalog,
+    private val loadShopCatalog: LoadShopCatalog,
+    private val buyProduct: BuyProduct,
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) : ViewModel() {
+
+    /** Remove-ads badge: only while ads are on AND Play returned a price for the Forever product (live). */
+    private val removeAdsBadge: Flow<Boolean> = combine(observeAdsRemoved(), observeShopCatalog()) { removed, catalog ->
+        HomeUiMapper.removeAdsBadgeVisible(removed, catalog)
+    }
+
+    /** True while the Play sheet launch is in flight; re-taps are ignored. */
+    private val buyBusy = MutableStateFlow(false)
 
     private val level = MutableStateFlow<Int?>(null)
     private val refreshTick = MutableStateFlow(0)
@@ -86,7 +104,8 @@ class HomeViewModel @Inject constructor(
             },
             worldMap,
             levelSheet,
-        ) { base, map, sheet -> base.copy(worldMap = map, levelSheet = sheet) }.stateIn(
+            removeAdsBadge,
+        ) { base, map, sheet, badge -> base.copy(worldMap = map, levelSheet = sheet, removeAdsBadgeVisible = badge) }.stateIn(
             viewModelScope,
             SharingStarted.Eagerly,
             HomeUiMapper.map(null, null, null, Settings()),
@@ -105,6 +124,37 @@ class HomeViewModel @Inject constructor(
                 throw e
             } catch (t: Throwable) {
                 // keep the previous label; the game resolves the level itself
+            }
+        }
+        ensureCatalog()
+    }
+
+    /** Prices are otherwise loaded only when Shop opens; the badge needs the Forever price on Home. Skipped once Ready. */
+    private fun ensureCatalog() {
+        if (observeShopCatalog().value is CatalogState.Ready) return
+        viewModelScope.launch {
+            try {
+                loadShopCatalog()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                // badge simply stays hidden
+            }
+        }
+    }
+
+    /** Remove-ads badge tapped: open the Play sheet for Forever directly. Failure is silent (badge stays; Shop shows errors). */
+    fun onRemoveAdsClick() {
+        if (!buyBusy.compareAndSet(expect = false, update = true)) return
+        viewModelScope.launch {
+            try {
+                buyProduct(ShopProduct.REMOVE_ADS_FOREVER.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                // never crash on a failed launch
+            } finally {
+                buyBusy.value = false
             }
         }
     }

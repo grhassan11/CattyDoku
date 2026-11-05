@@ -31,11 +31,34 @@ class GatherConsentAndInitAds(
     private val consent: ConsentRepository,
     private val ads: AdsRepository,
     private val flags: AppFlagsRepository,
+    private val tracker: AdSessionTracker? = null,
 ) {
     suspend operator fun invoke() {
+        tracker?.startupGatherStarted = true
         safely { flags.update { it.copy(sessionAdCount = 0) } }
         safely { consent.gatherConsent() }
         if (consent.state.value.canRequestAds) safely { ads.initialize() }
+    }
+}
+
+/**
+ * Fallback for a launch that skips the in-app splash: after process death the nav back stack is restored (e.g. Home / Game)
+ * and the splash, which normally runs [GatherConsentAndInitAds], is not on it. Runs the same startup step (UMP consent, then
+ * ads init, then the consent-gated Remote Config fetch) unless it already started this process. Idempotent; never throws.
+ * App Open stays gated: [AdSessionTracker.startFlowComplete] is set by Home and AppOpenPolicy also needs consent + SDK init.
+ */
+class EnsureConsentAndAdsInit(
+    private val gather: GatherConsentAndInitAds,
+    private val refreshRemoteConfig: RefreshRemoteConfig,
+    private val tracker: AdSessionTracker,
+) {
+    /** True when this call ran the startup step, false when it had already started. */
+    suspend operator fun invoke(): Boolean {
+        if (tracker.startupGatherStarted) return false
+        tracker.startupGatherStarted = true // claim before the first suspension: no second caller can slip in
+        safely { gather() }
+        safely { refreshRemoteConfig() }
+        return true
     }
 }
 
@@ -59,14 +82,14 @@ class ShowPrivacyOptions(
     }
 }
 
-/** Count a completed (won) non-daily level toward the every-Nth-win rule. */
+/** Count a completed (won) non-daily level (diagnostic win counter; Levels cadence is level-number based). */
 class RecordLevelWon(private val tracker: AdSessionTracker) {
     operator fun invoke(isDaily: Boolean) {
         if (!isDaily) tracker.recordWin()
     }
 }
 
-/** Count a completed Sudoku win toward the Sudoku every-Nth-win rule (own counter; Levels cadence untouched). */
+/** Count a completed Sudoku win (own diagnostic counter; Levels counter untouched). */
 class RecordSudokuWon(private val tracker: AdSessionTracker) {
     operator fun invoke() = tracker.recordSudokuWin()
 }
@@ -131,7 +154,8 @@ class ShowInterstitialIfAllowed(
                 safely {
                     flags.update {
                         it.copy(
-                            lastInterstitialLevel = if (persistLevel) level else it.lastInterstitialLevel,
+                            // Only a WIN ad marks the level as "had its ad". A Retry ad on a lost level must not block the later win ad.
+                            lastInterstitialLevel = if (persistLevel && trigger == AdTrigger.LEVEL_WON_CONTINUE) level else it.lastInterstitialLevel,
                             sessionAdCount = it.sessionAdCount + 1,
                         )
                     }

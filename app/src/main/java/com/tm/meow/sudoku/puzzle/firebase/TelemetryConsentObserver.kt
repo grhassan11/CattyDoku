@@ -1,5 +1,6 @@
 package com.tm.meow.sudoku.puzzle.firebase
 
+import com.tm.meow.sudoku.puzzle.di.DefaultDispatcher
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
 import com.tm.meow.sudoku.puzzle.domain.usecase.ApplyTelemetryConsent
 import com.tm.meow.sudoku.puzzle.domain.usecase.UserPropsSync
@@ -7,8 +8,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -23,9 +24,10 @@ class TelemetryConsentObserver @Inject constructor(
     private val consent: ConsentRepository,
     private val apply: ApplyTelemetryConsent,
     private val userProps: UserPropsSync,
+    @DefaultDispatcher dispatcher: CoroutineDispatcher,
 ) {
     private val started = AtomicBoolean(false)
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
     fun start() {
         if (!started.compareAndSet(false, true)) return

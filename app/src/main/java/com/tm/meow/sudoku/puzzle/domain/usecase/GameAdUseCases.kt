@@ -10,6 +10,7 @@ import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle
 import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.BannerPlacement
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedAdRepository
+import com.tm.meow.sudoku.puzzle.domain.ads.RewardedPlacement
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedResult
 import com.tm.meow.sudoku.puzzle.domain.billing.AdsRemovedRepository
 import com.tm.meow.sudoku.puzzle.domain.billing.NoAdsRemoved
@@ -55,13 +56,17 @@ class ObserveAdSurfaces(
             val consentState = consentAndRemoved.first
             val removed = consentAndRemoved.second
             val level = maxOf(flagLevel, screen)
-            val base = config.enabled && consentState.canRequestAds && initialized &&
+            val base = consentState.canRequestAds && initialized &&
                 AdFreePolicy.adsAllowed(level, config.adFreeThroughLevel)
             // Sudoku banner: no level gate (no level number there). Remove Ads still suppresses it.
-            val sudokuBase = config.enabled && consentState.canRequestAds && initialized
+            val sudokuBase = consentState.canRequestAds && initialized
+            val rewardedBase = base && rewarded.isConfigured
             AdSurfaces(
                 playerLevel = level,
-                rewarded = base && config.rewardedShow && rewarded.isConfigured,
+                levelsBoosters = rewardedBase && config.levelsBoostersRewardedShow,
+                levelsRevive = rewardedBase && config.levelsReviveRewardedShow,
+                sudokuBoosters = rewardedBase && config.sudokuBoostersRewardedShow,
+                sudokuRevive = rewardedBase && config.sudokuReviveRewardedShow,
                 rewardedLoad = load,
                 // Remove Ads suppresses the banner; rewarded is never suppressed (AdFreePolicy.isSuppressedByPurchase).
                 banner = base && config.levelsGameBannerShow && banner.isConfigured &&
@@ -82,7 +87,7 @@ class PreloadRewardedAd(
 ) {
     operator fun invoke(playerLevel: Int) {
         try {
-            if (!config.enabled || !config.rewardedShow || !repository.isConfigured) return
+            if (!config.anyRewardedShow || !repository.isConfigured) return
             if (AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel)) return
             if (!consent.state.value.canRequestAds || !sdk.isInitialized.value) return
             repository.preload()
@@ -105,8 +110,8 @@ class ShowRewardedAd(
     private val tracker: AdSessionTracker,
     private val config: AdPolicyConfig,
 ) {
-    suspend operator fun invoke(playerLevel: Int): RewardedResult {
-        if (!config.enabled || !config.rewardedShow || !repository.isConfigured) return RewardedResult.NOT_READY
+    suspend operator fun invoke(playerLevel: Int, placement: RewardedPlacement): RewardedResult {
+        if (!config.rewardedShowFor(placement) || !repository.isConfigured) return RewardedResult.NOT_READY
         if (AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel)) return RewardedResult.NOT_READY
         if (!consent.state.value.canRequestAds || !sdk.isInitialized.value) return RewardedResult.NOT_READY
         return try {
@@ -166,7 +171,7 @@ class LoadBannerAd(
             BannerPlacement.LEVELS_GAME -> config.levelsGameBannerShow
             BannerPlacement.SUDOKU_GAME -> config.sudokuGameBannerShow
         }
-        if (!config.enabled || !placementOn || !repository.isConfigured) return null
+        if (!placementOn || !repository.isConfigured) return null
         // Remove Ads: never even request the banner.
         if (AdFreePolicy.isSuppressedByPurchase(AdFormat.BANNER, adsRemoved.adsRemoved.value)) return null
         if (placement == BannerPlacement.LEVELS_GAME && AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel)) return null

@@ -4,9 +4,9 @@ import kotlin.random.Random
 
 /** The three animal icon sets used instead of cats on boss levels. [count] = icons shipped for the set. */
 enum class AnimalSet(val count: Int) {
-    ANIMALS(11),
+    ANIMALS(10),
     DOGS(10),
-    OCEAN(11),
+    OCEAN(10),
 }
 
 /**

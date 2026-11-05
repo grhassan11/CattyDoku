@@ -2,6 +2,7 @@ package com.tm.meow.sudoku.puzzle.ui.screens.home
 
 import com.tm.meow.sudoku.puzzle.ui.theme.FredokaFamily
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -64,6 +65,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tm.meow.sudoku.puzzle.R
@@ -74,6 +76,8 @@ import com.tm.meow.sudoku.puzzle.ui.ads.NativeAdSlot
 import com.tm.meow.sudoku.puzzle.ui.components.homeBackground
 import com.tm.meow.sudoku.puzzle.ui.screens.home.worlds.WorldMap
 import com.tm.meow.sudoku.puzzle.ui.screens.home.worlds.WorldThemes
+import com.tm.meow.sudoku.puzzle.ui.components.DownsampledIconImage
+import com.tm.meow.sudoku.puzzle.ui.components.IconArt
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.Button3D
 import com.tm.meow.sudoku.puzzle.ui.components.ButtonStyle
@@ -101,6 +105,7 @@ fun HomeScreen(
     onSudokuTab: () -> Unit,
     modifier: Modifier = Modifier,
     nativeAdSlot: NativeAdSlotState = NativeAdSlotState.Hidden,
+    onRemoveAds: () -> Unit = {},
 ) {
     // With the ad slot pinned at the bottom (skeleton while Loading, ad when Loaded), it owns the navigation-bar inset (its
     // background runs behind the bar), so the content stops at the slot and only keeps the status bar + side insets.
@@ -223,6 +228,19 @@ fun HomeScreen(
                     }
                     Spacer(Modifier.height(12.dp).onGloballyPositioned { spacerTopPx = it.boundsInRoot().top })
                 }
+                // Floating remove-ads badge: top-right directly under the Settings button, clear of the streak chip.
+                // 8 dp gap + 64 dp top bar (Shop is 64) + 8 dp gap = 80 dp from the content top. Box is 80 dp wide and the
+                // Settings button is 48 dp inset 16 dp, so end padding 0 centres the badge on Settings (16 + 24 = 40 = 80 / 2).
+                // AnimatedVisibility is unusable here: this Box sits inside a Column, so the ColumnScope overload wins and the
+                // scope marker rejects it. A plain alpha fade does the same job.
+                val badgeAlpha by animateFloatAsState(if (state.removeAdsBadgeVisible) 1f else 0f, label = "removeAdsBadgeAlpha")
+                if (badgeAlpha > 0f) {
+                    RemoveAdsBadge(onClick = onRemoveAds, modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .windowInsetsPadding(contentInsets)
+                        .padding(end = 0.dp, top = 80.dp)
+                        .graphicsLayer { alpha = badgeAlpha })
+                }
                 }
                 // Sticky mode tabs: never scroll; drawn over the world backdrop, directly above the native ad slot (own surface).
                 HomeModeTabs(
@@ -320,7 +338,7 @@ private fun TopBar(
     onOpenShop: () -> Unit,
 ) {
     Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) {
-        ShopButton(onOpenShop, Modifier.align(Alignment.CenterStart))
+        ShopButton(onOpenShop, Modifier.align(Alignment.CenterStart), boxSize = 64.dp, iconSize = 64.dp)
         StreakChip(streak, rewardPending, onOpenStreak, Modifier.align(Alignment.Center))
         SettingsButton(onOpenSettings, Modifier.align(Alignment.CenterEnd))
     }
@@ -429,7 +447,7 @@ internal fun SettingsButton(onClick: () -> Unit, modifier: Modifier = Modifier) 
 }
 
 @Composable
-internal fun ShopButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ShopButton(onClick: () -> Unit, modifier: Modifier = Modifier, boxSize: Dp = 48.dp, iconSize: Dp = 40.dp) {
     val description = stringResource(R.string.home_shop)
     val tapClick = rememberTapClick(onClick)
     val source = remember { MutableInteractionSource() }
@@ -437,15 +455,35 @@ internal fun ShopButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .size(48.dp)
-            .shadow(2.dp, CircleShape)
-            .clip(CircleShape)
-            .background(GameColors.Card)
+            .size(boxSize)
             .semantics { contentDescription = description }
-            .clickable(interactionSource = source, indication = ripple(), role = Role.Button, onClick = tapClick),
+            .clickable(interactionSource = source, indication = ripple(bounded = false), role = Role.Button, onClick = tapClick),
         contentAlignment = Alignment.Center,
     ) {
-        IconImage(R.drawable.ic_cart_store, size = 26.dp)
+        DownsampledIconImage(IconArt.Store, size = iconSize)
+    }
+}
+
+/**
+ * Floating "Remove ads" badge (`IconArt.RemoveAds`, 80x76 dp, >= 48 dp touch target). Opens the Play
+ * sheet for the Forever product directly.
+ */
+@Composable
+private fun RemoveAdsBadge(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val description = stringResource(R.string.home_remove_ads)
+    val tapClick = rememberTapClick(onClick)
+    val source = remember { MutableInteractionSource() }
+    val scale = rememberPressScale(source)
+    Box(
+        modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .size(width = 80.dp, height = 76.dp)
+            .semantics { contentDescription = description }
+            .clickable(interactionSource = source, indication = ripple(bounded = false), role = Role.Button, onClick = tapClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Untinted colour art, unclipped (scalloped badge + ribbon). Fit inside 80 dp keeps the ~1090x1024 aspect.
+        DownsampledIconImage(IconArt.RemoveAds, size = 80.dp)
     }
 }
 

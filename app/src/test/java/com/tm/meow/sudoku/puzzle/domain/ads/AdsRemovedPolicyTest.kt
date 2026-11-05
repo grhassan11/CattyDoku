@@ -61,11 +61,11 @@ class AdsRemovedPolicyTest {
             AdDecision.Skip(AdSkipReason.ADS_REMOVED),
             InterstitialPolicy.decide(interstitialCtx(adsRemoved = true)),
         )
-        // Also the optional lose-retry boundary.
+        // Also the lose-retry boundary.
         val retry = interstitialCtx(true).copy(trigger = AdTrigger.LOSE_RETRY)
         assertEquals(
             AdDecision.Skip(AdSkipReason.ADS_REMOVED),
-            InterstitialPolicy.decide(retry, AdPolicyConfig(showOnLoseRetry = true)),
+            InterstitialPolicy.decide(retry, AdPolicyConfig()),
         )
     }
 
@@ -155,7 +155,7 @@ class AdsRemovedPolicyTest {
             removed(true),
         )(MutableStateFlow(20)).first()
         assertFalse("banner suppressed", surfaces.banner)
-        assertTrue("rewarded unaffected", surfaces.rewarded)
+        assertTrue("rewarded unaffected", surfaces.levelsBoosters && surfaces.levelsRevive && surfaces.sudokuBoosters && surfaces.sudokuRevive)
         assertTrue(surfaces.adsRemoved)
     }
 
@@ -166,7 +166,7 @@ class AdsRemovedPolicyTest {
             removed(false),
         )(MutableStateFlow(20)).first()
         assertTrue(surfaces.banner)
-        assertTrue(surfaces.rewarded)
+        assertTrue(surfaces.levelsBoosters)
         assertFalse(surfaces.adsRemoved)
     }
 

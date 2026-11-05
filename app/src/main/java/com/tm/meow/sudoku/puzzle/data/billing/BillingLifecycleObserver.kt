@@ -6,6 +6,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.tm.meow.sudoku.puzzle.domain.repository.ShopRepository
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,7 +23,7 @@ class BillingLifecycleObserver @Inject constructor(
     private val shop: ShopRepository,
 ) : DefaultLifecycleObserver {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + CoroutineExceptionHandler { _, _ -> /* never crash on billing */ })
     private var coldStartPending = true
 
     /** Call once from `Application.onCreate` (main thread). */

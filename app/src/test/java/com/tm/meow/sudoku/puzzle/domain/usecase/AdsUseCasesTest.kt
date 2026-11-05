@@ -122,6 +122,53 @@ class AdsUseCasesTest {
         assertEquals("lastInterstitialLevel is persisted across sessions", 12, f.lastInterstitialLevel)
     }
 
+    // ---------------------------------------------------------------- restored-back-stack fallback (A-016)
+
+    private class CountingRemoteConfig : com.tm.meow.sudoku.puzzle.domain.config.RemoteConfigRepository {
+        var refreshes = 0
+        override fun current() = com.tm.meow.sudoku.puzzle.domain.config.AppRemoteConfig()
+        override fun refresh() {
+            refreshes++
+        }
+    }
+
+    @Test
+    fun fallbackRunsConsentThenInitThenConfigFetchOnce() = runTest {
+        val log = CallLog()
+        val tracker = AdSessionTracker(FakeTimeProvider())
+        val rc = CountingRemoteConfig()
+        val gather = GatherConsentAndInitAds(FakeConsent(log, allow), FakeAds(log), FakeAppFlagsRepository(), tracker)
+        val ensure = EnsureConsentAndAdsInit(gather, RefreshRemoteConfig(rc), tracker)
+        assertTrue(ensure())
+        assertEquals(listOf("consent", "init"), log.calls)
+        assertEquals(1, rc.refreshes)
+        assertFalse("second call is a no-op", ensure())
+        assertEquals(listOf("consent", "init"), log.calls)
+    }
+
+    @Test
+    fun fallbackSkipsWhenSplashAlreadyStartedTheGather() = runTest {
+        val log = CallLog()
+        val tracker = AdSessionTracker(FakeTimeProvider())
+        val gather = GatherConsentAndInitAds(FakeConsent(log, allow), FakeAds(log), FakeAppFlagsRepository(), tracker)
+        gather() // what the splash does
+        assertTrue(tracker.startupGatherStarted)
+        log.calls.clear()
+        val ensure = EnsureConsentAndAdsInit(gather, RefreshRemoteConfig(CountingRemoteConfig()), tracker)
+        assertFalse(ensure())
+        assertTrue(log.calls.isEmpty())
+    }
+
+    @Test
+    fun fallbackFailsOpen() = runTest {
+        val log = CallLog()
+        val tracker = AdSessionTracker(FakeTimeProvider())
+        val gather = GatherConsentAndInitAds(
+            FakeConsent(log, allow, gatherThrows = true), FakeAds(log), FakeAppFlagsRepository(), tracker,
+        )
+        assertTrue(EnsureConsentAndAdsInit(gather, RefreshRemoteConfig(CountingRemoteConfig()), tracker)())
+    }
+
     // ---------------------------------------------------------------- privacy options
 
     @Test
@@ -184,35 +231,52 @@ class AdsUseCasesTest {
     @Test
     fun showsWhenPolicyAllowsAndRecordsEverything() = runTest {
         val r = rig()
-        assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 16))
+        assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
         assertEquals(1, r.ads.showCalls)
         assertEquals(AdPolicyConfig.DEFAULT_LOAD_WAIT_TIMEOUT_MS, r.ads.lastWait)
         assertEquals(0, r.tracker.winsSinceLastAd)
         assertEquals(1, r.tracker.adsShown)
         assertEquals(r.time.now, r.tracker.lastAdShownMs)
         val f = r.flags.flags.first()
-        assertEquals(16, f.lastInterstitialLevel)
+        assertEquals(20, f.lastInterstitialLevel)
         assertEquals(1, f.sessionAdCount)
     }
 
     @Test
     fun policyDenialNeverTouchesTheSdk() = runTest {
-        val r = rig(wins = 1, flags = AppFlags(lastInterstitialLevel = 12)) // not the 2nd win, and not the first-ever ad
+        val r = rig(wins = 1, flags = AppFlags(lastInterstitialLevel = 12)) // level 16 is not a multiple of the default frequency 5
         assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 16))
+        assertEquals(0, r.ads.showCalls)
+    }
+
+    @Test
+    fun loseRetryShowsByDefaultButDoesNotMarkTheLevelAsHavingHadItsAd() = runTest {
+        val r = rig()
+        assertTrue(r.show(AdTrigger.LOSE_RETRY, level = 11)) // frequency does not apply to Retry
+        assertEquals(1, r.ads.showCalls)
+        val f = r.flags.flags.first()
+        assertEquals(0, f.lastInterstitialLevel)
+        assertEquals(1, f.sessionAdCount)
+    }
+
+    @Test
+    fun loseRetrySwitchOffNeverTouchesTheSdk() = runTest {
+        val r = rig(config = AdPolicyConfig(levelsRestartInterstitialShow = false))
+        assertFalse(r.show(AdTrigger.LOSE_RETRY, level = 20))
         assertEquals(0, r.ads.showCalls)
     }
 
     @Test
     fun noConsentNeverTouchesTheSdk() = runTest {
         val r = rig(consentState = ConsentState(canRequestAds = false))
-        assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 16))
+        assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
         assertEquals(0, r.ads.showCalls)
     }
 
     @Test
     fun dailyNeverShows() = runTest {
         val r = rig()
-        assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 16, isDaily = true))
+        assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20, isDaily = true))
         assertEquals(0, r.ads.showCalls)
     }
 
@@ -220,7 +284,7 @@ class AdsUseCasesTest {
     fun launchResumeMidGameDailyStartNeverShow() = runTest {
         val r = rig()
         for (t in listOf(AdTrigger.APP_LAUNCH, AdTrigger.APP_RESUME, AdTrigger.MID_GAMEPLAY, AdTrigger.DAILY_START, AdTrigger.TUTORIAL)) {
-            assertFalse("$t", r.show(t, level = 16))
+            assertFalse("$t", r.show(t, level = 20))
         }
         assertEquals(0, r.ads.showCalls)
     }
@@ -229,7 +293,7 @@ class AdsUseCasesTest {
     fun notReadyOrFailedDoesNotRecordAndKeepsWinCount() = runTest {
         for (res in listOf(AdShowResult.NOT_READY, AdShowResult.FAILED)) {
             val r = rig(adResult = res)
-            assertFalse("$res", r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 16))
+            assertFalse("$res", r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
             assertEquals(1, r.ads.showCalls)
             assertEquals(2, r.tracker.winsSinceLastAd)
             assertEquals(0, r.tracker.adsShown)
@@ -240,19 +304,19 @@ class AdsUseCasesTest {
     @Test
     fun secondAdBlockedByMinIntervalThenAllowedAfterIt() = runTest {
         val r = rig()
-        assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 16))
+        assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
         r.tracker.recordWin(); r.tracker.recordWin()
         r.time.now += 10_000L
-        assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 17))
+        assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 25))
         r.time.now += 90_000L
-        assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 17))
+        assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 25))
         assertEquals(2, r.flags.flags.first().sessionAdCount)
     }
 
     @Test
     fun youngSessionBlocksAd() = runTest {
         val r = rig(advanceMs = 30_000L)
-        assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 16))
+        assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
         assertEquals(0, r.ads.showCalls)
     }
 
@@ -264,7 +328,7 @@ class AdsUseCasesTest {
             override suspend fun showIfReady(loadWaitTimeoutMs: Long): AdShowResult = error("sdk boom")
         }
         val uc = ShowInterstitialIfAllowed(r.consent, throwing, r.tracker, r.flags, AdPolicyConfig())
-        assertFalse(uc(AdTrigger.LEVEL_WON_CONTINUE, level = 16))
+        assertFalse(uc(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
     }
 
     @Test

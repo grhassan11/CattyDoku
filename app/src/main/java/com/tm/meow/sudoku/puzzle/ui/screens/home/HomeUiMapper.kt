@@ -1,5 +1,7 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.home
 
+import com.tm.meow.sudoku.puzzle.domain.billing.CatalogState
+import com.tm.meow.sudoku.puzzle.domain.billing.ShopProduct
 import com.tm.meow.sudoku.puzzle.domain.engine.DailyAvailability
 import com.tm.meow.sudoku.puzzle.domain.engine.DailyRules
 import com.tm.meow.sudoku.puzzle.domain.model.DailyStatus
@@ -28,10 +30,15 @@ object HomeUiMapper {
             patternMode = settings.patternMode,
             streakReminders = settings.streakReminders,
             dailyReminders = settings.dailyReminders,
+            sudokuReminders = settings.sudokuReminders,
         ),
         calendar = calendar?.let { calendarUi(it) },
         streakRewardPending = rewardPending,
     )
+
+    /** Badge shows only while ads are on (no Forever, no active Monthly) and Play returned a Forever price. */
+    fun removeAdsBadgeVisible(adsRemoved: Boolean, catalog: CatalogState): Boolean =
+        !adsRemoved && (catalog as? CatalogState.Ready)?.prices?.containsKey(ShopProduct.REMOVE_ADS_FOREVER.id) == true
 
     fun dailyUi(daily: DailyStatus?): DailyUi = when (val a = daily?.availability) {
         null -> DailyUi.Locked(DailyRules.UNLOCK_LEVEL)

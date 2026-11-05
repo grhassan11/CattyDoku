@@ -9,6 +9,8 @@ import com.tm.meow.sudoku.puzzle.domain.repository.SettingsRepository
 import com.tm.meow.sudoku.puzzle.ui.screens.game.SfxKind
 import com.tm.meow.sudoku.puzzle.util.SfxPlayer
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
+import com.tm.meow.sudoku.puzzle.domain.crash.NoopCrashReporter
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,6 +40,7 @@ class AudioController @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: SettingsRepository,
     private val tracker: AdSessionTracker,
+    private val crash: CrashReporter = NoopCrashReporter,
 ) : DefaultLifecycleObserver {
 
     private val started = AtomicBoolean(false)
@@ -72,6 +75,7 @@ class AudioController @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
+                crash.recordNonFatal(t, "audio.music")
                 runCatching { music.stop() }
             }
         }
@@ -87,6 +91,7 @@ class AudioController @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
+                crash.recordNonFatal(t, "audio.sfxSetting")
                 // keep last value
             }
         }
@@ -100,6 +105,7 @@ class AudioController @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
+                crash.recordNonFatal(t, "audio.adSilence")
                 // ignore
             }
         }

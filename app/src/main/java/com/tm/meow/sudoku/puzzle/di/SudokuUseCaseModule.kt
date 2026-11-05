@@ -9,6 +9,7 @@ import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.GetActiveSudokuElapsed
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.IsSudokuTutorialDone
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.ObserveSudokuProgress
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.ResetActiveSudokuGame
+import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SaveOrDiscardSudokuGame
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SaveSudokuGame
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.ShowSudokuInterstitialIfAllowed
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.StartOrResumeSudoku
@@ -39,6 +40,9 @@ object SudokuUseCaseModule {
 
     @Provides
     fun provideSaveSudokuGame(repo: SudokuRepository): SaveSudokuGame = SaveSudokuGame(repo)
+
+    @Provides
+    fun provideSaveOrDiscardSudokuGame(repo: SudokuRepository): SaveOrDiscardSudokuGame = SaveOrDiscardSudokuGame(repo)
 
     @Provides
     fun provideResetActiveSudokuGame(repo: SudokuRepository): ResetActiveSudokuGame = ResetActiveSudokuGame(repo)

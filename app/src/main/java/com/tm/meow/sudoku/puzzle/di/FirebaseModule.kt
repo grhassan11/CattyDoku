@@ -33,8 +33,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /**
@@ -68,11 +68,14 @@ object FirebaseModule {
     }
 
     @Provides @Singleton
-    fun provideRemoteConfigRepository(@ApplicationContext context: Context): RemoteConfigRepository = try {
+    fun provideRemoteConfigRepository(
+        @ApplicationContext context: Context,
+        @DefaultDispatcher dispatcher: CoroutineDispatcher,
+    ): RemoteConfigRepository = try {
         if (FirebaseAvailability.isAvailable(context)) {
             FirebaseRemoteConfigRepository(
                 remoteConfig = FirebaseRemoteConfig.getInstance(),
-                scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+                scope = CoroutineScope(SupervisorJob() + dispatcher),
                 debug = BuildConfig.DEBUG,
             )
         } else {
