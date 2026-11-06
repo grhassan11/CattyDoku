@@ -47,8 +47,6 @@ class ShopProductTest {
         assertEquals(ProductKind.SUBSCRIPTION, ShopProduct.REMOVE_ADS_MONTHLY.kind)
         assertEquals(ProductKind.NON_CONSUMABLE, ShopProduct.REMOVE_ADS_FOREVER.kind)
         assertEquals(9, ShopProduct.ofKind(ProductKind.CONSUMABLE).size)
-        assertTrue(ShopProduct.REMOVE_ADS_MONTHLY.isAdsRemoval)
-        assertTrue(ShopProduct.REMOVE_ADS_FOREVER.isAdsRemoval)
         assertEquals(0, ShopProduct.REMOVE_ADS_FOREVER.amount)
         assertNull(ShopProduct.REMOVE_ADS_FOREVER.booster)
     }

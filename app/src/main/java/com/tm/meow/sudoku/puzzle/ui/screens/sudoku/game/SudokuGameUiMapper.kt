@@ -10,7 +10,7 @@ import com.tm.meow.sudoku.puzzle.ui.screens.sudoku.entry.SudokuEntryUiMapper
 /** Pure domain -> UI mapping for the Sudoku game screen. */
 object SudokuGameUiMapper {
 
-    fun map(game: SudokuGameState, hintCharges: Int, userPaused: Boolean, dialog: SudokuDialogUi): SudokuGameUiState {
+    fun map(game: SudokuGameState, hintCharges: Int, userPaused: Boolean, dialog: SudokuDialogUi, introKey: Long = 0L): SudokuGameUiState {
         val box = game.size.box
         return SudokuGameUiState(
             loading = false,
@@ -31,6 +31,7 @@ object SudokuGameUiMapper {
             hintCharges = hintCharges.coerceAtLeast(0),
             padKeys = padKeys(game),
             dialog = dialog,
+            introKey = introKey,
         )
     }
 

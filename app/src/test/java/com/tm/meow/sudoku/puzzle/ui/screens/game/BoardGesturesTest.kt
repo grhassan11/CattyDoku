@@ -82,7 +82,6 @@ class BoardGesturesTest {
         val r = BoardGestureResolver()
         r.begin(a, 0)
         assertNull(r.move(a))
-        assertFalse(r.isDragging)
         assertEquals(BoardAction.Tap(a), r.end(50))
     }
 
@@ -91,7 +90,6 @@ class BoardGesturesTest {
         val r = BoardGestureResolver()
         r.begin(a, 0)
         assertEquals(listOf(a, b), r.move(b))
-        assertTrue(r.isDragging)
         assertEquals(BoardAction.Drag(listOf(a, b)), r.end(80))
     }
 

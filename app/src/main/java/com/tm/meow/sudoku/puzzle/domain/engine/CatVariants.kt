@@ -19,13 +19,7 @@ object CatVariants {
         return a
     }
 
-    /** Variant for [region]: bag[region % UNIQUE]. All distinct until UNIQUE regions are used, then repeats. */
-    fun variantFor(seed: Long, levelIndex: Int, region: Int): Int {
-        require(region >= 0) { "region >= 0" }
-        return bag(seed, levelIndex)[region % UNIQUE]
-    }
-
-    /** Variants for regions 0 until [regionCount]. */
+    /** Variants for regions 0 until [regionCount]: bag[region % UNIQUE]. All distinct until UNIQUE regions are used, then repeats. */
     fun forRegions(seed: Long, levelIndex: Int, regionCount: Int): IntArray {
         val bag = bag(seed, levelIndex)
         return IntArray(regionCount) { bag[it % UNIQUE] }

@@ -47,11 +47,16 @@ import com.tm.meow.sudoku.puzzle.ui.ads.BannerAdSlot
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.homePattern
 import com.tm.meow.sudoku.puzzle.ui.screens.game.BoosterAdDialog
+import com.tm.meow.sudoku.puzzle.ui.screens.game.rememberAnimationsEnabled
+import com.tm.meow.sudoku.puzzle.ui.screens.game.rememberBoardIntro
 import com.tm.meow.sudoku.puzzle.ui.screens.sudoku.entry.labelRes
 import com.tm.meow.sudoku.puzzle.ui.theme.FredokaFamily
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 
 private val ContentMaxWidth = 480.dp
+
+/** Digits start this long after their cell along the intro wave (see [SudokuBoard]). */
+internal const val SUDOKU_DIGIT_LAG_MS = 150f
 
 /** Gap kept between the number pad and the banner slot (AdMob accidental-click policy). Same as the Levels screen. */
 private val BANNER_CLEARANCE = 48.dp
@@ -96,6 +101,14 @@ fun SudokuGameScreen(
 ) {
     BackHandler(onBack = onBack)
     val theme = remember(state.tier) { sudokuTierTheme(state.tier) }
+    // Board intro wave. Held HERE (not in SudokuBoard) so the pause overlay, which removes the board from composition, never replays it.
+    val intro = rememberBoardIntro(
+        introKey = state.introKey.takeIf { it != 0L && !state.loading },
+        animationsOn = rememberAnimationsEnabled(null),
+        totalMs = 1300f,
+        cellMs = 450f,
+        tailMs = SUDOKU_DIGIT_LAG_MS,
+    )
     CompositionLocalProvider(LocalSudokuTierTheme provides theme) {
     Box(
         modifier
@@ -151,6 +164,7 @@ fun SudokuGameScreen(
                             inputEnabled = state.inputEnabled,
                             onCellTap = onCellTap,
                             size = side,
+                            intro = intro,
                         )
                     }
                 }

@@ -44,10 +44,12 @@ class SfxPlayer(context: Context) {
             fun load(kind: SfxKind, resId: Int) {
                 runCatching { p.load(context, resId, 1) }.getOrNull()?.takeIf { it > 0 }?.let { soundIds[kind] = it }
             }
-            load(SfxKind.MEOW, R.raw.sfx_meow)
+            // One load per asset: sfx_meow doubles as the first random-cat sample, sfx_hint as the chime.
+            val meowId = runCatching { p.load(context, R.raw.sfx_meow, 1) }.getOrNull()?.takeIf { it > 0 }
+            meowId?.let { soundIds[SfxKind.MEOW] = it; catIds.add(it) }
             load(SfxKind.WRONG, R.raw.sfx_wrong_placement)
             load(SfxKind.HINT, R.raw.sfx_hint)
-            load(SfxKind.CHIME, R.raw.sfx_hint) // no dedicated chime asset: reuse the hint ding (played softer + higher, see play)
+            soundIds[SfxKind.HINT]?.let { soundIds[SfxKind.CHIME] = it } // no dedicated chime asset: reuse the hint ding (played softer + higher, see play)
             load(SfxKind.WIN, R.raw.sfx_win)
             load(SfxKind.BLOCKED, R.raw.sfx_blocked)
             load(SfxKind.UI_TAP, R.raw.sfx_ui_tap)
@@ -55,7 +57,7 @@ class SfxPlayer(context: Context) {
             load(SfxKind.MOUSE, R.raw.sfx_mouse)
             // Random cat meows layered on the correct-placement chime (see play).
             intArrayOf(
-                R.raw.sfx_meow, R.raw.sfx_cat_2, R.raw.sfx_cat_3, R.raw.sfx_cat_4,
+                R.raw.sfx_cat_2, R.raw.sfx_cat_3, R.raw.sfx_cat_4,
                 R.raw.sfx_cat_5, R.raw.sfx_cat_6, R.raw.sfx_cat_7,
             ).forEach { res -> runCatching { p.load(context, res, 1) }.getOrNull()?.takeIf { it > 0 }?.let { catIds.add(it) } }
         }

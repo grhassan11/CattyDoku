@@ -543,9 +543,7 @@
     <string name="sudoku_restart_confirm">Restart</string>
     <string name="sudoku_keep_playing">Keep Playing</string>
     <string name="sudoku_win_title">Puzzle solved!</string>
-    <string name="sudoku_win_best_time">New best time!</string>
-    <string name="sudoku_win_best_score">New best score!</string>
-    <string name="sudoku_win_unlocked">Unlocked: %1$s</string>
+    <string name="sudoku_win_message_good">Nicely solved. Every cell in place.</string>
     <string name="sudoku_win_next">Next Puzzle</string>
     <string name="sudoku_win_done">Back</string>
     <string name="sudoku_over_title">Out of hearts</string>

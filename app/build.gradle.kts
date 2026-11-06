@@ -135,14 +135,12 @@ dependencies {
     implementation(libs.androidx.profileinstaller) // installs the baseline profile on first run
     baselineProfile(project(":baselineprofile"))
     implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.process) // ProcessLifecycleOwner (resume-only app-open ads)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.material3)
 
     implementation(libs.androidx.navigation.compose)

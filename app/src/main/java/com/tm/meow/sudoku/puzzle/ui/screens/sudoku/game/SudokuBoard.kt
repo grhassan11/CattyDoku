@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.tm.meow.sudoku.puzzle.R
 import com.tm.meow.sudoku.puzzle.domain.sudoku.model.BoxShape
+import com.tm.meow.sudoku.puzzle.ui.screens.game.BoardIntro
 import com.tm.meow.sudoku.puzzle.ui.screens.game.rememberAnimationsEnabled
 import com.tm.meow.sudoku.puzzle.ui.theme.FredokaFamily
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
@@ -75,6 +76,8 @@ internal fun SudokuBoard(
     onCellTap: (Int) -> Unit,
     size: Dp,
     modifier: Modifier = Modifier,
+    /** New-board intro wave (owned by the screen so pause does not replay it). Null (tutorial) = none. */
+    intro: BoardIntro? = null,
 ) {
     if (cells.size != n * n) return
     val cell = size / n
@@ -146,7 +149,8 @@ internal fun SudokuBoard(
                             flashToken = if (index in fx.flashCells) fx.id else 0,
                             shakePx = shakePx,
                             onClick = { onCellTap(index) },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).then(intro?.layer(r, c, n) ?: Modifier),
+                            digitModifier = intro?.layer(r, c, n, SUDOKU_DIGIT_LAG_MS) ?: Modifier,
                         )
                     }
                 }
@@ -173,6 +177,8 @@ private fun BoardCell(
     shakePx: Float,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Intro-wave layer for the digit (later than the cell's own); no-op outside the intro. */
+    digitModifier: Modifier = Modifier,
 ) {
     val cellFx = if (popToken != 0 || shakeToken != 0 || flashToken != 0) {
         rememberCellFx(popToken, shakeToken, flashToken, shakePx)
@@ -205,9 +211,9 @@ private fun BoardCell(
             ui.value != 0 -> Text(
                 ui.value.toString(),
                 modifier = if (cellFx == null) {
-                    Modifier
+                    digitModifier
                 } else {
-                    Modifier.graphicsLayer {
+                    digitModifier.graphicsLayer {
                         scaleX = cellFx.pop.value
                         scaleY = cellFx.pop.value
                         translationX = cellFx.shake.value

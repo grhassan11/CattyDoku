@@ -21,15 +21,12 @@ import com.tm.meow.sudoku.puzzle.domain.model.AnimalSet
 
 /**
  * User-supplied icon art (Design\Icons, see ASSET_LICENSES.txt). Which icon plays which role is
- * decided HERE, in one place. ic_cat_1..10, ic_animals_1..10, ic_dog_1..10 and ic_ocean_animal_1..10, ic_fish_life and ic_fishbone are WebPs (drawable-nodpi, 680 px for animals/dogs/ocean/fish); ic_yarn_ball, ic_mouse, and ic_mouse_locked are PNGs (drawable-nodpi, gradients
- * could not be converted); everything else (incl. the one-colour cat/dog silhouettes, tinted via ColorFilter) is a VectorDrawable.
+ * decided HERE, in one place. ic_cat_1..10, ic_animals_1..10, ic_dog_1..10 and ic_ocean_animal_1..10, ic_fish_life and ic_fishbone, ic_yarn_ball, ic_mouse and ic_mouse_locked are WebPs (drawable-nodpi; 680 px for animals/dogs/ocean/fish, 512 px lossless for yarn/mouse);
+ * everything else (incl. the one-colour cat/dog silhouettes, tinted via ColorFilter) is a VectorDrawable.
  * Decorative: content descriptions live on the clickable / semantic parent.
  */
 object IconArt {
-    /**
-     * Placed-cat art, indexed by CatVariants variant (size must equal CatVariants.UNIQUE).
-     * ic_cat_black_flat is NOT used: flat one-colour silhouette, no face, reads badly on region colours.
-     */
+    /** Placed-cat art, indexed by CatVariants variant (size must equal CatVariants.UNIQUE). ic_cat_black_flat is the separate CatSilhouette. */
     private val placedCats: List<Int> = listOf(
         R.drawable.ic_cat_1,
         R.drawable.ic_cat_2,
@@ -46,10 +43,10 @@ object IconArt {
     /** Fixed cat for decorative spots (rules diagram, cat booster button, splash, tutorial). */
     @DrawableRes val PlacedCat: Int = R.drawable.ic_cat_5
 
-    /** Mouse booster art (PNG, gradient SVG). */
+    /** Mouse booster art (lossless WebP, gradient SVG). */
     @DrawableRes val Mouse: Int = R.drawable.ic_mouse
 
-    /** Greyed mouse booster art for the locked state (PNG, gradient SVG). Lock badge is drawn by the caller. */
+    /** Greyed mouse booster art for the locked state (lossless WebP, gradient SVG). Lock badge is drawn by the caller. */
     @DrawableRes val MouseLocked: Int = R.drawable.ic_mouse_locked
 
     /** Rate Us star (VectorDrawable, single gradient). Unselected state is greyed at the use site. */

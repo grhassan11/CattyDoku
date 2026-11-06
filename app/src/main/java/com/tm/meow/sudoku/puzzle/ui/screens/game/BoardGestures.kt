@@ -73,8 +73,6 @@ class BoardGestureResolver(private val doubleTapWindowMs: Long = DEFAULT_DOUBLE_
         return if (dragging) path.toList() else null
     }
 
-    val isDragging: Boolean get() = dragging
-
     /** Finger up. Returns the resolved action, or null when nothing started. */
     fun end(upMs: Long): BoardAction? {
         val s = start ?: return null

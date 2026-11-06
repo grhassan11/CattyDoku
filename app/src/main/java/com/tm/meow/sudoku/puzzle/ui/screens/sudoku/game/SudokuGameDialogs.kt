@@ -1,5 +1,10 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.sudoku.game
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -39,9 +44,11 @@ import com.tm.meow.sudoku.puzzle.ui.components.DialogScrim
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.PillButton
 import com.tm.meow.sudoku.puzzle.ui.components.StatusBarIconsEffect
+import com.tm.meow.sudoku.puzzle.ui.components.IconArt
 import com.tm.meow.sudoku.puzzle.ui.screens.game.LoseScreenLayout
+import com.tm.meow.sudoku.puzzle.ui.screens.game.StatChip
+import com.tm.meow.sudoku.puzzle.ui.screens.game.WinScreenLayout
 import com.tm.meow.sudoku.puzzle.ui.screens.game.rememberAnimationsEnabled
-import com.tm.meow.sudoku.puzzle.ui.screens.sudoku.entry.labelRes
 import com.tm.meow.sudoku.puzzle.ui.theme.FredokaFamily
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 import kotlinx.coroutines.delay
@@ -154,59 +161,56 @@ internal fun SudokuWinDialog(
 ) {
     val title = stringResource(R.string.sudoku_win_title)
     val armed = rememberInputArmed()
-    DialogCard(
-        title,
-        onScrimTap = null,
-        scrimColor = GameColors.OutcomeScrim,
-        lightStatusIcons = true,
-        behind = { if (rememberAnimationsEnabled(null)) Confetti() },
+    val message = stringResource(
+        when {
+            win.mistakes == 0 && win.hintsUsed == 0 -> R.string.win_message_perfect
+            win.mistakes >= 3 -> R.string.win_message_tough
+            else -> R.string.sudoku_win_message_good
+        },
+    )
+    // Same entry motion as the Levels outcome overlay (fade + scale in).
+    val visible = remember { MutableTransitionState(false).apply { targetState = true } }
+    AnimatedVisibility(
+        visibleState = visible,
+        enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.92f, animationSpec = tween(260)),
     ) {
-        DialogTitle(title)
-        Spacer(Modifier.height(14.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            WinStat(stringResource(R.string.sudoku_stat_time), win.timeText)
-            WinStat(stringResource(R.string.sudoku_stat_score), win.score.toString())
-            WinStat(stringResource(R.string.sudoku_stat_mistakes), win.mistakes.toString())
-            WinStat(stringResource(R.string.sudoku_stat_hints), win.hintsUsed.toString())
-        }
-        if (win.newBestTime) WinNote(stringResource(R.string.sudoku_win_best_time))
-        if (win.newBestScore) WinNote(stringResource(R.string.sudoku_win_best_score))
-        if (win.unlocked.isNotEmpty()) {
-            val names = win.unlocked.map { stringResource(it.labelRes()) }.joinToString(", ")
-            WinNote(stringResource(R.string.sudoku_win_unlocked, names))
-        }
-        Spacer(Modifier.height(20.dp))
-        PillButton(
-            text = stringResource(R.string.sudoku_win_next),
-            onClick = { if (armed) onNext() },
-            textSize = 18.sp,
-            horizontalPadding = 16.dp,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(10.dp))
-        PillButton(
-            text = stringResource(R.string.sudoku_win_done),
-            onClick = { if (armed) onDone() },
-            filled = false,
-            textSize = 18.sp,
-            horizontalPadding = 16.dp,
-            modifier = Modifier.fillMaxWidth(),
+        // Same screen as Levels "Level Completed" (shared WinScreenLayout): ribbon, mascot, score count-up, stat chips, Home + Next.
+        WinScreenLayout(
+            headline = title,
+            message = message,
+            mascotRes = IconArt.mascotFor(win.score),
+            mascotDescription = stringResource(R.string.win_mascot_description),
+            score = win.score,
+            stats = {
+                StatChip(
+                    label = stringResource(R.string.win_stat_time),
+                    value = win.timeText,
+                    iconRes = null,
+                    description = stringResource(R.string.win_stat_time_description, win.timeText),
+                )
+                StatChip(
+                    label = stringResource(R.string.win_stat_mistakes),
+                    value = win.mistakes.toString(),
+                    iconRes = R.drawable.ic_heart_filled,
+                    iconTint = GameColors.Conflict,
+                    description = stringResource(R.string.win_stat_mistakes_description, win.mistakes),
+                )
+                StatChip(
+                    label = stringResource(R.string.win_stat_hints),
+                    value = win.hintsUsed.toString(),
+                    iconRes = R.drawable.ic_hint,
+                    description = stringResource(R.string.win_stat_hints_description, win.hintsUsed),
+                )
+            },
+            ctaText = stringResource(R.string.sudoku_win_next),
+            onCta = onNext,
+            showHome = true,
+            onHome = onDone,
+            homeDescription = stringResource(R.string.sudoku_win_done),
+            confetti = rememberAnimationsEnabled(null),
+            inputArmed = armed,
         )
     }
-}
-
-@Composable
-private fun androidx.compose.foundation.layout.RowScope.WinStat(label: String, value: String) {
-    Column(Modifier.weight(1f).semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = GameColors.StatCardLabel, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-        Text(value, color = GameColors.StatCardValue, fontSize = cappedSp(20f), fontWeight = FontWeight.Bold, fontFamily = FredokaFamily, maxLines = 1)
-    }
-}
-
-@Composable
-private fun WinNote(text: String) {
-    Spacer(Modifier.height(8.dp))
-    Text(text, color = GameColors.Primary, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
 }
 
 /**

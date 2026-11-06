@@ -109,6 +109,7 @@ class SudokuGameViewModel @Inject constructor(
     private var clockOrigin = 0L
     private var clockBase = 0L
     private var saveJob: Job? = null
+    private var introEpoch = 0L
     private val ioLock = Mutex()
 
     private val _state = MutableStateFlow(SudokuGameUiState(tier = tier ?: SudokuTier.EASY))
@@ -191,6 +192,7 @@ class SudokuGameViewModel @Inject constructor(
         userPaused = false
         dialog = SudokuDialogUi.None
         game = state.copy(paused = false)
+        introEpoch++ // new puzzle / first load plays the board intro wave once
         _timeText.value = SudokuEntryUiMapper.formatTime(state.elapsedMs)
         if (state.status == SudokuStatus.PLAYING) {
             applyHolds()
@@ -478,6 +480,7 @@ class SudokuGameViewModel @Inject constructor(
         userPaused = false
         dialog = SudokuDialogUi.None
         game = fresh
+        introEpoch++ // restart replays the board intro wave
         _timeText.value = SudokuEntryUiMapper.formatTime(0L)
         viewModelScope.launch { persist() }
         applyHolds()
@@ -655,7 +658,7 @@ class SudokuGameViewModel @Inject constructor(
         _state.value = if (g == null) {
             SudokuGameUiState(loading = true, tier = tier ?: SudokuTier.EASY, hintCharges = hintCharges)
         } else {
-            SudokuGameUiMapper.map(g, hintCharges, userPaused, dialog)
+            SudokuGameUiMapper.map(g, hintCharges, userPaused, dialog, introEpoch)
         }
     }
 

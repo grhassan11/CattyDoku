@@ -42,13 +42,8 @@ class CatVariantsTest {
     }
 
     @Test fun indexAlwaysInRange() {
-        for (s in -5L..40L) for (r in 0..12) {
-            assertTrue(CatVariants.variantFor(s, 1, r) in 0 until CatVariants.UNIQUE)
+        for (s in -5L..40L) {
+            assertTrue(CatVariants.forRegions(s, 1, 13).all { it in 0 until CatVariants.UNIQUE })
         }
-    }
-
-    @Test fun variantForMatchesForRegions() {
-        val v = CatVariants.forRegions(8L, 4, 7)
-        for (r in 0 until 7) assertEquals(v[r], CatVariants.variantFor(8L, 4, r))
     }
 }

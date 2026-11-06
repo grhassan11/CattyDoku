@@ -34,12 +34,15 @@ import kotlinx.coroutines.launch
 @HiltAndroidApp
 class CatPuzzleApp : Application() {
     @Inject lateinit var currentActivityProvider: CurrentActivityProvider
-    @Inject lateinit var appOpenObserver: AppOpenLifecycleObserver
-    @Inject lateinit var billingObserver: BillingLifecycleObserver
-    @Inject lateinit var telemetryConsentObserver: TelemetryConsentObserver
+        @Inject lateinit var telemetryConsentObserver: TelemetryConsentObserver
     @Inject lateinit var audioController: AudioController
     @Inject lateinit var crashReporter: CrashReporter
     @Inject @field:IoDispatcher lateinit var ioDispatcher: CoroutineDispatcher
+
+    // App-open + billing observers also start after the first frame (see runAfterFirstFrame): ProcessLifecycleOwner replays ON_START
+    // to a late observer, which each observer's own coldStartPending flag treats as the cold start (no ad, no duplicate sync).
+    @Inject lateinit var appOpenObserver: Lazy<AppOpenLifecycleObserver>
+    @Inject lateinit var billingObserver: Lazy<BillingLifecycleObserver>
 
     // Reminder schedulers are not needed for the first frame: built and started after it (see runAfterFirstFrame).
     @Inject lateinit var streakReminderObserver: Lazy<StreakReminderObserver>
@@ -52,17 +55,17 @@ class CatPuzzleApp : Application() {
         if (BuildConfig.DEBUG) enableStrictMode()
         // Hilt has injected by now (super.onCreate). Gives UMP / ads wrappers a foreground Activity.
         currentActivityProvider.register(this)
-        // Resume-only app-open ads (cold start never shows). Needs the ProcessLifecycleOwner (lifecycle-process).
-        appOpenObserver.start()
-        // Play Billing: listen for purchase updates + sync purchases / entitlement now and on every resume.
-        billingObserver.start()
         // Analytics / Crashlytics stay off until UMP consent allows them (follows every consent change).
         telemetryConsentObserver.start()
         // Background music + SFX owner: Music/Sound settings, process foreground, full-screen-ad silencing.
         audioController.start()
-        // Ordering above is deliberate and unchanged: ActivityProvider, app-open, billing, telemetry (must be collecting
-        // before the splash runs gatherConsent, its drop(1) skips only the fail-closed default), audio.
+        // Ordering above is deliberate: ActivityProvider, telemetry (must be collecting before the splash runs gatherConsent,
+        // its drop(1) skips only the fail-closed default), audio.
         runAfterFirstFrame {
+            // Resume-only app-open ads (cold start never shows). Needs the ProcessLifecycleOwner (lifecycle-process).
+            appOpenObserver.get().start()
+            // Play Billing: listen for purchase updates + sync purchases / entitlement now and on every resume.
+            billingObserver.get().start()
             // Evening streak-at-risk reminder: books / cancels the WorkManager check on start, toggle change, and every win.
             streakReminderObserver.get().start()
             // Daily 20:00 reminder: books on start and toggle change; the worker re-books itself every day.

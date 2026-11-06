@@ -42,9 +42,6 @@ enum class ShopProduct(
     MOUSE_PACK_50("mouse_pack_50", ProductKind.CONSUMABLE, Booster.MOUSE, 50),
     ;
 
-    /** Ads-removal products (subscription + forever). */
-    val isAdsRemoval: Boolean get() = kind != ProductKind.CONSUMABLE
-
     companion object {
         /** Base plan id expected in Play Console for the monthly subscription (informational). */
         const val MONTHLY_BASE_PLAN_ID = "monthly"

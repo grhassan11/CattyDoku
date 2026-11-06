@@ -198,9 +198,72 @@ private fun WinDialog(
         IconArt.mascotFor(level)
     }
 
+    WinScreenLayout(
+        headline = headline,
+        message = message,
+        mascotRes = mascotRes,
+        mascotDescription = mascotDescription,
+        score = outcome.score,
+        stats = {
+            StatChip(
+                label = stringResource(R.string.win_stat_time),
+                value = OutcomeLogic.formatElapsed(outcome.elapsedSeconds),
+                iconRes = null,
+                description = stringResource(
+                    R.string.win_stat_time_description,
+                    OutcomeLogic.formatElapsed(outcome.elapsedSeconds),
+                ),
+            )
+            StatChip(
+                label = stringResource(R.string.win_stat_mistakes),
+                value = heartsLost.toString(),
+                iconRes = IconArt.FishBone,
+                downsampleIcon = true,
+                description = stringResource(R.string.win_stat_mistakes_description, heartsLost),
+            )
+            StatChip(
+                label = stringResource(R.string.win_stat_hints),
+                value = outcome.hintsUsed.toString(),
+                iconRes = R.drawable.ic_hint,
+                description = stringResource(R.string.win_stat_hints_description, outcome.hintsUsed),
+            )
+        },
+        ctaText = if (daily) {
+            stringResource(R.string.win_back_home)
+        } else {
+            stringResource(R.string.win_next_level, level + 1)
+        },
+        onCta = onNextLevel,
+        showHome = !daily,
+        onHome = onWinHome,
+    )
+}
+
+/**
+ * Shared win screen (Levels "Level Completed" + Sudoku "Puzzle solved"): confetti, ribbon headline, mascot stage,
+ * message, optional [extra] notes, score count-up, stat chip row, then [HOME icon] + CTA. Text and stats come in as params.
+ * [inputArmed] false = buttons inert (Sudoku guards against a stray tap as the screen appears).
+ */
+@Composable
+internal fun WinScreenLayout(
+    headline: String,
+    message: String,
+    mascotRes: Int,
+    mascotDescription: String,
+    score: Int,
+    stats: @Composable RowScope.() -> Unit,
+    ctaText: String,
+    onCta: () -> Unit,
+    showHome: Boolean,
+    onHome: () -> Unit,
+    homeDescription: String = stringResource(R.string.win_home),
+    confetti: Boolean = true,
+    inputArmed: Boolean = true,
+    extra: @Composable () -> Unit = {},
+) {
     DialogScrim(Modifier.semantics { paneTitle = headline }, scrimColor = GameColors.OutcomeScrim) {
-    StatusBarIconsEffect()
-        Confetti()
+        StatusBarIconsEffect()
+        if (confetti) Confetti()
         Column(
             Modifier
                 .fillMaxSize()
@@ -227,49 +290,28 @@ private fun WinDialog(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.widthIn(max = 320.dp),
             )
+            extra()
             Spacer(Modifier.height(16.dp))
 
-            ScoreCountUp(score = outcome.score)
+            ScoreCountUp(score = score)
             Spacer(Modifier.height(12.dp))
 
             Row(
                 Modifier.fillMaxWidth().widthIn(max = 360.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                StatChip(
-                    label = stringResource(R.string.win_stat_time),
-                    value = OutcomeLogic.formatElapsed(outcome.elapsedSeconds),
-                    iconRes = null,
-                    description = stringResource(
-                        R.string.win_stat_time_description,
-                        OutcomeLogic.formatElapsed(outcome.elapsedSeconds),
-                    ),
-                )
-                StatChip(
-                    label = stringResource(R.string.win_stat_mistakes),
-                    value = heartsLost.toString(),
-                    iconRes = IconArt.FishBone,
-                    downsampleIcon = true,
-                    description = stringResource(R.string.win_stat_mistakes_description, heartsLost),
-                )
-                StatChip(
-                    label = stringResource(R.string.win_stat_hints),
-                    value = outcome.hintsUsed.toString(),
-                    iconRes = R.drawable.ic_hint,
-                    description = stringResource(R.string.win_stat_hints_description, outcome.hintsUsed),
-                )
-            }
+                content = stats,
+            )
             Spacer(Modifier.height(24.dp))
 
             Row(
                 Modifier.fillMaxWidth().widthIn(max = 360.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                if (!daily) {
+                if (showHome) {
                     Button3D(
-                        onClick = onWinHome,
+                        onClick = { if (inputArmed) onHome() },
                         style = ButtonStyle.Secondary,
-                        contentDescription = stringResource(R.string.win_home),
+                        contentDescription = homeDescription,
                         horizontalPadding = 0.dp,
                         modifier = Modifier.width(Button3DHeight),
                     ) {
@@ -277,12 +319,8 @@ private fun WinDialog(
                     }
                 }
                 PillButton(
-                    text = if (daily) {
-                        stringResource(R.string.win_back_home)
-                    } else {
-                        stringResource(R.string.win_next_level, level + 1)
-                    },
-                    onClick = onNextLevel,
+                    text = ctaText,
+                    onClick = { if (inputArmed) onCta() },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -442,7 +480,7 @@ private fun ScoreCountUp(score: Int) {
 }
 
 @Composable
-private fun RowScope.StatChip(
+internal fun RowScope.StatChip(
     label: String,
     value: String,
     iconRes: Int?,

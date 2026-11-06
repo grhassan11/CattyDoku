@@ -1,11 +1,6 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.game
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -24,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -34,6 +30,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.inset
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.pointer.pointerInput
@@ -54,10 +51,6 @@ import com.tm.meow.sudoku.puzzle.domain.model.PieceSkin
 import com.tm.meow.sudoku.puzzle.domain.model.Pos
 import com.tm.meow.sudoku.puzzle.ui.components.drawXMark
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
-
-private const val INTRO_TOTAL_MS = 1500f
-private const val INTRO_CELL_MS = 600f
-private const val INTRO_STAGGER_MS = INTRO_TOTAL_MS - INTRO_CELL_MS
 
 /**
  * Board card + cell grid. Stateless apart from the transient swipe preview (pure UI state).
@@ -119,15 +112,36 @@ fun BoardView(
     }
     // New-level intro wave: corner-diagonal sweep, per-cell scale + alpha read in the layer phase (no per-frame recomposition).
     // Saveable per key so rotation / resume / undo / revive never replay it; only a changed key (new level) does.
-    var introDone by rememberSaveable(introKey) { mutableStateOf(false) }
-    val introRunning = introKey != null && animationsOn && !introDone
-    val introProgress = remember(introKey) { Animatable(0f) }
-    LaunchedEffect(introKey, introRunning) {
-        if (!introRunning) return@LaunchedEffect
-        introProgress.animateTo(INTRO_TOTAL_MS, tween(INTRO_TOTAL_MS.toInt(), easing = LinearEasing))
-        introDone = true
+    val intro = rememberBoardIntro(introKey, animationsOn)
+
+    // Cross jiggle: only crosses that newly appear within a short window after a player board gesture (tap / double-tap / drag,
+    // incl. crosses auto-added by that move). Undo / restore / rotation / resume / intro never arm it. `prevMarks` is seeded from
+    // the first composed board, so a loaded or restored game never jiggles. Clock read in draw of jiggling cells only.
+    val jiggle = remember { CrossJiggle() }
+    val armedUntil = remember { longArrayOf(0L) }
+    val prevMarks = remember(n) { Array(board.cells.size) { board.cells[it].mark } }
+    var jiggles by remember(n) { mutableStateOf<Map<Int, Long>>(emptyMap()) }
+    LaunchedEffect(board) {
+        val now = CrossJiggle.nowMs()
+        val armed = animationsOn && !intro.running && now <= armedUntil[0] && prevMarks.size == board.cells.size
+        var next: MutableMap<Int, Long>? = null
+        if (armed) {
+            for (i in board.cells.indices) {
+                if (board.cells[i].mark == CellMarkUi.X && prevMarks[i] != CellMarkUi.X) {
+                    val m = next ?: jiggles.filterValues { now - it < CrossJiggle.DURATION_MS }.toMutableMap().also { next = it }
+                    if (m.size < CrossJiggle.MAX_CONCURRENT) m[i] = now
+                }
+            }
+        }
+        for (i in board.cells.indices) prevMarks[i] = board.cells[i].mark
+        next?.let { jiggles = it }
     }
-    val introMaxStep = (2 * (n - 1)).coerceAtLeast(1)
+    LaunchedEffect(jiggles) {
+        if (jiggles.isEmpty()) return@LaunchedEffect
+        val end = (jiggles.values.maxOrNull() ?: return@LaunchedEffect) + CrossJiggle.DURATION_MS
+        while (CrossJiggle.nowMs() < end) withFrameNanos { jiggle.tick() }
+        jiggles = emptyMap()
+    }
 
     val fxToken = if (animationsOn && lastCorrectPlacement != null && lastCorrectPlacement.token != doneToken) lastCorrectPlacement.token else 0
     val fxIdx = if (fxToken != 0 && lastCorrectPlacement != null) lastCorrectPlacement.row * n + lastCorrectPlacement.col else -1
@@ -183,9 +197,9 @@ fun BoardView(
                             }
                             if (!change.pressed) {
                                 when (val action = resolver.end(change.uptimeMillis)) {
-                                    is BoardAction.Tap -> tap(action.pos)
-                                    is BoardAction.DoubleTap -> doubleTap(action.pos)
-                                    is BoardAction.Drag -> drag(action.path)
+                                    is BoardAction.Tap -> { armedUntil[0] = CrossJiggle.nowMs() + ARM_WINDOW_MS; tap(action.pos) }
+                                    is BoardAction.DoubleTap -> { armedUntil[0] = CrossJiggle.nowMs() + ARM_WINDOW_MS; doubleTap(action.pos) }
+                                    is BoardAction.Drag -> { armedUntil[0] = CrossJiggle.nowMs() + ARM_WINDOW_MS; drag(action.path) }
                                     null -> Unit
                                 }
                                 break
@@ -239,22 +253,16 @@ fun BoardView(
                             },
                             placementFx = if (r * n + c == fxIdx) fx else null,
                             placementToken = fxToken,
-                            modifier = (if (introRunning) {
-                                val delayMs = INTRO_STAGGER_MS * (r + c) / introMaxStep
-                                Modifier.graphicsLayer {
-                                    val t = ((introProgress.value - delayMs) / INTRO_CELL_MS).coerceIn(0f, 1f)
-                                    val inv = 1f - t
-                                    val e = 1f - inv * inv * inv
-                                    val sc = 0.6f + 0.4f * e
-                                    scaleX = sc
-                                    scaleY = sc
-                                    alpha = t
-                                }
-                            } else Modifier).semantics {
+                            jiggle = jiggle,
+                            jiggleStartMs = jiggles[r * n + c] ?: -1L,
+                            modifier = intro.layer(r, c, n).semantics {
                                 contentDescription = description
                                 role = Role.Button
                                 onClick(label = toggleLabel) {
-                                    if (enabled) tap(pos)
+                                    if (enabled) {
+                                        armedUntil[0] = CrossJiggle.nowMs() + ARM_WINDOW_MS
+                                        tap(pos)
+                                    }
                                     enabled
                                 }
                                 customActions = buildList {
@@ -275,6 +283,8 @@ fun BoardView(
     }
 }
 
+private const val ARM_WINDOW_MS = 500L
+
 @Composable
 private fun BoardCell(
     cell: CellUi,
@@ -286,6 +296,9 @@ private fun BoardCell(
     /** Non-null only for the just-placed cell while its effect runs: scales the cat (pop + squish). */
     placementFx: PlacementFx? = null,
     placementToken: Int = 0,
+    /** Cross jiggle clock + this cell's start (-1 = none). Clock is read in draw only, and only while jiggling. */
+    jiggle: CrossJiggle? = null,
+    jiggleStartMs: Long = -1L,
 ) {
     Canvas(modifier.size(sideDp.dp)) {
         val s = this.size.minDimension
@@ -307,7 +320,18 @@ private fun BoardCell(
         }
 
         when (cell.mark) {
-            CellMarkUi.X -> drawXMark(Offset.Zero, s, GameColors.XMark.copy(alpha = if (previewing) 0.25f else 1f))
+            CellMarkUi.X -> {
+                val xColor = GameColors.XMark.copy(alpha = if (previewing) 0.25f else 1f)
+                val elapsed = if (jiggle != null && jiggleStartMs >= 0L) jiggle.clock - jiggleStartMs else Long.MAX_VALUE
+                if (jiggle == null || elapsed >= CrossJiggle.DURATION_MS) {
+                    drawXMark(Offset.Zero, s, xColor)
+                } else {
+                    val pivot = Offset(s / 2f, s / 2f)
+                    rotate(jiggle.angle(elapsed), pivot) {
+                        scale(jiggle.scale(elapsed), pivot = pivot) { drawXMark(Offset.Zero, s, xColor) }
+                    }
+                }
+            }
             CellMarkUi.CAT -> catPainter?.let { painter ->
                 if (placementFx == null) {
                     inset(s * 0.08f) {
