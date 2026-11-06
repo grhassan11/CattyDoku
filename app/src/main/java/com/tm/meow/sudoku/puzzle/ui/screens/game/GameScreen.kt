@@ -79,6 +79,7 @@ import com.tm.meow.sudoku.puzzle.ui.components.HintBulb
 import com.tm.meow.sudoku.puzzle.ui.components.IconArt
 import com.tm.meow.sudoku.puzzle.ui.components.MouseIcon
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
+import com.tm.meow.sudoku.puzzle.ui.components.contentMaxWidth
 import com.tm.meow.sudoku.puzzle.ui.components.drawXMark
 import com.tm.meow.sudoku.puzzle.ui.components.rememberPressScale
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
@@ -273,7 +274,8 @@ private fun GameContent(
         Column(
             Modifier
                 .weight(1f)
-                .fillMaxWidth()
+                .align(Alignment.CenterHorizontally)
+                .contentMaxWidth()
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

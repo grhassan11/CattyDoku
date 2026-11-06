@@ -16,6 +16,7 @@ import com.tm.meow.sudoku.puzzle.BuildConfig
 import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
 import com.tm.meow.sudoku.puzzle.data.platform.CurrentActivityProvider
 import com.tm.meow.sudoku.puzzle.di.IoDispatcher
+import com.tm.meow.sudoku.puzzle.di.MainDispatcher
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdShowResult
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsRepository
@@ -58,6 +59,7 @@ class AdsRepositoryImpl @Inject constructor(
     private val adsRemoved: AdsRemovedRepository,
     private val policy: AdPolicyConfig,
     @IoDispatcher private val io: CoroutineDispatcher,
+    @MainDispatcher main: CoroutineDispatcher,
     private val crash: CrashReporter = NoopCrashReporter,
 ) : AdsRepository, AdsSdkStatus {
 
@@ -70,7 +72,7 @@ class AdsRepositoryImpl @Inject constructor(
 
     /** True while the interstitial preloader is running (main thread only). */
     private var preloading = false
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val scope = CoroutineScope(SupervisorJob() + main)
 
     private val unitId: String get() = BuildConfig.ADMOB_INTERSTITIAL_ID
 

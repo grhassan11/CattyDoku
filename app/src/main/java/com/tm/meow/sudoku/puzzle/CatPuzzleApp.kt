@@ -1,7 +1,16 @@
 package com.tm.meow.sudoku.puzzle
 
+import android.app.Activity
+import android.app.ActivityManager
 import android.app.Application
+import android.app.ApplicationExitInfo
+import android.content.Context
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.StrictMode
+import android.view.Choreographer
 import com.tm.meow.sudoku.puzzle.audio.AudioController
 import com.tm.meow.sudoku.puzzle.data.ads.AppOpenLifecycleObserver
 import com.tm.meow.sudoku.puzzle.data.billing.BillingLifecycleObserver
@@ -9,9 +18,17 @@ import com.tm.meow.sudoku.puzzle.data.notification.DailyReminderObserver
 import com.tm.meow.sudoku.puzzle.data.notification.StreakReminderObserver
 import com.tm.meow.sudoku.puzzle.data.notification.SudokuReminderObserver
 import com.tm.meow.sudoku.puzzle.data.platform.CurrentActivityProvider
+import com.tm.meow.sudoku.puzzle.di.IoDispatcher
+import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
 import com.tm.meow.sudoku.puzzle.firebase.TelemetryConsentObserver
+import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 @HiltAndroidApp
 class CatPuzzleApp : Application() {
@@ -20,9 +37,13 @@ class CatPuzzleApp : Application() {
     @Inject lateinit var billingObserver: BillingLifecycleObserver
     @Inject lateinit var telemetryConsentObserver: TelemetryConsentObserver
     @Inject lateinit var audioController: AudioController
-    @Inject lateinit var streakReminderObserver: StreakReminderObserver
-    @Inject lateinit var dailyReminderObserver: DailyReminderObserver
-    @Inject lateinit var sudokuReminderObserver: SudokuReminderObserver
+    @Inject lateinit var crashReporter: CrashReporter
+    @Inject @field:IoDispatcher lateinit var ioDispatcher: CoroutineDispatcher
+
+    // Reminder schedulers are not needed for the first frame: built and started after it (see runAfterFirstFrame).
+    @Inject lateinit var streakReminderObserver: Lazy<StreakReminderObserver>
+    @Inject lateinit var dailyReminderObserver: Lazy<DailyReminderObserver>
+    @Inject lateinit var sudokuReminderObserver: Lazy<SudokuReminderObserver>
 
     override fun onCreate() {
         super.onCreate()
@@ -37,12 +58,92 @@ class CatPuzzleApp : Application() {
         telemetryConsentObserver.start()
         // Background music + SFX owner: Music/Sound settings, process foreground, full-screen-ad silencing.
         audioController.start()
-        // Evening streak-at-risk reminder: books / cancels the WorkManager check on start, toggle change, and every win.
-        streakReminderObserver.start()
-        // Daily 20:00 reminder: books on start and toggle change; the worker re-books itself every day.
-        dailyReminderObserver.start()
-        // Unfinished-Sudoku one-shot reminder: books ~4 h after the app goes to background with a saved game; cancels on resume / finish / toggle off.
-        sudokuReminderObserver.start()
+        // Ordering above is deliberate and unchanged: ActivityProvider, app-open, billing, telemetry (must be collecting
+        // before the splash runs gatherConsent, its drop(1) skips only the fail-closed default), audio.
+        runAfterFirstFrame {
+            // Evening streak-at-risk reminder: books / cancels the WorkManager check on start, toggle change, and every win.
+            streakReminderObserver.get().start()
+            // Daily 20:00 reminder: books on start and toggle change; the worker re-books itself every day.
+            dailyReminderObserver.get().start()
+            // Unfinished-Sudoku one-shot reminder: books ~4 h after the app goes to background with a saved game; cancels on resume / finish / toggle off.
+            sudokuReminderObserver.get().start()
+            logLastExitReason()
+        }
+    }
+
+    /** Why the previous process ended (API 30+), as Crashlytics keys. Read on IO, never on main. */
+    private fun logLastExitReason() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        CoroutineScope(SupervisorJob() + ioDispatcher).launch {
+            try {
+                val manager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return@launch
+                val last = manager.getHistoricalProcessExitReasons(packageName, 0, 1).firstOrNull() ?: return@launch
+                crashReporter.setCustomKey("last_exit_reason", exitReasonName(last.reason))
+                crashReporter.setCustomKey("last_exit_importance", last.importance)
+                crashReporter.setCustomKey("last_exit_at_ms", last.timestamp.toString())
+            } catch (t: Throwable) {
+                // observability only; never affect the app
+            }
+        }
+    }
+
+    private fun exitReasonName(reason: Int): String = when (reason) {
+        ApplicationExitInfo.REASON_ANR -> "ANR"
+        ApplicationExitInfo.REASON_CRASH -> "CRASH"
+        ApplicationExitInfo.REASON_CRASH_NATIVE -> "CRASH_NATIVE"
+        ApplicationExitInfo.REASON_EXIT_SELF -> "EXIT_SELF"
+        ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "INIT_FAILURE"
+        ApplicationExitInfo.REASON_LOW_MEMORY -> "LOW_MEMORY"
+        ApplicationExitInfo.REASON_SIGNALED -> "SIGNALED"
+        ApplicationExitInfo.REASON_USER_REQUESTED -> "USER_REQUESTED"
+        ApplicationExitInfo.REASON_USER_STOPPED -> "USER_STOPPED"
+        ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "PERMISSION_CHANGE"
+        ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "EXCESSIVE_RESOURCE_USAGE"
+        ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "DEPENDENCY_DIED"
+        else -> "OTHER_$reason"
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        // Key only (cheap, last value wins): shows the last memory pressure level seen before a kill / crash.
+        if (::crashReporter.isInitialized) crashReporter.setCustomKey("last_trim_memory_level", level)
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        if (::crashReporter.isInitialized) {
+            crashReporter.setCustomKey("low_memory_seen", true)
+            crashReporter.log("onLowMemory")
+        }
+    }
+
+    /**
+     * Runs [block] once on the main thread after the first Activity has drawn its first frame. Fallback: [DEFERRED_FALLBACK_MS]
+     * after process start, so a headless process (WorkManager wake-up, no Activity) still gets its observers.
+     */
+    private fun runAfterFirstFrame(block: () -> Unit) {
+        val done = AtomicBoolean(false)
+        val handler = Handler(Looper.getMainLooper())
+        val once = Runnable { if (done.compareAndSet(false, true)) block() }
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityResumed(activity: Activity) {
+                unregisterActivityLifecycleCallbacks(this)
+                // Resume -> next vsync is the first drawn frame; the block then runs on the following main-thread turn.
+                Choreographer.getInstance().postFrameCallback { handler.post(once) }
+            }
+
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+            override fun onActivityStarted(activity: Activity) = Unit
+            override fun onActivityPaused(activity: Activity) = Unit
+            override fun onActivityStopped(activity: Activity) = Unit
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+            override fun onActivityDestroyed(activity: Activity) = Unit
+        })
+        handler.postDelayed(once, DEFERRED_FALLBACK_MS)
+    }
+
+    private companion object {
+        const val DEFERRED_FALLBACK_MS = 5_000L
     }
 
     /** Debug builds only: log main-thread I/O and leaked closeables / activities to Logcat (tag StrictMode). Never kills the app. */

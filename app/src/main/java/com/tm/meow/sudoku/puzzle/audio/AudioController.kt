@@ -1,5 +1,6 @@
 package com.tm.meow.sudoku.puzzle.audio
 
+import com.tm.meow.sudoku.puzzle.di.MainDispatcher
 import android.content.Context
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -16,6 +17,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,11 +42,12 @@ class AudioController @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: SettingsRepository,
     private val tracker: AdSessionTracker,
+    @MainDispatcher main: CoroutineDispatcher,
     private val crash: CrashReporter = NoopCrashReporter,
 ) : DefaultLifecycleObserver {
 
     private val started = AtomicBoolean(false)
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val scope = CoroutineScope(SupervisorJob() + main)
     private val foreground = MutableStateFlow(false)
     private val music = MusicPlayer(context)
     private val sfxLazy = lazy { SfxPlayer(context) }

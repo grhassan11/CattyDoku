@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tm.meow.sudoku.puzzle.R
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
+import com.tm.meow.sudoku.puzzle.ui.components.contentMaxWidth
 import com.tm.meow.sudoku.puzzle.ui.components.MicPlaceholder
 import com.tm.meow.sudoku.puzzle.ui.components.MusicNotePlaceholder
 import com.tm.meow.sudoku.puzzle.ui.components.LocalAudioController
@@ -76,7 +77,8 @@ fun SettingsScreen(
             Column(
                 Modifier
                     .weight(1f)
-                    .fillMaxWidth()
+                    .align(Alignment.CenterHorizontally)
+                    .contentMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),

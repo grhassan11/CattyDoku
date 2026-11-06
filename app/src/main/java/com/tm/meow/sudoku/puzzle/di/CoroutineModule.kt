@@ -16,12 +16,21 @@ annotation class IoDispatcher
 @Retention(AnnotationRetention.BINARY)
 annotation class DefaultDispatcher
 
+/** `Dispatchers.Main.immediate`: app-lifetime scopes of lifecycle observers / singletons that must run on the main thread. */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class MainDispatcher
+
 @Module
 @InstallIn(SingletonComponent::class)
 object CoroutineModule {
     @Provides
     @IoDispatcher
     fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
+
+    @Provides
+    @MainDispatcher
+    fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main.immediate
 
     @Provides
     @DefaultDispatcher

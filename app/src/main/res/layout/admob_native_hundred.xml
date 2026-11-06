@@ -49,19 +49,22 @@
                 android:gravity="center_vertical|start"
                 android:orientation="horizontal">
 
-                <!-- "Ad" attribution badge: fixed 20x20dp, start of the title row (left of headline), static, always visible. -->
+                <!-- "Ad" attribution badge: wraps its text (min 20x20dp, so it grows with font scale instead of clipping), start of the title row, static, always visible. -->
                 <TextView
                     android:id="@+id/ad_attribute_txtv"
                     android:fontFamily="@font/fredoka"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="20dp"
+                    android:minHeight="20dp"
                     android:layout_marginStart="8dp"
                     android:background="@drawable/bg_native_ad_badge"
                     android:contentDescription="@string/ad_badge_description"
                     android:gravity="center"
                     android:includeFontPadding="false"
                     android:maxLines="1"
-                    android:padding="0dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
                     android:text="@string/ad_badge"
                     android:textColor="@color/native_ad_badge_text"
                     android:textSize="11sp"

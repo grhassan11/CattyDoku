@@ -45,12 +45,12 @@ class BaselineProfileGenerator {
         clickIfPresent(By.text("Not Now"), 2_000)
         clickIfPresent(By.text("Skip Tutorial"), 2_000)
 
-        // Home: Levels map visible (tabs "Levels" / "Sudoku", Shop icon desc "Shop").
+        // Home: Levels map visible (tabs "Levels" / "Sudoku", Store icon desc "Store").
         if (!device.wait(Until.hasObject(By.text("Sudoku")), 10_000)) return@collect
 
-        // Shop and back (home_shop = "Shop", shop_back = "Back").
-        if (clickIfPresent(By.desc("Shop"), 2_000)) {
-            device.wait(Until.hasObject(By.text("Remove ads")), 3_000)
+        // Store and back (home_shop = "Store", shop_back = "Back").
+        if (clickIfPresent(By.desc("Store"), 2_000)) {
+            device.wait(Until.hasObject(By.text("Restore")), 3_000) // shop_restore (Remove ads card is hidden before Lv 10)
             device.pressBack()
             device.wait(Until.hasObject(By.text("Sudoku")), 3_000)
         }

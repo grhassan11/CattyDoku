@@ -1,5 +1,6 @@
 package com.tm.meow.sudoku.puzzle.data.ads
 
+import com.tm.meow.sudoku.puzzle.di.MainDispatcher
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -10,7 +11,7 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.ShowAppOpenIfAllowed
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -30,9 +31,10 @@ class AppOpenLifecycleObserver @Inject constructor(
     private val preloadAppOpen: PreloadAppOpenAd,
     private val sdk: AdsSdkStatus,
     private val tracker: AdSessionTracker,
+    @MainDispatcher main: CoroutineDispatcher,
 ) : DefaultLifecycleObserver {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val scope = CoroutineScope(SupervisorJob() + main)
 
     private var coldStartPending = true
     private var backgroundedAtMs: Long? = null

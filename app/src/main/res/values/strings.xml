@@ -155,7 +155,7 @@
     <!-- Boosters -->
     <string name="booster_cat">Place a cat, %1$d left</string>
     <string name="booster_hint">Hint, %1$d left</string>
-    <string name="home_shop">Shop</string>
+    <string name="home_shop">Store</string>
     <string name="home_remove_ads">Remove ads</string>
     <string name="home_world_name_description">World: %1$s</string>
     <string name="home_jump_to_current">Jump to current level</string>
@@ -551,7 +551,6 @@
         <item quantity="other">%1$d mistakes this time</item>
     </plurals>
     <string name="sudoku_over_restart">Restart</string>
-    <string name="sudoku_over_quit">Quit</string>
     <string name="sudoku_over_home">Home</string>
     <string name="sudoku_over_hero_description">A sad crying cat: out of hearts</string>
     <string name="sudoku_over_watch_ad_description">Watch an ad to get one more heart and keep playing</string>

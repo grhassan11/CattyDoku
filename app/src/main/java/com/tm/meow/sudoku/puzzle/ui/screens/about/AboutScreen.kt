@@ -1,6 +1,5 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.about
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,8 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -36,7 +33,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tm.meow.sudoku.puzzle.R
+import com.tm.meow.sudoku.puzzle.ui.components.DownsampledIconImage
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
+import com.tm.meow.sudoku.puzzle.ui.components.contentMaxWidth
 import com.tm.meow.sudoku.puzzle.ui.components.homeBackground
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 
@@ -55,7 +54,8 @@ fun AboutScreen(
             val minHeight = maxHeight
             Column(
                 Modifier
-                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .contentMaxWidth()
                     .heightIn(min = minHeight)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp, vertical = 24.dp),
@@ -67,16 +67,13 @@ fun AboutScreen(
                     Modifier
                         .size(112.dp)
                         .clip(RoundedCornerShape(48.dp))
-                        .background(colorResource(R.color.ic_launcher_background))
+                        .background(GameColors.RuleCard)
                         .semantics { contentDescription = iconDescription },
                     contentAlignment = Alignment.Center,
                 ) {
                     // Adaptive foreground carries safe-zone padding: scale up so the art fills the rounded tile.
-                    Image(
-                        painter = painterResource(R.drawable.ic_launcher_foreground),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize().scale(1.4f),
-                    )
+                    // Downsampled decode (~112 dp) instead of the full 1024 px bitmap.
+                    DownsampledIconImage(R.drawable.ic_launcher_foreground, modifier = Modifier.scale(1.4f), size = 112.dp)
                 }
                 Spacer(Modifier.height(16.dp))
                 Text(

@@ -74,7 +74,7 @@ Audio
   Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\Audios
   Source / license (all 5 rows): user-provided, provenance unknown - user to confirm license
   File (app/src/main/res/raw/)  Format / length                    Used for
-  sfx_wrong_placement.mp3       MP3 stereo 44.1 kHz, 1.6 s         cat placed on non-solution cell
+  sfx_wrong_placement.ogg       Vorbis q4 stereo 44.1 kHz, 1.6 s (re-encoded from the original mp3, 2026-11-06)        cat placed on non-solution cell
   sfx_hint.ogg                  Vorbis mono 44.1 kHz, 2.8 s        hint used
   sfx_win.ogg                   Vorbis stereo 44.1 kHz, 2.0 s      level won (non-milestone levels)
   sfx_award.ogg                 Vorbis mono 44.1 kHz, 7.6 s        level won on milestone levels 1/5/10/25 (MediaPlayer)

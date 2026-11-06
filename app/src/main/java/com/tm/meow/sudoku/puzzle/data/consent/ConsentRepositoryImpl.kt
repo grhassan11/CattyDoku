@@ -8,15 +8,20 @@ import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
 import com.tm.meow.sudoku.puzzle.BuildConfig
 import com.tm.meow.sudoku.puzzle.data.platform.CurrentActivityProvider
+import com.tm.meow.sudoku.puzzle.di.IoDispatcher
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentState
 import com.tm.meow.sudoku.puzzle.domain.consent.TelemetryConsentPolicy
+import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -35,7 +40,12 @@ class ConsentRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val activities: CurrentActivityProvider,
     private val tracker: AdSessionTracker,
+    private val crash: CrashReporter,
+    @IoDispatcher private val io: CoroutineDispatcher,
 ) : ConsentRepository {
+
+    /** The "no foreground Activity" branch is logged once per process (it can repeat on every splash retry). */
+    private val noActivityLogged = AtomicBoolean(false)
 
     private val info: ConsentInformation by lazy { UserMessagingPlatform.getConsentInformation(context) }
 
@@ -46,6 +56,10 @@ class ConsentRepositoryImpl @Inject constructor(
         try {
             val activity = activities.current()
             if (activity == null) {
+                if (noActivityLogged.compareAndSet(false, true)) {
+                    crash.setCustomKey("consent_no_activity", true)
+                    crash.log("consent.gather: no foreground Activity, UMP skipped (ads stay as cached)")
+                }
                 publish()
                 return
             }
@@ -57,6 +71,7 @@ class ConsentRepositoryImpl @Inject constructor(
             throw e
         } catch (t: Throwable) {
             // fail open
+            crash.recordNonFatal(t, "consent.gather")
         } finally {
             publish()
         }
@@ -70,7 +85,8 @@ class ConsentRepositoryImpl @Inject constructor(
                 tracker.consentFormShowing = true
                 try {
                     suspendCancellableCoroutine { cont ->
-                        UserMessagingPlatform.showPrivacyOptionsForm(activity) { _ ->
+                        UserMessagingPlatform.showPrivacyOptionsForm(activity) { error ->
+                            if (error != null) crash.log("consent.privacyOptions form error ${error.errorCode}")
                             if (cont.isActive) cont.resume(Unit)
                         }
                     }
@@ -82,28 +98,36 @@ class ConsentRepositoryImpl @Inject constructor(
             throw e
         } catch (t: Throwable) {
             // fail open
+            crash.recordNonFatal(t, "consent.privacyOptions")
         } finally {
             publish()
         }
     }
 
-    private fun publish() {
-        _state.value = try {
-            val canRequestAds = info.canRequestAds()
-            val purposes = readTcfPurposes()
-            val optionsRequired = info.privacyOptionsRequirementStatus ==
-                ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
-            val usRegulated = TelemetryConsentPolicy.usRegulatedNoTcf(optionsRequired, purposes)
-            ConsentState(
-                canRequestAds = canRequestAds,
-                analyticsAllowed = TelemetryConsentPolicy.analyticsAllowed(canRequestAds, purposes),
-                adStorage = TelemetryConsentPolicy.adStorageAllowed(canRequestAds, purposes, usRegulated),
-                adUserData = TelemetryConsentPolicy.adUserDataAllowed(canRequestAds, purposes, usRegulated),
-                adPersonalization = TelemetryConsentPolicy.adPersonalizationAllowed(canRequestAds, purposes, usRegulated),
-                privacyOptionsRequired = optionsRequired,
-            )
-        } catch (t: Throwable) {
-            ConsentState()
+    /**
+     * Reads UMP / SharedPreferences state on the IO dispatcher (first SharedPreferences load is disk I/O; callers are on Main).
+     * NonCancellable: runs from `finally` blocks, so a cancelled caller still leaves the state published.
+     */
+    private suspend fun publish() {
+        _state.value = withContext(NonCancellable + io) {
+            try {
+                val canRequestAds = info.canRequestAds()
+                val purposes = readTcfPurposes()
+                val optionsRequired = info.privacyOptionsRequirementStatus ==
+                    ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
+                val usRegulated = TelemetryConsentPolicy.usRegulatedNoTcf(optionsRequired, purposes)
+                ConsentState(
+                    canRequestAds = canRequestAds,
+                    analyticsAllowed = TelemetryConsentPolicy.analyticsAllowed(canRequestAds, purposes),
+                    adStorage = TelemetryConsentPolicy.adStorageAllowed(canRequestAds, purposes, usRegulated),
+                    adUserData = TelemetryConsentPolicy.adUserDataAllowed(canRequestAds, purposes, usRegulated),
+                    adPersonalization = TelemetryConsentPolicy.adPersonalizationAllowed(canRequestAds, purposes, usRegulated),
+                    privacyOptionsRequired = optionsRequired,
+                )
+            } catch (t: Throwable) {
+                crash.recordNonFatal(t, "consent.publish")
+                ConsentState()
+            }
         }
     }
 
@@ -120,7 +144,10 @@ class ConsentRepositoryImpl @Inject constructor(
             activity,
             buildParams(activity),
             { if (cont.isActive) cont.resume(true) },
-            { _ -> if (cont.isActive) cont.resume(false) },
+            { error ->
+                crash.log("consent.infoUpdate failed ${error.errorCode}")
+                if (cont.isActive) cont.resume(false)
+            },
         )
     }
 
@@ -128,7 +155,8 @@ class ConsentRepositoryImpl @Inject constructor(
         tracker.consentFormShowing = true
         try {
             suspendCancellableCoroutine { cont ->
-                UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { _ ->
+                UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { error ->
+                    if (error != null) crash.log("consent.form failed ${error.errorCode}")
                     if (cont.isActive) cont.resume(Unit)
                 }
             }
