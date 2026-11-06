@@ -37,8 +37,9 @@ import kotlinx.coroutines.launch
  * The only place that touches [SettingsViewModel] / [PrivacyOptionsViewModel]: collects state, wires the feedback and
  * legal-link seams, then hands plain state and lambdas to the stateless [SettingsScreen].
  *
- * Also owns the notification permission gate for the two reminder toggles: they show OFF while the OS blocks
- * notifications (checked on every resume, persisted values are not rewritten), and turning one ON asks for
+ * Also owns the notification permission gate for the three reminder toggles: they show OFF while the OS blocks
+ * notifications (checked on every resume, persisted values are not rewritten), a not-granted -> granted transition
+ * (resume or permission result) turns all three ON once via the ViewModel, and turning one ON asks for
  * POST_NOTIFICATIONS first. A permanent denial (system shows no dialog) or app-level block gets a snackbar with an
  * "Open settings" action to the app notification settings.
  */
@@ -65,6 +66,8 @@ fun SettingsRoute(
     var notificationsOn by remember { mutableStateOf(notificationsEnabled(context)) }
     LifecycleResumeEffect(Unit) {
         notificationsOn = notificationsEnabled(context)
+        // Granted from system settings while away: not-granted -> granted turns all reminders ON once.
+        viewModel.syncNotificationPermission()
         onPauseOrDispose { }
     }
     var pending by rememberSaveable { mutableStateOf<SettingToggle?>(null) }
@@ -86,6 +89,7 @@ fun SettingsRoute(
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         notificationsOn = notificationsEnabled(context)
+        viewModel.syncNotificationPermission(granted && notificationsOn) // transition -> all three ON
         val toggle = pending
         pending = null
         if (granted && notificationsOn) {

@@ -42,4 +42,9 @@ data class AppFlags(
     val sudokuTutorialSeen: Set<SudokuSize> = emptySet(),
     /** Player has had at least one fresh purchase granted. Sticky; stored regardless of analytics consent (feeds the `payer` user property). */
     val payer: Boolean = false,
+    /**
+     * Last OS notification-permission state the app acted on. A false -> true transition turns every reminder ON once
+     * (SyncNotificationPermission); while it stays true the user's per-toggle choices stick.
+     */
+    val notificationPermissionGranted: Boolean = false,
 )

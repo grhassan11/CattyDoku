@@ -6,6 +6,7 @@ import com.tm.meow.sudoku.puzzle.domain.model.BoardState
 import com.tm.meow.sudoku.puzzle.domain.model.Booster
 import com.tm.meow.sudoku.puzzle.domain.model.Puzzle
 import com.tm.meow.sudoku.puzzle.domain.model.Settings
+import com.tm.meow.sudoku.puzzle.domain.notification.NotificationStatus
 import com.tm.meow.sudoku.puzzle.domain.repository.AppFlagsRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.InventoryRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.ProgressRepository
@@ -52,10 +53,35 @@ class UpdateSettings(private val repo: SettingsRepository) {
     suspend operator fun invoke(transform: (Settings) -> Settings) = repo.update(transform)
 }
 
-/** Persist all reminder toggles OFF (notification permission denied). */
-class DisableReminders(private val repo: SettingsRepository) {
-    suspend operator fun invoke() =
-        repo.update { it.copy(streakReminders = false, dailyReminders = false, sudokuReminders = false) }
+/**
+ * Single place that maps the OS notification-permission outcome onto the reminder toggles:
+ * granted = every reminder ON (the observers then book the work), denied = every reminder OFF.
+ */
+class ApplyNotificationPermission(
+    private val repo: SettingsRepository,
+    private val flags: AppFlagsRepository,
+) {
+    suspend operator fun invoke(granted: Boolean) {
+        repo.update { it.copy(streakReminders = granted, dailyReminders = granted, sudokuReminders = granted) }
+        flags.update { it.copy(notificationPermissionGranted = granted) } // after the toggles: a crash in between retries
+    }
+}
+
+/**
+ * Reconciles the persisted last-known permission state with the OS ([granted], default = live OS state). Only a
+ * not-granted -> granted transition turns every reminder ON (once); while it stays granted the user's individual
+ * toggle choices are left alone. A granted -> denied transition just records the state (toggles are shown OFF by the
+ * UI while the OS blocks, persisted values stay). Call on app resume, Settings resume, and any permission result.
+ */
+class SyncNotificationPermission(
+    private val status: NotificationStatus,
+    private val apply: ApplyNotificationPermission,
+    private val flags: AppFlagsRepository,
+) {
+    suspend operator fun invoke(granted: Boolean = status.areEnabled()) {
+        if (granted == flags.flags.first().notificationPermissionGranted) return
+        if (granted) apply(true) else flags.update { it.copy(notificationPermissionGranted = false) }
+    }
 }
 
 /** Current booster stock, every [Booster] present (0 when none). */

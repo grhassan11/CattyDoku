@@ -1,6 +1,10 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -38,6 +42,7 @@ fun HomeRoute(
     onOpenShop: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenSudoku: () -> Unit,
+    onExit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
     adsViewModel: LevelsHomeAdsViewModel = hiltViewModel(),
@@ -91,6 +96,11 @@ fun HomeRoute(
     // Home leaves composition (Game opened, activity recreated): destroy the ad; ON_START loads a fresh one on return.
     DisposableEffect(adsViewModel) { onDispose { adsViewModel.release() } }
 
+    // System Back on Home asks before leaving. Disabled while the level sheet or the exit sheet is open (a sheet consumes
+    // Back itself); later-registered BackHandlers (Rate us dialog) take priority over this one.
+    var showExit by rememberSaveable { mutableStateOf(false) }
+    BackHandler(enabled = !showExit && state.levelSheet == null) { showExit = true }
+
     Box(modifier.fillMaxSize()) {
     HomeScreen(
         state = state,
@@ -123,6 +133,15 @@ fun HomeRoute(
     )
     // One-time Rate us dialog (last child = on top of Home).
     RateUsHost(rateUsViewModel, snackbarHostState)
+    if (showExit) {
+        ExitSheet(
+            onDismiss = { showExit = false },
+            onExit = {
+                showExit = false
+                onExit()
+            },
+        )
+    }
     }
 }
 

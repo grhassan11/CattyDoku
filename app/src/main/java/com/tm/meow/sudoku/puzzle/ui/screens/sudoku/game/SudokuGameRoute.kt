@@ -88,8 +88,8 @@ fun SudokuGameRoute(
         if (surfaces.sudokuBanner) adsViewModel.requestBanner(bannerWidthDp, BannerPlacement.SUDOKU_GAME) else adsViewModel.releaseBanner()
     }
     DisposableEffect(adsViewModel) { onDispose { adsViewModel.releaseBanner() } }
-    // No banner under dialogs (restart / win / game over / out of hints) or the pause panel: slot stays reserved, ad view detaches.
-    val bannerVisible = state.dialog == SudokuDialogUi.None && !state.paused && !state.loading
+    // No banner under dialogs (restart / win / game over / out of hints): slot stays reserved, ad view detaches. Pause does NOT affect it.
+    val bannerVisible = state.dialog == SudokuDialogUi.None && !state.loading
 
     LaunchedEffect(adsViewModel) {
         adsViewModel.events.collect { event ->

@@ -1,7 +1,7 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.notification
 
 import app.cash.turbine.test
-import com.tm.meow.sudoku.puzzle.domain.usecase.DisableReminders
+import com.tm.meow.sudoku.puzzle.domain.usecase.ApplyNotificationPermission
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkNotificationPromptAsked
 import com.tm.meow.sudoku.puzzle.ui.screens.game.FakeAppFlagsRepository
 import com.tm.meow.sudoku.puzzle.ui.screens.game.FakeSettingsRepository
@@ -28,7 +28,7 @@ class NotificationPromptViewModelTest {
             val flags = FakeAppFlagsRepository()
             block(
                 flags,
-                NotificationPromptViewModel(MarkNotificationPromptAsked(flags), DisableReminders(settings)),
+                NotificationPromptViewModel(MarkNotificationPromptAsked(flags), ApplyNotificationPermission(settings, flags)),
             )
         } finally {
             Dispatchers.resetMain()
@@ -46,11 +46,44 @@ class NotificationPromptViewModelTest {
     }
 
     @Test
+    fun secondAnswerIgnored() = vmTest { _, vm ->
+        vm.onAnswered(false)
+        vm.onAnswered(true) // ignored (idempotent): still OFF
+        assertFalse(settings.settings.first().sudokuReminders)
+    }
+
+    @Test
+    fun grantedEnablesAllRemindersAfterDeniedBefore() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val flags = FakeAppFlagsRepository()
+            DisableAll(settings, flags)
+            val vm = NotificationPromptViewModel(MarkNotificationPromptAsked(flags), ApplyNotificationPermission(settings, flags))
+            vm.onAnswered(true)
+            val s = settings.settings.first()
+            assertTrue(s.streakReminders)
+            assertTrue(s.dailyReminders)
+            assertTrue(s.sudokuReminders)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    private suspend fun DisableAll(repo: FakeSettingsRepository, flags: FakeAppFlagsRepository) =
+        ApplyNotificationPermission(repo, flags)(false)
+
+    @Test
     fun grantedKeepsReminders() = vmTest { _, vm ->
         vm.onAnswered(true)
         val s = settings.settings.first()
         assertTrue(s.streakReminders)
         assertTrue(s.dailyReminders)
+    }
+
+    @Test
+    fun answerPersistsPermissionState() = vmTest { flags, vm ->
+        vm.onAnswered(true)
+        assertTrue(flags.flags.first().notificationPermissionGranted)
     }
 
     @Test

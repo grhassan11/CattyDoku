@@ -15,6 +15,7 @@ import com.tm.meow.sudoku.puzzle.audio.AudioController
 import com.tm.meow.sudoku.puzzle.data.ads.AppOpenLifecycleObserver
 import com.tm.meow.sudoku.puzzle.data.billing.BillingLifecycleObserver
 import com.tm.meow.sudoku.puzzle.data.notification.DailyReminderObserver
+import com.tm.meow.sudoku.puzzle.data.notification.NotificationPermissionObserver
 import com.tm.meow.sudoku.puzzle.data.notification.StreakReminderObserver
 import com.tm.meow.sudoku.puzzle.data.notification.SudokuReminderObserver
 import com.tm.meow.sudoku.puzzle.data.platform.CurrentActivityProvider
@@ -44,6 +45,7 @@ class CatPuzzleApp : Application() {
     @Inject lateinit var streakReminderObserver: Lazy<StreakReminderObserver>
     @Inject lateinit var dailyReminderObserver: Lazy<DailyReminderObserver>
     @Inject lateinit var sudokuReminderObserver: Lazy<SudokuReminderObserver>
+    @Inject lateinit var notificationPermissionObserver: Lazy<NotificationPermissionObserver>
 
     override fun onCreate() {
         super.onCreate()
@@ -67,6 +69,8 @@ class CatPuzzleApp : Application() {
             dailyReminderObserver.get().start()
             // Unfinished-Sudoku one-shot reminder: books ~4 h after the app goes to background with a saved game; cancels on resume / finish / toggle off.
             sudokuReminderObserver.get().start()
+            // Permission granted outside the app (system settings) -> all reminder toggles ON once, on every foreground.
+            notificationPermissionObserver.get().start()
             logLastExitReason()
         }
     }

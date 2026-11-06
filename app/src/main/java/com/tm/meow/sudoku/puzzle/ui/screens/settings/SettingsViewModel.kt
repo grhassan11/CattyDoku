@@ -6,6 +6,7 @@ import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.model.Settings
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveSettings
+import com.tm.meow.sudoku.puzzle.domain.usecase.SyncNotificationPermission
 import com.tm.meow.sudoku.puzzle.domain.usecase.UpdateSettings
 import com.tm.meow.sudoku.puzzle.ui.screens.game.SettingToggle
 import com.tm.meow.sudoku.puzzle.ui.screens.game.SettingsUi
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 class SettingsViewModel @Inject constructor(
     observeSettings: ObserveSettings,
     private val updateSettings: UpdateSettings,
+    private val syncPermission: SyncNotificationPermission,
     private val analytics: AnalyticsLogger,
 ) : ViewModel() {
 
@@ -41,6 +43,22 @@ class SettingsViewModel @Inject constructor(
             SharingStarted.Eagerly,
             Settings().toUi(),
         )
+
+    /**
+     * Call on Settings resume and after a permission result. [granted] null = read the live OS state.
+     * A not-granted -> granted transition turns all three reminders ON once; otherwise toggles are untouched.
+     */
+    fun syncNotificationPermission(granted: Boolean? = null) {
+        viewModelScope.launch {
+            try {
+                if (granted == null) syncPermission() else syncPermission(granted)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                // best effort
+            }
+        }
+    }
 
     fun onSettingChanged(toggle: SettingToggle, enabled: Boolean) {
         analytics.log(AnalyticsEvent.SettingChange(toggle.name.lowercase(), enabled))

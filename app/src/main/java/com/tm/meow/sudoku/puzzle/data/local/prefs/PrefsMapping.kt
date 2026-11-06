@@ -40,6 +40,7 @@ internal object PrefKeys {
     val RATE_US_DISMISSED_COUNT = intPreferencesKey("rate_us_dismissed_count")
     val RATE_US_RATED = booleanPreferencesKey("rate_us_rated")
     val PAYER = booleanPreferencesKey("payer")
+    val NOTIFICATION_PERMISSION_GRANTED = booleanPreferencesKey("notification_permission_granted")
 
     // Sudoku tutorial seen flags, one per board size. The pre-per-size key "sudoku_tutorial_done" IS the 9x9 flag:
     // reusing it migrates old installs (they saw the 9x9 tutorial) with no read/rewrite step.
@@ -106,6 +107,8 @@ internal fun Preferences.toAppFlags(): AppFlags {
         rateUsRated = this[PrefKeys.RATE_US_RATED] ?: d.rateUsRated,
         sudokuTutorialSeen = SudokuSize.entries.filter { this[PrefKeys.sudokuTutorialKey(it)] ?: false }.toSet(),
         payer = this[PrefKeys.PAYER] ?: d.payer,
+        notificationPermissionGranted =
+        this[PrefKeys.NOTIFICATION_PERMISSION_GRANTED] ?: d.notificationPermissionGranted,
     )
 }
 
@@ -123,6 +126,7 @@ internal fun MutablePreferences.write(f: AppFlags) {
     this[PrefKeys.RATE_US_DISMISSED_COUNT] = f.rateUsDismissedCount
     this[PrefKeys.RATE_US_RATED] = f.rateUsRated
     this[PrefKeys.PAYER] = f.payer
+    this[PrefKeys.NOTIFICATION_PERMISSION_GRANTED] = f.notificationPermissionGranted
     for (size in SudokuSize.entries) this[PrefKeys.sudokuTutorialKey(size)] = size in f.sudokuTutorialSeen
 }
 

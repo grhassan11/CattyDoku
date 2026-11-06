@@ -1,5 +1,9 @@
 package com.tm.meow.sudoku.puzzle.ui.navigation
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -119,6 +123,11 @@ private fun NavHostController.popIfResumed() {
     if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) popBackStack()
 }
 
+private tailrec fun Context.findHostActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findHostActivity()
+    else -> null
+}
 
 @Composable
 fun AppNavHost(
@@ -134,6 +143,7 @@ fun AppNavHost(
     }
 
     val navController = rememberNavController()
+    val hostActivity = LocalContext.current.findHostActivity()
     // Restored back stack (process death) has no splash, so consent + ads init would never run: run them once when resumed.
     val startupRecovery: StartupRecoveryViewModel = hiltViewModel()
     LifecycleResumeEffect(navController, startupRecovery) {
@@ -186,6 +196,7 @@ fun AppNavHost(
                 onOpenStreak = { navController.navigate(Routes.STREAK) { launchSingleTop = true } },
                 onOpenShop = { navController.navigate(Routes.SHOP) { launchSingleTop = true } },
                 onOpenSudoku = { navController.navigate(Routes.SUDOKU) { launchSingleTop = true } },
+                onExit = { hostActivity?.finish() },
             )
         }
         composable(Routes.SUDOKU) {

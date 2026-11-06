@@ -42,8 +42,10 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.ClaimStreakReward
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreak
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreakRewards
 import com.tm.meow.sudoku.puzzle.domain.usecase.AcceptTerms
-import com.tm.meow.sudoku.puzzle.domain.usecase.DisableReminders
+import com.tm.meow.sudoku.puzzle.domain.usecase.ApplyNotificationPermission
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkNotificationPromptAsked
+import com.tm.meow.sudoku.puzzle.domain.usecase.SyncNotificationPermission
+import com.tm.meow.sudoku.puzzle.domain.notification.NotificationStatus
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveTermsAccepted
 import com.tm.meow.sudoku.puzzle.domain.usecase.ReadStartInputs
 import com.tm.meow.sudoku.puzzle.domain.startup.SdkLevelProvider
@@ -217,7 +219,18 @@ object UseCaseModule {
 
     @Provides fun provideUpdateSettings(repo: SettingsRepository): UpdateSettings = UpdateSettings(repo)
 
-    @Provides fun provideDisableReminders(repo: SettingsRepository): DisableReminders = DisableReminders(repo)
+    @Provides
+    fun provideApplyNotificationPermission(
+        repo: SettingsRepository,
+        flags: AppFlagsRepository,
+    ): ApplyNotificationPermission = ApplyNotificationPermission(repo, flags)
+
+    @Provides
+    fun provideSyncNotificationPermission(
+        status: NotificationStatus,
+        apply: ApplyNotificationPermission,
+        flags: AppFlagsRepository,
+    ): SyncNotificationPermission = SyncNotificationPermission(status, apply, flags)
 
     @Provides
     fun provideGetBoosterCharges(inventory: InventoryRepository): GetBoosterCharges =

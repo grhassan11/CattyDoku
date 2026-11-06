@@ -114,6 +114,9 @@ fun SudokuGameScreen(
                 // Policy: keep clear space between the number pad (accidental-tap zone) and the banner.
                 .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = if (bannerReserved) BANNER_CLEARANCE else 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            // Leftover height (only exists when the board is width-bound: 4x4/6x6/tall phones) is spread between sections.
+            // The board's weight(1f, fill=false) claims its space first, so tight screens (9x9, small phones) get zero slack.
+            verticalArrangement = Arrangement.SpaceEvenly,
         ) {
             if (state.loading) {
                 SudokuTopBar(state.tier, state.n, onBack = onBack, onHelp = {}, onRestart = {})
@@ -133,7 +136,7 @@ fun SudokuGameScreen(
                     onPauseToggle = onPauseToggle,
                 )
                 Spacer(Modifier.height(8.dp))
-                // fill=false: box wraps the board (no centring slack above/below it); leftover height stays free at the bottom.
+                // fill=false: box wraps the board (no centring slack above/below it); leftover height is spread by the Column's SpaceEvenly.
                 BoxWithConstraints(Modifier.weight(1f, fill = false).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val side: Dp = minOf(maxWidth, maxHeight)
                     if (state.paused) {

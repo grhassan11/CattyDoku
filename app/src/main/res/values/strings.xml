@@ -471,6 +471,9 @@
     <string name="level_sheet_none">--</string>
     <string name="level_sheet_play">Play</string>
     <string name="level_sheet_replay">Replay</string>
+    <string name="exit_sheet_message">Are you sure you want to exit?</string>
+    <string name="exit_sheet_cancel">Cancel</string>
+    <string name="exit_sheet_exit">Exit</string>
     <!-- Sudoku entry -->
     <string name="sudoku_entry_title">CATTY SUDOKU</string>
     <string name="sudoku_back">Back</string>
