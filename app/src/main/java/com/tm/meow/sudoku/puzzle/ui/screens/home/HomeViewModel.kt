@@ -5,10 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.billing.BillingFailure
 import com.tm.meow.sudoku.puzzle.domain.billing.CatalogState
 import com.tm.meow.sudoku.puzzle.domain.billing.ShopProduct
+import com.tm.meow.sudoku.puzzle.domain.billing.StoreResult
 import com.tm.meow.sudoku.puzzle.domain.usecase.BuyProduct
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadShopCatalog
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsExposure
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsRemoved
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveShopCatalog
 import com.tm.meow.sudoku.puzzle.domain.model.WorldRules
@@ -31,6 +34,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,8 +43,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+/** One-shot Home messages (Route turns them into a snackbar). */
+sealed interface HomeEvent {
+    /** The Remove ads badge could not open the Play sheet. User-canceled is never reported. */
+    data class RemoveAdsFailed(val failure: BillingFailure) : HomeEvent
+}
 
 /**
  * Home state holder. Level label uses the same rule as the game ([ResolveStartLevel]); streak calendar,
@@ -59,16 +70,21 @@ class HomeViewModel @Inject constructor(
     observeSettings: ObserveSettings,
     private val updateSettings: UpdateSettings,
     observeAdsRemoved: ObserveAdsRemoved,
+    observeAdsExposure: ObserveAdsExposure,
     private val observeShopCatalog: ObserveShopCatalog,
     private val loadShopCatalog: LoadShopCatalog,
     private val buyProduct: BuyProduct,
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) : ViewModel() {
 
-    /** Remove-ads badge: only while ads are on AND Play returned a price for the Forever product (live). */
-    private val removeAdsBadge: Flow<Boolean> = combine(observeAdsRemoved(), observeShopCatalog()) { removed, catalog ->
-        HomeUiMapper.removeAdsBadgeVisible(removed, catalog)
-    }
+    /** Remove-ads badge: only once ads can appear (past the ad-free levels), ads not removed, AND Play priced Forever (live). */
+    private val removeAdsBadge: Flow<Boolean> =
+        combine(observeAdsRemoved(), observeShopCatalog(), observeAdsExposure()) { removed, catalog, exposed ->
+            HomeUiMapper.removeAdsBadgeVisible(removed, catalog, exposed)
+        }
+
+    private val eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
+    val events: Flow<HomeEvent> = eventChannel.receiveAsFlow()
 
     /** True while the Play sheet launch is in flight; re-taps are ignored. */
     private val buyBusy = MutableStateFlow(false)
@@ -143,16 +159,19 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** Remove-ads badge tapped: open the Play sheet for Forever directly. Failure is silent (badge stays; Shop shows errors). */
+    /** Remove-ads badge tapped: open the Play sheet for Forever directly. A failed launch emits [HomeEvent.RemoveAdsFailed] (cancel stays silent). */
     fun onRemoveAdsClick() {
         if (!buyBusy.compareAndSet(expect = false, update = true)) return
         viewModelScope.launch {
             try {
-                buyProduct(ShopProduct.REMOVE_ADS_FOREVER.id)
+                val result = buyProduct(ShopProduct.REMOVE_ADS_FOREVER.id)
+                if (result is StoreResult.Failure && result.failure != BillingFailure.USER_CANCELED) {
+                    eventChannel.trySend(HomeEvent.RemoveAdsFailed(result.failure))
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
-                // never crash on a failed launch
+                eventChannel.trySend(HomeEvent.RemoveAdsFailed(BillingFailure.ERROR))
             } finally {
                 buyBusy.value = false
             }

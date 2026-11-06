@@ -11,6 +11,7 @@ import com.tm.meow.sudoku.puzzle.domain.billing.CatalogState
 import com.tm.meow.sudoku.puzzle.domain.billing.PurchaseEvent
 import com.tm.meow.sudoku.puzzle.domain.usecase.BuyProduct
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadShopCatalog
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsExposure
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveBoosterBalances
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveEntitlement
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObservePurchaseEvents
@@ -38,6 +39,7 @@ import kotlinx.coroutines.launch
 class ShopViewModel @Inject constructor(
     private val observeCatalog: ObserveShopCatalog,
     observeEntitlement: ObserveEntitlement,
+    observeAdsExposure: ObserveAdsExposure,
     observeBalances: ObserveBoosterBalances,
     private val loadCatalog: LoadShopCatalog,
     private val buyProduct: BuyProduct,
@@ -50,14 +52,17 @@ class ShopViewModel @Inject constructor(
     private val busy = MutableStateFlow(false)
     private val restoring = MutableStateFlow(false)
 
+    // combine() has typed overloads up to 5 flows: busy + restoring travel together.
+    private val busyState = combine(busy, restoring) { isBusy, isRestoring -> isBusy to isRestoring }
+
     val state: StateFlow<ShopUiState> = combine(
         observeCatalog(),
         observeEntitlement(),
         observeBalances(),
-        busy,
-        restoring,
-    ) { catalog, entitlement, balances, isBusy, isRestoring ->
-        ShopUiMapper.map(catalog, entitlement, balances, isBusy, isRestoring)
+        busyState,
+        observeAdsExposure(),
+    ) { catalog, entitlement, balances, busyPair, exposed ->
+        ShopUiMapper.map(catalog, entitlement, balances, busyPair.first, busyPair.second, exposed)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ShopUiMapper.initial())
 
     private val _events = Channel<PurchaseEvent>(Channel.BUFFERED)

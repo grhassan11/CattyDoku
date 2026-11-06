@@ -36,9 +36,12 @@ object HomeUiMapper {
         streakRewardPending = rewardPending,
     )
 
-    /** Badge shows only while ads are on (no Forever, no active Monthly) and Play returned a Forever price. */
-    fun removeAdsBadgeVisible(adsRemoved: Boolean, catalog: CatalogState): Boolean =
-        !adsRemoved && (catalog as? CatalogState.Ready)?.prices?.containsKey(ShopProduct.REMOVE_ADS_FOREVER.id) == true
+    /**
+     * Badge shows only once ads can appear for this player ([adsExposed], from the ad-free level rule), while ads are on
+     * (no Forever, no active Monthly) and Play returned a Forever price.
+     */
+    fun removeAdsBadgeVisible(adsRemoved: Boolean, catalog: CatalogState, adsExposed: Boolean): Boolean =
+        adsExposed && !adsRemoved && (catalog as? CatalogState.Ready)?.prices?.containsKey(ShopProduct.REMOVE_ADS_FOREVER.id) == true
 
     fun dailyUi(daily: DailyStatus?): DailyUi = when (val a = daily?.availability) {
         null -> DailyUi.Locked(DailyRules.UNLOCK_LEVEL)

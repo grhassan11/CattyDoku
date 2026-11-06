@@ -53,7 +53,7 @@ data class HomeUiState(
     val worldMap: WorldMapUi = WorldMapUi(),
     /** Open level detail sheet (null = closed). */
     val levelSheet: LevelSheetUi? = null,
-    /** Floating "Remove ads" badge: ads still on and Play offers the Forever product. */
+    /** Floating "Remove ads" badge: past the ad-free levels, ads still on and Play offers the Forever product. */
     val removeAdsBadgeVisible: Boolean = false,
 )
 

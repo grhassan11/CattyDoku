@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,6 +47,7 @@ import com.tm.meow.sudoku.puzzle.domain.model.Booster
 import com.tm.meow.sudoku.puzzle.ui.components.Button3D
 import com.tm.meow.sudoku.puzzle.ui.components.ButtonStyle
 import com.tm.meow.sudoku.puzzle.ui.components.CatIcon
+import com.tm.meow.sudoku.puzzle.ui.components.contentMaxWidth
 import com.tm.meow.sudoku.puzzle.ui.components.HintBulb
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.MouseIcon
@@ -55,12 +57,19 @@ import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 private val CardShape = RoundedCornerShape(20.dp)
 private val BadgeShape = RoundedCornerShape(8.dp)
 
-/** LazyColumn item index of each section: 0 = remove-ads card, 1..3 = packs, 4 = footer. */
-private fun sectionIndex(section: Booster?): Int = when (section) {
-    Booster.CAT -> 1
-    Booster.HINT -> 2
-    Booster.MOUSE -> 3
-    null -> 0
+/**
+ * LazyColumn item index of each section. [hasTopItem] = the leading "ads" item exists (Remove Ads card and/or the
+ * unavailable notice); without it the packs shift up by one. An index past the end is clamped by LazyColumn, so a
+ * stale deep-link section can never crash.
+ */
+private fun sectionIndex(section: Booster?, hasTopItem: Boolean): Int {
+    val first = if (hasTopItem) 1 else 0
+    return when (section) {
+        Booster.CAT -> first
+        Booster.HINT -> first + 1
+        Booster.MOUSE -> first + 2
+        null -> 0
+    }
 }
 
 /**
@@ -80,7 +89,8 @@ fun ShopScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = sectionIndex(initialSection))
+    val hasTopItem = state.showRemoveAds || state.catalog == CatalogStatus.UNAVAILABLE
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = sectionIndex(initialSection, hasTopItem))
     Box(modifier.fillMaxSize().background(GameColors.ScreenBackground)) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
             ShopTopBar(restoreEnabled = !state.busy, onBack = onBack, onRestore = onRestore)
@@ -91,19 +101,23 @@ fun ShopScreen(
                     trackColor = GameColors.RuleCard,
                 )
             }
+            // Centered, width-capped column on tablets / foldables.
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.fillMaxHeight().contentMaxWidth(),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                item(key = "ads") {
-                    Column {
-                        if (state.catalog == CatalogStatus.UNAVAILABLE) {
-                            UnavailableNotice(onRetry)
-                            Spacer(Modifier.height(16.dp))
+                if (hasTopItem) {
+                    item(key = "ads") {
+                        Column {
+                            if (state.catalog == CatalogStatus.UNAVAILABLE) {
+                                UnavailableNotice(onRetry)
+                                if (state.showRemoveAds) Spacer(Modifier.height(16.dp))
+                            }
+                            if (state.showRemoveAds) RemoveAdsCard(state, onBuy, onManageSubscription)
                         }
-                        RemoveAdsCard(state, onBuy, onManageSubscription)
                     }
                 }
                 for (section in state.sections) {
@@ -114,6 +128,7 @@ fun ShopScreen(
                 item(key = "footer") {
                     ShopFooter(restoreEnabled = !state.busy, onRestore = onRestore, onPrivacy = onPrivacy)
                 }
+            }
             }
         }
         SnackbarHost(

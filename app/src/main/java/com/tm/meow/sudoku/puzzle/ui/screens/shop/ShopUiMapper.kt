@@ -11,7 +11,8 @@ object ShopUiMapper {
     /** Section order on screen. */
     val SECTION_ORDER: List<Booster> = listOf(Booster.CAT, Booster.HINT, Booster.MOUSE)
 
-    fun initial(): ShopUiState = map(CatalogState.Loading, Entitlement.NONE, emptyMap(), busy = false)
+    /** Before the first emission: Remove Ads card hidden (no flash for players who must not see it yet). */
+    fun initial(): ShopUiState = map(CatalogState.Loading, Entitlement.NONE, emptyMap(), busy = false, adsExposed = false)
 
     fun map(
         catalog: CatalogState,
@@ -19,6 +20,7 @@ object ShopUiMapper {
         balances: Map<Booster, Int>,
         busy: Boolean,
         restoring: Boolean = false,
+        adsExposed: Boolean = true,
     ): ShopUiState {
         val status = when (catalog) {
             CatalogState.Loading -> CatalogStatus.LOADING
@@ -67,6 +69,7 @@ object ShopUiMapper {
             },
             busy = busy,
             restoring = restoring,
+            showRemoveAds = adsExposed || entitlement.foreverOwned || entitlement.monthlyActive,
         )
     }
 

@@ -78,12 +78,15 @@ class HomeUiMapperTest {
         val forever = ShopProduct.REMOVE_ADS_FOREVER.id
         val monthly = ShopProduct.REMOVE_ADS_MONTHLY.id
         val ready = CatalogState.Ready(mapOf(forever to ProductPrice(forever, "$1")))
-        assertTrue(HomeUiMapper.removeAdsBadgeVisible(false, ready))
-        assertFalse(HomeUiMapper.removeAdsBadgeVisible(true, ready))
-        assertFalse(HomeUiMapper.removeAdsBadgeVisible(false, CatalogState.Loading))
-        assertFalse(HomeUiMapper.removeAdsBadgeVisible(false, CatalogState.Unavailable(null)))
+        assertTrue(HomeUiMapper.removeAdsBadgeVisible(false, ready, adsExposed = true))
+        assertFalse(HomeUiMapper.removeAdsBadgeVisible(true, ready, adsExposed = true))
+        assertFalse(HomeUiMapper.removeAdsBadgeVisible(false, ready, adsExposed = false)) // Lv 1-9: no ads yet, no offer
+        assertFalse(HomeUiMapper.removeAdsBadgeVisible(false, CatalogState.Loading, adsExposed = true))
+        assertFalse(HomeUiMapper.removeAdsBadgeVisible(false, CatalogState.Unavailable(null), adsExposed = true))
         assertFalse(
-            HomeUiMapper.removeAdsBadgeVisible(false, CatalogState.Ready(mapOf(monthly to ProductPrice(monthly, "$1")))),
+            HomeUiMapper.removeAdsBadgeVisible(
+                false, CatalogState.Ready(mapOf(monthly to ProductPrice(monthly, "$1"))), adsExposed = true,
+            ),
         )
     }
 

@@ -1,5 +1,7 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.home
 
+import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
+import com.tm.meow.sudoku.puzzle.domain.billing.BillingFailure
 import com.tm.meow.sudoku.puzzle.domain.billing.CatalogState
 import com.tm.meow.sudoku.puzzle.domain.billing.Entitlement
 import com.tm.meow.sudoku.puzzle.domain.billing.FakeAdsRemovedRepository
@@ -10,6 +12,7 @@ import com.tm.meow.sudoku.puzzle.domain.billing.StoreResult
 import com.tm.meow.sudoku.puzzle.domain.repository.ShopRepository
 import com.tm.meow.sudoku.puzzle.domain.usecase.BuyProduct
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadShopCatalog
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsExposure
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsRemoved
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveShopCatalog
 import kotlinx.coroutines.flow.Flow
@@ -43,6 +46,8 @@ import com.tm.meow.sudoku.puzzle.ui.screens.game.SettingToggle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -61,13 +66,14 @@ class HomeViewModelTest {
         val catalogState = MutableStateFlow(initial)
         var loadCalls = 0
         val bought = mutableListOf<String>()
+        var buyResult: StoreResult<Unit> = StoreResult.Success(Unit)
         override val catalog: StateFlow<CatalogState> = catalogState
         override val events: Flow<PurchaseEvent> = emptyFlow()
         override fun start() = Unit
         override suspend fun loadCatalog() { loadCalls++ }
         override suspend fun buy(productId: String): StoreResult<Unit> {
             bought += productId
-            return StoreResult.Success(Unit)
+            return buyResult
         }
         override suspend fun restore() = Unit
         override suspend fun refresh() = Unit
@@ -103,6 +109,7 @@ class HomeViewModelTest {
             observeSettings = ObserveSettings(settingsRepo),
             updateSettings = UpdateSettings(settingsRepo),
             observeAdsRemoved = ObserveAdsRemoved(ads),
+            observeAdsExposure = ObserveAdsExposure(this.flags, AdPolicyConfig()),
             observeShopCatalog = ObserveShopCatalog(shop),
             loadShopCatalog = LoadShopCatalog(shop),
             buyProduct = BuyProduct(shop),
@@ -123,8 +130,11 @@ class HomeViewModelTest {
 
     private fun won(level: Int) = LevelProgress(level, 100, 1_000L, 1L, 0, 0)
 
+    /** Past the ad-free levels (default ad_free_through_level = 9): ads can appear, so the Remove ads offer may show. */
+    private val adsLevel = AppFlags(lastPlayedLevel = 10)
+
     @Test
-    fun badgeHiddenUntilForeverPriceLoaded() = vmTest { rig, vm ->
+    fun badgeHiddenUntilForeverPriceLoaded() = vmTest(Rig(adsLevel)) { rig, vm ->
         assertFalse(vm.state.value.removeAdsBadgeVisible)
         assertEquals(1, rig.shop.loadCalls) // Home loads prices itself
         rig.shop.catalogState.value = foreverReady
@@ -132,10 +142,40 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun badgeHiddenWhenAdsRemoved() = vmTest(Rig(shop = FakeShop(foreverReady))) { rig, vm ->
+    fun badgeHiddenWhenAdsRemoved() = vmTest(Rig(adsLevel, shop = FakeShop(foreverReady))) { rig, vm ->
         assertTrue(vm.state.value.removeAdsBadgeVisible)
         rig.ads.apply(Entitlement(foreverOwned = true))
         assertFalse(vm.state.value.removeAdsBadgeVisible)
+    }
+
+    @Test
+    fun badgeHiddenDuringAdFreeLevelsEvenWithPrice() = vmTest(Rig(AppFlags(lastPlayedLevel = 9), shop = FakeShop(foreverReady))) { _, vm ->
+        assertFalse(vm.state.value.removeAdsBadgeVisible)
+    }
+
+    @Test
+    fun badgeHiddenOnFreshInstall() = vmTest(Rig(shop = FakeShop(foreverReady))) { _, vm ->
+        assertFalse(vm.state.value.removeAdsBadgeVisible)
+    }
+
+    @Test
+    fun badgeAppearsOnceLevelTenIsReached() = vmTest(Rig(AppFlags(lastPlayedLevel = 9), shop = FakeShop(foreverReady))) { rig, vm ->
+        assertFalse(vm.state.value.removeAdsBadgeVisible)
+        rig.flags.update { it.copy(lastPlayedLevel = 10) }
+        assertTrue(vm.state.value.removeAdsBadgeVisible)
+    }
+
+    @Test
+    fun removeAdsFailureEmitsEventButCancelIsSilent() = vmTest(Rig(adsLevel, shop = FakeShop(foreverReady))) { rig, vm ->
+        val seen = mutableListOf<HomeEvent>()
+        val job = launch(Dispatchers.Unconfined) { vm.events.toList(seen) }
+        rig.shop.buyResult = StoreResult.Failure(BillingFailure.USER_CANCELED)
+        vm.onRemoveAdsClick()
+        assertTrue(seen.isEmpty())
+        rig.shop.buyResult = StoreResult.Failure(BillingFailure.NETWORK)
+        vm.onRemoveAdsClick()
+        assertEquals(listOf<HomeEvent>(HomeEvent.RemoveAdsFailed(BillingFailure.NETWORK)), seen)
+        job.cancel()
     }
 
     @Test
@@ -144,7 +184,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun removeAdsClickBuysForever() = vmTest(Rig(shop = FakeShop(foreverReady))) { rig, vm ->
+    fun removeAdsClickBuysForever() = vmTest(Rig(adsLevel, shop = FakeShop(foreverReady))) { rig, vm ->
         vm.onRemoveAdsClick()
         assertEquals(listOf("remove_ads_forever"), rig.shop.bought)
     }

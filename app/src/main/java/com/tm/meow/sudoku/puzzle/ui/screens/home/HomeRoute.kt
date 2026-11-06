@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import com.tm.meow.sudoku.puzzle.domain.analytics.AttemptMode
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -16,6 +17,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tm.meow.sudoku.puzzle.R
+import com.tm.meow.sudoku.puzzle.domain.billing.BillingFailure
 import com.tm.meow.sudoku.puzzle.domain.engine.DailyRules
 import com.tm.meow.sudoku.puzzle.ui.ads.LevelsHomeAdsViewModel
 import com.tm.meow.sudoku.puzzle.ui.screens.rate.RateUsHost
@@ -48,6 +50,33 @@ fun HomeRoute(
     val requiredLevel = (state.daily as? DailyUi.Locked)?.requiredLevel ?: DailyRules.UNLOCK_LEVEL
     val lockedText = stringResource(R.string.home_daily_locked_snackbar, requiredLevel)
     val doneText = stringResource(R.string.home_daily_done_snackbar)
+    val errUnavailable = stringResource(R.string.shop_err_unavailable)
+    val errNetwork = stringResource(R.string.shop_err_network)
+    val errItem = stringResource(R.string.shop_err_item_unavailable)
+    val errOwned = stringResource(R.string.shop_err_already_owned)
+    val errGeneric = stringResource(R.string.shop_err_generic)
+
+    // Remove ads badge could not open the Play sheet: tell the player instead of failing silently.
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is HomeEvent.RemoveAdsFailed -> {
+                    val text = when (event.failure) {
+                        BillingFailure.SERVICE_DISCONNECTED,
+                        BillingFailure.SERVICE_UNAVAILABLE,
+                        BillingFailure.BILLING_UNAVAILABLE,
+                        -> errUnavailable
+                        BillingFailure.NETWORK -> errNetwork
+                        BillingFailure.ITEM_UNAVAILABLE -> errItem
+                        BillingFailure.ALREADY_OWNED -> errOwned
+                        else -> errGeneric
+                    }
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    launch { snackbarHostState.showSnackbar(text) }
+                }
+            }
+        }
+    }
 
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
         viewModel.refresh()
