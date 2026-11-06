@@ -20,6 +20,7 @@ android {
         targetSdk = 36
         versionCode = 2
         versionName = "1.1"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // ---- Ads / UMP (phase 9). Source holds NO real IDs. ----
         // Debug = Google official TEST IDs. Release = PLACEHOLDERS (all-zero publisher id) until the user supplies the
@@ -73,6 +74,11 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+    }
+
+    sourceSets {
+        // Exported Room schemas (app/schemas) as androidTest assets: MigrationTestHelper reads them from there.
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
     }
 
     androidResources {
@@ -137,9 +143,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.androidx.navigation.compose)
 
@@ -175,6 +179,10 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.mockk)
+
+    // Instrumented Room migration tests (app/src/androidTest). Run: ./gradlew :app:connectedDebugAndroidTest
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }
 
 // Firebase Gradle plugins: applied ONLY when the real config file is present, so the project builds without it.
