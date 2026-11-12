@@ -22,9 +22,31 @@ android {
         versionName = "1.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // ---- Ads / UMP (phase 9). Source holds NO real IDs. ----
-        // Debug = Google official TEST IDs. Release = PLACEHOLDERS (all-zero publisher id) until the user supplies the
-        // real AdMob app id + interstitial / native (Home) / app-open unit ids: ads stay disabled in code while the placeholder is present.
+        // ---- Ads / UMP (phase 9). ----
+        // ALL builds (debug, release, nonMinifiedRelease, benchmarkRelease) = Google TEST IDs, defined ONCE here.
+        // SWITCH TO REAL IDs BEFORE RELEASE BUILD: edit ONLY the ids below (single place). No per-buildType ad ids exist.
+        // REAL IDs (pub-4314093941046206), swap in for the TEST values below:
+        //   app        ca-app-pub-4314093941046206~9747457418
+        //   interstitial ca-app-pub-4314093941046206/9472125240
+        //   native     ca-app-pub-4314093941046206/4495130734
+        //   app open   ca-app-pub-4314093941046206/4609671647
+        //   banner     ca-app-pub-4314093941046206/7814419481
+        //   rewarded   ca-app-pub-4314093941046206/9921708076
+        // Placeholder guard (PLACEHOLDER_MARK contains-check) passes for both sets, so ads stay enabled.
+        // No setTestDeviceIds is set: with REAL IDs do NOT run the release build on a dev device (invalid-traffic / policy risk).
+        val admobAppId = "ca-app-pub-3940256099942544~3347511713"
+        val admobInterstitialId = "ca-app-pub-3940256099942544/1033173712"
+        val admobNativeId = "ca-app-pub-3940256099942544/2247696110"
+        val admobAppOpenId = "ca-app-pub-3940256099942544/9257395921"
+        val admobBannerId = "ca-app-pub-3940256099942544/9214589741"
+        val admobRewardedId = "ca-app-pub-3940256099942544/5224354917"
+        manifestPlaceholders["admobAppId"] = admobAppId
+        buildConfigField("String", "ADMOB_APP_ID", "\"$admobAppId\"")
+        buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"$admobInterstitialId\"")
+        buildConfigField("String", "ADMOB_NATIVE_ID", "\"$admobNativeId\"")
+        buildConfigField("String", "ADMOB_APP_OPEN_ID", "\"$admobAppOpenId\"")
+        buildConfigField("String", "ADMOB_BANNER_ID", "\"$admobBannerId\"")
+        buildConfigField("String", "ADMOB_REWARDED_ID", "\"$admobRewardedId\"")
         // UMP_DEBUG_GEOGRAPHY (debug builds only): "" = real location, "EEA", "NOT_EEA", "US_STATE".
         // UMP_TEST_DEVICE_HASHED_ID: logcat prints it on first UMP request; blank = none.
         buildConfigField("String", "UMP_DEBUG_GEOGRAPHY", "\"\"")
@@ -32,26 +54,8 @@ android {
     }
 
     buildTypes {
-        debug {
-            manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
-            buildConfigField("String", "ADMOB_APP_ID", "\"ca-app-pub-3940256099942544~3347511713\"")
-            buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"ca-app-pub-3940256099942544/1033173712\"")
-            // Google official TEST units: native advanced + app open.
-            buildConfigField("String", "ADMOB_NATIVE_ID", "\"ca-app-pub-3940256099942544/2247696110\"")
-            buildConfigField("String", "ADMOB_APP_OPEN_ID", "\"ca-app-pub-3940256099942544/9257395921\"")
-            // Google official TEST units: adaptive banner + rewarded.
-            buildConfigField("String", "ADMOB_BANNER_ID", "\"ca-app-pub-3940256099942544/9214589741\"")
-            buildConfigField("String", "ADMOB_REWARDED_ID", "\"ca-app-pub-3940256099942544/5224354917\"")
-        }
+        // Ad IDs: defaultConfig only (all build types inherit). Nothing ad-related here.
         release {
-            // REAL AdMob IDs (release only). Debug stays on Google TEST IDs.
-            manifestPlaceholders["admobAppId"] = "ca-app-pub-4314093941046206~9747457418"
-            buildConfigField("String", "ADMOB_APP_ID", "\"ca-app-pub-4314093941046206~9747457418\"")
-            buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"ca-app-pub-4314093941046206/9472125240\"")
-            buildConfigField("String", "ADMOB_NATIVE_ID", "\"ca-app-pub-4314093941046206/4495130734\"")
-            buildConfigField("String", "ADMOB_APP_OPEN_ID", "\"ca-app-pub-4314093941046206/4609671647\"")
-            buildConfigField("String", "ADMOB_BANNER_ID", "\"ca-app-pub-4314093941046206/7814419481\"")
-            buildConfigField("String", "ADMOB_REWARDED_ID", "\"ca-app-pub-4314093941046206/9921708076\"")
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
@@ -59,20 +63,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-        }
-    }
-
-    // Baseline-profile plugin adds nonMinifiedRelease + benchmarkRelease via initWith(release): force them back to
-    // Google TEST ids so profile/benchmark runs on a dev device never request real ads.
-    buildTypes.configureEach {
-        if (name == "nonMinifiedRelease" || name == "benchmarkRelease") {
-            manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
-            buildConfigField("String", "ADMOB_APP_ID", "\"ca-app-pub-3940256099942544~3347511713\"")
-            buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"ca-app-pub-3940256099942544/1033173712\"")
-            buildConfigField("String", "ADMOB_NATIVE_ID", "\"ca-app-pub-3940256099942544/2247696110\"")
-            buildConfigField("String", "ADMOB_APP_OPEN_ID", "\"ca-app-pub-3940256099942544/9257395921\"")
-            buildConfigField("String", "ADMOB_BANNER_ID", "\"ca-app-pub-3940256099942544/9214589741\"")
-            buildConfigField("String", "ADMOB_REWARDED_ID", "\"ca-app-pub-3940256099942544/5224354917\"")
         }
     }
 
@@ -117,7 +107,7 @@ android {
 }
 
 // Baseline Profile (generate: ./gradlew :app:generateBaselineProfile with a device attached, see :baselineprofile).
-// The plugin adds nonMinifiedRelease + benchmarkRelease via initWith(release) (ad ids overridden to Google TEST ids in buildTypes.configureEach above).
+// The plugin adds nonMinifiedRelease + benchmarkRelease via initWith(release) (ad ids come from defaultConfig like every other build type).
 // Normal builds do not need a generated profile: without a generated profile (app/src/main/generated/baselineProfiles/) the build is unchanged.
 baselineProfile {
     // Dex layout optimisation from the startup profile (no-op until the profile is generated).
