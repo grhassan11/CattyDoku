@@ -19,7 +19,7 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.FakeTimeProvider
 import com.tm.meow.sudoku.puzzle.domain.usecase.GatherConsentAndInitAds
 import com.tm.meow.sudoku.puzzle.domain.usecase.GetOrCreatePuzzle
 import com.tm.meow.sudoku.puzzle.domain.usecase.IsConsentFormShowing
-import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveTermsAccepted
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveReturningLaunch
 import com.tm.meow.sudoku.puzzle.domain.usecase.PrefetchLevel
 import com.tm.meow.sudoku.puzzle.domain.usecase.RefreshRemoteConfig
 import com.tm.meow.sudoku.puzzle.domain.usecase.ResolveStartLevel
@@ -104,7 +104,7 @@ class SplashViewModelTest {
         val tracker = AdSessionTracker(FakeTimeProvider(today = 20_000L))
 
         fun viewModel() = SplashViewModel(
-            observeTermsAccepted = ObserveTermsAccepted(this.flags),
+            observeReturningLaunch = ObserveReturningLaunch(this.flags),
             resolveStartLevel = ResolveStartLevel(FakeSavedGameRepository(), this.flags, FakeProgressRepository()),
             prefetchLevel = PrefetchLevel(
                 GetOrCreatePuzzle(cache, StartLevel(generator), dispatcher = Dispatchers.Unconfined),
@@ -141,7 +141,7 @@ class SplashViewModelTest {
     }
 
     @Test
-    fun returningLaunchSkipsTheLongWait() = vmTest(Rig(AppFlags(termsAccepted = true, termsVersion = 1))) { _, vm ->
+    fun returningLaunchSkipsTheLongWait() = vmTest(Rig(AppFlags(tutorialDone = true))) { _, vm ->
         vm.events.test {
             advanceTimeBy(SplashTiming.MIN_RETURNING_MS - 1)
             expectNoEvents()

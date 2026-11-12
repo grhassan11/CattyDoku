@@ -89,13 +89,14 @@ private val LockedOutline = Color(0xFFE2DBD2)
 private val LockedLockShadow = Color(0xFF2E2823)
 
 /** Node cell size (layout footprint) for a node of this kind. */
-internal fun nodeCellHeight(boss: Boolean): Dp = NodeCellHeight * (if (boss) BossScale else RegularScale)
+internal fun nodeCellHeight(boss: Boolean, sizeScale: Float = 1f): Dp =
+    NodeCellHeight * (if (boss) BossScale else RegularScale) * sizeScale
 
 /**
  * Level node: a single 3D cat paw pad (bean with two small top bumps, built from [padPath]) with the level number centred on it. Done: stars tray underneath, tappable via [onClick] (opens the level
  * sheet). Current: pulsing glow, bob, thicker ring, floating PLAY tag above, tappable via [onClick]. Locked (future):
  * flat, dimmed, lock icon, no stars, inert. [boss] = level 10 of a world: 1.05x, body = one of 5 shapes picked per level (see BossNodeShapes). Content description per
- * state; the tappable node is always >= 48dp.
+ * state; the tappable node is always >= 48dp. [sizeScale] (0.7..1, from [mapScale]) shrinks the node, its cell, stars tray and PLAY-tag gap together on narrow / short screens; 1 = design size.
  */
 @Composable
 fun LevelNode(
@@ -106,11 +107,12 @@ fun LevelNode(
     boss: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    sizeScale: Float = 1f,
 ) {
     val current = state == NodeState.Current
     val locked = state == NodeState.Locked
     val scale = if (boss) BossScale else RegularScale
-    val nodeSize = (if (current) NodeBase * CurrentScale else NodeBase) * scale
+    val nodeSize = (if (current) NodeBase * CurrentScale else NodeBase) * scale * sizeScale
     val lipDp = if (locked) 4.dp else 6.dp
     val pal = if (locked) LockedPalette else theme.palFor(state)
     val description = when (state) {
@@ -145,7 +147,7 @@ fun LevelNode(
     // Boss body: one of 8 shapes, stable per level (null = regular paw pad).
     val bossShape = if (boss) BossNodeShapes.indexFor(level) else -1
 
-    Box(modifier.size(width = NodeCellWidth * scale, height = NodeCellHeight * scale), contentAlignment = Alignment.Center) {
+    Box(modifier.size(width = NodeCellWidth * scale * sizeScale, height = NodeCellHeight * scale * sizeScale), contentAlignment = Alignment.Center) {
         if (current) GlowRing(nodeSize * 1.45f, theme.accent)
         Box(
             Modifier
@@ -223,13 +225,14 @@ fun LevelNode(
                 NodeStars(
                     earned = stars,
                     plate = theme.starPlate,
-                    modifier = Modifier.align(Alignment.BottomCenter).offset(y = StarTrayOffset),
+                    starSize = StarSize * sizeScale,
+                    modifier = Modifier.align(Alignment.BottomCenter).offset(y = StarTrayOffset * sizeScale),
                 )
             }
         }
         if (current) {
             // Floating PLAY tag, hovering above the node.
-            val lift = nodeSize / 2 + PlayTagGap
+            val lift = nodeSize / 2 + PlayTagGap * sizeScale
             PlayTag(
                 accent = theme.accent,
                 modifier = Modifier
@@ -294,7 +297,7 @@ private fun PlayTag(accent: Color, modifier: Modifier = Modifier) {
  * yellow stars read on any world backdrop (>= 3:1). Middle star 1dp higher.
  */
 @Composable
-private fun NodeStars(earned: Int, plate: Color, modifier: Modifier = Modifier, total: Int = 3) {
+private fun NodeStars(earned: Int, plate: Color, starSize: Dp, modifier: Modifier = Modifier, total: Int = 3) {
     Row(
         modifier
             .background(plate, RoundedCornerShape(50))
@@ -304,7 +307,7 @@ private fun NodeStars(earned: Int, plate: Color, modifier: Modifier = Modifier, 
         for (i in 0 until total) {
             ShadowedIcon(
                 res = IconArt.StarIsland,
-                size = StarSize,
+                size = starSize,
                 greyed = i >= earned,
                 modifier = if (i == 1) Modifier.offset(y = (-1).dp) else Modifier,
             )

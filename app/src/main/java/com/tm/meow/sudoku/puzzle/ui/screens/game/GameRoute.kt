@@ -54,6 +54,8 @@ fun GameRoute(
     val content = (state as? GameUiState.Ready)?.content
     val adLevel = content?.levelNumber ?: 0
     val adIsDaily = content?.isDaily ?: false
+    // First composition: re-try a failed ads SDK init (no-op when up / no consent).
+    LaunchedEffect(Unit) { adsViewModel.retryAdsInitOnEntry() }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
@@ -89,6 +91,9 @@ fun GameRoute(
 
     // ---- ads wiring: all policy lives in domain; `surfaces` already folds in ad-free levels, consent, kill switches ----
     LaunchedEffect(adLevel) { adsViewModel.setScreenLevel(adLevel) }
+    // Keep an interstitial loaded for the win / retry boundary: on entry and whenever level / consent / SDK state changes.
+    // Idempotent (no double-load); ad-free levels, consent, SDK, Remove Ads are gated in the use case.
+    LaunchedEffect(adLevel, surfaces) { adsViewModel.preloadInterstitialAd(isSudoku = false) }
 
     // Keep a rewarded ad preloaded while any booster is empty, on the last heart, and when the lose dialog shows.
     val boosters = content?.boosters

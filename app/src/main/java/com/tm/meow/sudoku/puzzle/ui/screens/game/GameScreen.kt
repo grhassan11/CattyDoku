@@ -794,24 +794,18 @@ internal fun BoosterButton(
         ) {
             if (nudge != null) NudgeIcon(nudge, icon) else icon()
         }
-        CountBadge(count, Modifier.align(Alignment.TopEnd), showPlay = showPlay)
+        // Empty and no rewarded surface: no badge at all (never a grey 0). Tap still routes to the no-charges snackbar.
+        if (count > 0 || showPlay) CountBadge(count, Modifier.align(Alignment.TopEnd), showPlay = showPlay)
     }
 }
 
-/** Stock badge. [showPlay] (empty + rewarded allowed): green badge with a play icon instead of the number. */
+/** Stock badge. [showPlay] (empty + rewarded allowed): red (Coral) badge with a white play icon instead of the number. */
 @Composable
 internal fun CountBadge(count: Int, modifier: Modifier = Modifier, showPlay: Boolean = false) {
     Box(
         modifier
             .size(20.dp)
-            .background(
-                when {
-                    showPlay -> GameColors.CtaGreenFace
-                    count > 0 -> GameColors.Coral
-                    else -> GameColors.FishOff
-                },
-                CircleShape,
-            ),
+            .background(GameColors.Coral, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         if (showPlay) {

@@ -21,14 +21,12 @@ import kotlinx.coroutines.flow.stateIn
 
 /** Route for a start step. Pure mapping, unit-tested. */
 internal fun routeFor(step: StartStep): String = when (step) {
-    StartStep.WELCOME -> Routes.WELCOME
-    StartStep.NOTIFICATION -> Routes.NOTIFICATION
     StartStep.TUTORIAL -> Routes.TUTORIAL
     StartStep.HOME -> Routes.HOME
 }
 
 /**
- * Reads the start-flow inputs once per process (terms / notification asked / tutorial done / API level).
+ * Reads the start-flow inputs once per process (tutorial done).
  * The nav graph always starts at the in-app splash; this snapshot decides where the splash hands over
  * (see StartFlow). One-shot on purpose: flags flipping later must not rebuild the nav graph.
  * MainActivity holds the system splash until [startInputs] is non-null (a few ms): no blank frame.

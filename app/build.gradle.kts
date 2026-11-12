@@ -18,8 +18,8 @@ android {
         applicationId = "com.tm.meow.sudoku.puzzle"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 5
+        versionName = "1.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // ---- Ads / UMP (phase 9). Source holds NO real IDs. ----
@@ -44,14 +44,14 @@ android {
             buildConfigField("String", "ADMOB_REWARDED_ID", "\"ca-app-pub-3940256099942544/5224354917\"")
         }
         release {
-            // TBD(user): replace both with the real AdMob IDs (and keep them out of VCS if desired, e.g. gradle.properties).
-            manifestPlaceholders["admobAppId"] = "ca-app-pub-0000000000000000~0000000000"
-            buildConfigField("String", "ADMOB_APP_ID", "\"ca-app-pub-0000000000000000~0000000000\"")
-            buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"ca-app-pub-0000000000000000/0000000000\"")
-            buildConfigField("String", "ADMOB_NATIVE_ID", "\"ca-app-pub-0000000000000000/0000000000\"")
-            buildConfigField("String", "ADMOB_APP_OPEN_ID", "\"ca-app-pub-0000000000000000/0000000000\"")
-            buildConfigField("String", "ADMOB_BANNER_ID", "\"ca-app-pub-0000000000000000/0000000000\"")
-            buildConfigField("String", "ADMOB_REWARDED_ID", "\"ca-app-pub-0000000000000000/0000000000\"")
+            // REAL AdMob IDs (release only). Debug stays on Google TEST IDs.
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-4314093941046206~9747457418"
+            buildConfigField("String", "ADMOB_APP_ID", "\"ca-app-pub-4314093941046206~9747457418\"")
+            buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"ca-app-pub-4314093941046206/9472125240\"")
+            buildConfigField("String", "ADMOB_NATIVE_ID", "\"ca-app-pub-4314093941046206/4495130734\"")
+            buildConfigField("String", "ADMOB_APP_OPEN_ID", "\"ca-app-pub-4314093941046206/4609671647\"")
+            buildConfigField("String", "ADMOB_BANNER_ID", "\"ca-app-pub-4314093941046206/7814419481\"")
+            buildConfigField("String", "ADMOB_REWARDED_ID", "\"ca-app-pub-4314093941046206/9921708076\"")
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
@@ -59,6 +59,20 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+        }
+    }
+
+    // Baseline-profile plugin adds nonMinifiedRelease + benchmarkRelease via initWith(release): force them back to
+    // Google TEST ids so profile/benchmark runs on a dev device never request real ads.
+    buildTypes.configureEach {
+        if (name == "nonMinifiedRelease" || name == "benchmarkRelease") {
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
+            buildConfigField("String", "ADMOB_APP_ID", "\"ca-app-pub-3940256099942544~3347511713\"")
+            buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"ca-app-pub-3940256099942544/1033173712\"")
+            buildConfigField("String", "ADMOB_NATIVE_ID", "\"ca-app-pub-3940256099942544/2247696110\"")
+            buildConfigField("String", "ADMOB_APP_OPEN_ID", "\"ca-app-pub-3940256099942544/9257395921\"")
+            buildConfigField("String", "ADMOB_BANNER_ID", "\"ca-app-pub-3940256099942544/9214589741\"")
+            buildConfigField("String", "ADMOB_REWARDED_ID", "\"ca-app-pub-3940256099942544/5224354917\"")
         }
     }
 
@@ -82,8 +96,9 @@ android {
     }
 
     androidResources {
-        // App ships English only: drop library translations (Material, Play Services, Firebase, ...) from the APK/AAB.
-        localeFilters += "en"
+        // App ships these 11 languages (see AppLanguages / res/xml/locales_config.xml): drop every other library translation
+        // (Material, Play Services, Firebase, ...) from the APK/AAB. zh-rTW = Traditional Chinese.
+        localeFilters += listOf("en", "ja", "zh-rTW", "nl", "de", "ko", "it", "es", "fr", "ru", "tr")
     }
 
     packaging {
@@ -102,7 +117,7 @@ android {
 }
 
 // Baseline Profile (generate: ./gradlew :app:generateBaselineProfile with a device attached, see :baselineprofile).
-// The plugin adds nonMinifiedRelease + benchmarkRelease via initWith(release) (inherits placeholder ad ids = ads off).
+// The plugin adds nonMinifiedRelease + benchmarkRelease via initWith(release) (ad ids overridden to Google TEST ids in buildTypes.configureEach above).
 // Normal builds do not need a generated profile: without a generated profile (app/src/main/generated/baselineProfiles/) the build is unchanged.
 baselineProfile {
     // Dex layout optimisation from the startup profile (no-op until the profile is generated).
@@ -116,7 +131,7 @@ kotlin {
 }
 
 // ADS POLICY: GMA Next-Gen SDK only. Legacy play-services-ads family is excluded from EVERY configuration, including
-// what the Meta / Unity mediation adapters pull in transitively (Next-Gen ships the compat shims).
+// anything pulled in transitively (Next-Gen ships the compat shims).
 configurations.configureEach {
     exclude(group = "com.google.android.gms", module = "play-services-ads")
     exclude(group = "com.google.android.gms", module = "play-services-ads-api")
@@ -132,6 +147,7 @@ ksp {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
+    implementation(libs.androidx.appcompat) // per-app language: AppCompatDelegate.setApplicationLocales + AppCompatActivity
     implementation(libs.androidx.profileinstaller) // installs the baseline profile on first run
     baselineProfile(project(":baselineprofile"))
     implementation(libs.androidx.activity.compose)
@@ -156,11 +172,8 @@ dependencies {
     implementation(libs.androidx.work.runtime) // streak-at-risk reminder (one-time work chain, re-evaluated at fire time)
     implementation(libs.kotlinx.coroutines.android)
 
-    // Ads + consent (phase 9): Next-Gen SDK, console-mediation adapters (Meta + Unity bidding), UMP.
+    // Ads + consent (phase 9): Next-Gen SDK, UMP. AdMob only (no mediation adapters).
     implementation(libs.ads.mobile.sdk)
-    implementation(libs.ads.mediation.facebook)
-    implementation(libs.unity.ads)
-    implementation(libs.ads.mediation.unity)
     implementation(libs.ump)
 
     // Shop: Google Play Billing (KTX). Merges the BILLING permission + <queries> + ProxyBillingActivity; ships its own R8 rules.

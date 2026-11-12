@@ -17,7 +17,7 @@ import org.junit.runner.RunWith
  * Output lands in app/src/main/generated/baselineProfiles/ (baseline-prof.txt + startup-prof.txt); commit both.
  *
  * Journey: cold start -> (first run only: Accept terms, notification "Not Now", "Skip Tutorial") -> Home (Levels map)
- *   -> Shop and back -> Levels game (current node -> sheet Play -> board tap) -> back -> Sudoku tab -> New Game ->
+ *   -> Shop and back -> Settings and back -> Levels game (current node -> sheet Play -> board tap) -> back -> Sudoku tab -> New Game ->
  *   Sudoku board tap -> back.
  * Selectors are accessibility text / content descriptions that exist in the app (res/values/strings.xml). Every step
  * after launch is optional so a missing screen never fails the run. The built variant is release-based, so the
@@ -40,9 +40,11 @@ class BaselineProfileGenerator {
         pressHome()
         startActivityAndWait()
 
-        // First-run screens (only present right after install / data clear). Strings: welcome_accept, notif_not_now, tutorial_skip.
-        clickIfPresent(By.text("Accept"), 4_000)
-        clickIfPresent(By.text("Not Now"), 2_000)
+        // First-run screens (only present right after install / data clear). Strings: tutorial_skip. Home then asks POST_NOTIFICATIONS (system dialog).
+        // UMP consent form (EEA/regulated geographies only; no-op elsewhere). Test device should be non-EEA or form accepted once.
+        clickIfPresent(By.text("Consent"), 1_500)
+        clickIfPresent(By.text("Agree"), 500)
+        clickIfPresent(By.text("Don't allow"), 2_000)
         clickIfPresent(By.text("Skip Tutorial"), 2_000)
 
         // Home: Levels map visible (tabs "Levels" / "Sudoku", Store icon desc "Store").
@@ -51,6 +53,13 @@ class BaselineProfileGenerator {
         // Store and back (home_shop = "Store", shop_back = "Back").
         if (clickIfPresent(By.desc("Store"), 2_000)) {
             device.wait(Until.hasObject(By.text("Restore")), 3_000) // shop_restore (Remove ads card is hidden before Lv 10)
+            device.pressBack()
+            device.wait(Until.hasObject(By.text("Sudoku")), 3_000)
+        }
+
+        // Settings and back (home_settings = "Settings", settings_back = "Back").
+        if (clickIfPresent(By.desc("Settings"), 2_000)) {
+            device.wait(Until.hasObject(By.text("Sound & feel")), 3_000)
             device.pressBack()
             device.wait(Until.hasObject(By.text("Sudoku")), 3_000)
         }

@@ -3,7 +3,11 @@ package com.tm.meow.sudoku.puzzle.domain.usecase
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.network.AlwaysOnline
+import com.tm.meow.sudoku.puzzle.domain.network.ConnectivityObserver
 import com.tm.meow.sudoku.puzzle.domain.ads.AdDecision
+import com.tm.meow.sudoku.puzzle.domain.ads.AdFormat
+import com.tm.meow.sudoku.puzzle.domain.ads.AdFreePolicy
 import com.tm.meow.sudoku.puzzle.domain.ads.AdLogger
 import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
 import com.tm.meow.sudoku.puzzle.domain.ads.NoopAdLogger
@@ -38,14 +42,31 @@ class GatherConsentAndInitAds(
         safely { flags.update { it.copy(sessionAdCount = 0) } }
         safely { consent.gatherConsent() }
         if (consent.state.value.canRequestAds) safely { ads.initialize() }
+        tracker?.startupGatherFinished = true
     }
+
+    /**
+     * Re-attempt SDK init after a failed / skipped first attempt. No UMP form, no sessionAdCount reset. No-op unless the
+     * startup gather finished, no form is on screen, consent allows ads and the SDK is not up. Repo init is mutex-guarded.
+     */
+    suspend fun retryInit() {
+        val t = tracker ?: return
+        if (!t.startupGatherFinished || t.consentFormShowing) return
+        if (ads.isSdkInitialized || !consent.state.value.canRequestAds) return
+        safely { ads.initialize() }
+    }
+}
+
+/** Re-try a failed / skipped SDK init (game screen entry). See [GatherConsentAndInitAds.retryInit]; no-op when not applicable. Never throws. */
+class RetryAdsInit(private val gather: GatherConsentAndInitAds) {
+    suspend operator fun invoke() = safely { gather.retryInit() }
 }
 
 /**
  * Fallback for a launch that skips the in-app splash: after process death the nav back stack is restored (e.g. Home / Game)
  * and the splash, which normally runs [GatherConsentAndInitAds], is not on it. Runs the same startup step (UMP consent, then
  * ads init, then the consent-gated Remote Config fetch) unless it already started this process. Idempotent; never throws.
- * App Open stays gated: [AdSessionTracker.startFlowComplete] is set by Home and AppOpenPolicy also needs consent + SDK init.
+ * App Open needs only consent + SDK init (no start-flow gate).
  */
 class EnsureConsentAndAdsInit(
     private val gather: GatherConsentAndInitAds,
@@ -54,7 +75,10 @@ class EnsureConsentAndAdsInit(
 ) {
     /** True when this call ran the startup step, false when it had already started. */
     suspend operator fun invoke(): Boolean {
-        if (tracker.startupGatherStarted) return false
+        if (tracker.startupGatherStarted) {
+            safely { gather.retryInit() } // startup already ran: only re-try a failed SDK init
+            return false
+        }
         tracker.startupGatherStarted = true // claim before the first suspension: no second caller can slip in
         safely { gather() }
         safely { refreshRemoteConfig() }
@@ -95,6 +119,40 @@ class RecordSudokuWon(private val tracker: AdSessionTracker) {
 }
 
 /**
+ * Keep an interstitial loaded for the next win / restart boundary. Idempotent, never throws.
+ * [playerLevel] = Levels level on screen / progress (ad-free levels never preload); null = Sudoku (no level gate).
+ */
+class PreloadInterstitialAd(
+    private val consent: ConsentRepository,
+    private val ads: AdsRepository,
+    private val config: AdPolicyConfig,
+    private val adsRemoved: AdsRemovedRepository = NoAdsRemoved,
+    private val logger: AdLogger = NoopAdLogger,
+    private val connectivity: ConnectivityObserver = AlwaysOnline,
+) {
+    operator fun invoke(playerLevel: Int?) {
+        try {
+            val why = when {
+                !config.anyInterstitialShow -> "all interstitial switches off"
+                AdFreePolicy.isSuppressedByPurchase(AdFormat.INTERSTITIAL, adsRemoved.adsRemoved.value) -> "ads removed"
+                playerLevel != null && AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel) -> "ad-free level $playerLevel"
+                !connectivity.isOnline.value -> "offline"
+                !consent.state.value.canRequestAds -> "no consent"
+                !ads.isSdkInitialized -> "sdk not initialized"
+                else -> null
+            }
+            if (why != null) {
+                logger.log("preload interstitial skipped: $why")
+                return
+            }
+            ads.preloadInterstitial()
+        } catch (t: Throwable) {
+            // fail open
+        }
+    }
+}
+
+/**
  * Decide with the pure [InterstitialPolicy], show if allowed, record. Returns true when an ad was shown.
  * Always returns (fail open): the caller continues navigation whatever happens.
  * [persistLevel] false (Sudoku, which has no level numbers) leaves the persisted Queens lastInterstitialLevel untouched.
@@ -108,6 +166,7 @@ class ShowInterstitialIfAllowed(
     private val adsRemoved: AdsRemovedRepository = NoAdsRemoved,
     private val logger: AdLogger = NoopAdLogger,
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
+    private val connectivity: ConnectivityObserver = AlwaysOnline,
 ) {
     suspend operator fun invoke(
         trigger: AdTrigger,
@@ -123,17 +182,13 @@ class ShowInterstitialIfAllowed(
                 level = level,
                 isDaily = isDaily,
                 winsSinceLastAd = if (trigger == AdTrigger.SUDOKU_WON_CONTINUE || trigger == AdTrigger.SUDOKU_RESTART) tracker.sudokuWinsSinceLastAd else tracker.winsSinceLastAd,
-                nowMs = tracker.now(),
-                sessionStartMs = tracker.sessionStartMs,
-                lastAdShownMs = tracker.lastAdShownMs,
                 lastInterstitialLevel = f.lastInterstitialLevel,
-                adsShownThisSession = tracker.adsShown,
                 adsRemoved = adsRemoved.adsRemoved.value,
+                online = connectivity.isOnline.value,
             )
             val decision = InterstitialPolicy.decide(ctx, config)
             val inputs = "trigger=${ctx.trigger} level=${ctx.level} daily=${ctx.isDaily} wins=${ctx.winsSinceLastAd} " +
-                "sessionAgeMs=${ctx.nowMs - ctx.sessionStartMs} sinceLastAdMs=${ctx.lastAdShownMs?.let { ctx.nowMs - it }} " +
-                "shownThisSession=${ctx.adsShownThisSession} lastInterstitialLevel=${ctx.lastInterstitialLevel} " +
+                "lastInterstitialLevel=${ctx.lastInterstitialLevel} " +
                 "consent=${ctx.canRequestAds} adsRemoved=${ctx.adsRemoved}"
             if (decision != AdDecision.Show) {
                 logger.log("decide -> SKIP ${(decision as? AdDecision.Skip)?.reason} | $inputs")

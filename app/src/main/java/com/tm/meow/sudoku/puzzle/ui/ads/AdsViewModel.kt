@@ -12,12 +12,16 @@ import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle
 import com.tm.meow.sudoku.puzzle.domain.ads.BannerPlacement
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedResult
 import com.tm.meow.sudoku.puzzle.domain.model.Booster
+import com.tm.meow.sudoku.puzzle.domain.network.AlwaysOnline
 import com.tm.meow.sudoku.puzzle.domain.time.TimeProvider
 import com.tm.meow.sudoku.puzzle.domain.usecase.GrantBoosterReward
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadBannerAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdSurfaces
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveOnline
+import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadInterstitialAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadRewardedAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.RecordLevelWon
+import com.tm.meow.sudoku.puzzle.domain.usecase.RetryAdsInit
 import com.tm.meow.sudoku.puzzle.domain.usecase.ShowInterstitialIfAllowed
 import com.tm.meow.sudoku.puzzle.domain.usecase.ShowRewardedAd
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,16 +60,37 @@ sealed interface AdsUiEvent {
 class AdsViewModel @Inject constructor(
     private val recordLevelWon: RecordLevelWon,
     private val showInterstitial: ShowInterstitialIfAllowed,
+    private val preloadInterstitial: PreloadInterstitialAd,
     observeAdSurfaces: ObserveAdSurfaces,
     private val preloadRewarded: PreloadRewardedAd,
     private val showRewarded: ShowRewardedAd,
     private val grantBoosterReward: GrantBoosterReward,
     private val loadBanner: LoadBannerAd,
     private val time: TimeProvider,
+    private val retryAdsInit: RetryAdsInit,
+    observeOnline: ObserveOnline = ObserveOnline(AlwaysOnline),
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) : ViewModel() {
 
     private val busy = AtomicBoolean(false)
+
+    /** Live internet state (true until the first platform callback). Rewarded CTAs show a helper text and stay disabled while false. */
+    val isOnline: StateFlow<Boolean> = observeOnline()
+
+    private var lastPreloadWasSudoku: Boolean? = null
+    private var rewardedPreloadRequested = false
+
+    init {
+        // Offline preloads are skipped by the use cases (and the interstitial retry is parked, not spent): when the network is
+        // back, re-ask once so the next boundary finds an ad ready.
+        viewModelScope.launch {
+            isOnline.collect { online ->
+                if (!online) return@collect
+                lastPreloadWasSudoku?.let { preloadInterstitialAd(it) }
+                if (rewardedPreloadRequested) preloadRewardedAd()
+            }
+        }
+    }
 
     private val _rewardedBusy = MutableStateFlow(false)
 
@@ -86,7 +111,24 @@ class AdsViewModel @Inject constructor(
     private val _events = Channel<AdsUiEvent>(Channel.BUFFERED)
     val events: Flow<AdsUiEvent> = _events.receiveAsFlow()
 
+    private var initRetryJob: Job? = null
+
+    /** Game screen entry: re-try a failed SDK init. No-op if already up, consent not granted, or a retry is running. */
+    fun retryAdsInitOnEntry() {
+        if (initRetryJob?.isActive == true) return
+        initRetryJob = viewModelScope.launch { retryAdsInit() }
+    }
+
     // ------------------------------------------------------------ interstitial
+
+    /**
+     * Keep an interstitial loaded for the next boundary. [isSudoku] true = no level gate; Levels skips ad-free levels.
+     * Call on game-screen entry (and again once the level number / ads state is known). Idempotent; policy in the use case.
+     */
+    fun preloadInterstitialAd(isSudoku: Boolean) {
+        lastPreloadWasSudoku = isSudoku
+        preloadInterstitial(if (isSudoku) null else surfaces.value.playerLevel.coerceAtLeast(screenLevel.value))
+    }
 
     /** Call when a level is WON (diagnostic win counter). Daily wins are ignored. */
     fun onLevelWon(isDaily: Boolean) = recordLevelWon(isDaily)
@@ -121,7 +163,10 @@ class AdsViewModel @Inject constructor(
      * Keep a rewarded ad loaded. Call when any booster is empty, on the last heart, and when the lose dialog shows.
      * Policy (ad-free levels, consent, SDK) is decided in the use case; the preloader refills itself after each show.
      */
-    fun preloadRewardedAd() = preloadRewarded(surfaces.value.playerLevel.coerceAtLeast(screenLevel.value))
+    fun preloadRewardedAd() {
+        rewardedPreloadRequested = true
+        preloadRewarded(surfaces.value.playerLevel.coerceAtLeast(screenLevel.value))
+    }
 
     /** Levels booster dialog "Watch Video": on EARNED grant +1 [booster] to inventory, then [onGranted] (game refreshes charges). */
     fun watchBoosterAd(booster: Booster, onGranted: () -> Unit) =
@@ -153,6 +198,7 @@ class AdsViewModel @Inject constructor(
     }
 
     private fun watch(placement: String, rewardedPlacement: RewardedPlacement, onEarned: suspend () -> Unit) {
+        if (!isOnline.value) return // offline: the CTA is disabled and shows a helper text; never attempt a load
         if (!busy.compareAndSet(false, true)) return
         _rewardedBusy.value = true
         viewModelScope.launch {

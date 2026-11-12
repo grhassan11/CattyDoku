@@ -41,12 +41,13 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.MarkLevelPlayed
 import com.tm.meow.sudoku.puzzle.domain.usecase.ClaimStreakReward
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreak
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreakRewards
-import com.tm.meow.sudoku.puzzle.domain.usecase.AcceptTerms
 import com.tm.meow.sudoku.puzzle.domain.usecase.ApplyNotificationPermission
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkNotificationPromptAsked
 import com.tm.meow.sudoku.puzzle.domain.usecase.SyncNotificationPermission
 import com.tm.meow.sudoku.puzzle.domain.notification.NotificationStatus
-import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveTermsAccepted
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveReturningLaunch
+import com.tm.meow.sudoku.puzzle.domain.usecase.ShouldAskNotificationPermission
+import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.usecase.ReadStartInputs
 import com.tm.meow.sudoku.puzzle.domain.startup.SdkLevelProvider
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveSettings
@@ -62,6 +63,9 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.ToggleX
 import com.tm.meow.sudoku.puzzle.domain.usecase.Undo
 import com.tm.meow.sudoku.puzzle.domain.usecase.UseCatBooster
 import com.tm.meow.sudoku.puzzle.domain.usecase.UpdateSettings
+import com.tm.meow.sudoku.puzzle.domain.usecase.GetAppLanguage
+import com.tm.meow.sudoku.puzzle.domain.usecase.SetAppLanguage
+import com.tm.meow.sudoku.puzzle.domain.repository.LanguageRepository
 import com.tm.meow.sudoku.puzzle.domain.usecase.UseHint
 import com.tm.meow.sudoku.puzzle.domain.usecase.UseMouseBooster
 import dagger.Module
@@ -217,6 +221,10 @@ object UseCaseModule {
 
     @Provides fun provideObserveSettings(repo: SettingsRepository): ObserveSettings = ObserveSettings(repo)
 
+    @Provides fun provideGetAppLanguage(repo: LanguageRepository): GetAppLanguage = GetAppLanguage(repo)
+
+    @Provides fun provideSetAppLanguage(repo: LanguageRepository): SetAppLanguage = SetAppLanguage(repo)
+
     @Provides fun provideUpdateSettings(repo: SettingsRepository): UpdateSettings = UpdateSettings(repo)
 
     @Provides
@@ -300,14 +308,17 @@ object UseCaseModule {
     // ---- startup flow (phase 8) ----
 
     @Provides
-    fun provideReadStartInputs(flags: AppFlagsRepository, sdk: SdkLevelProvider): ReadStartInputs =
-        ReadStartInputs(flags, sdk)
+    fun provideReadStartInputs(flags: AppFlagsRepository): ReadStartInputs = ReadStartInputs(flags)
 
     @Provides
-    fun provideObserveTermsAccepted(flags: AppFlagsRepository): ObserveTermsAccepted = ObserveTermsAccepted(flags)
+    fun provideObserveReturningLaunch(flags: AppFlagsRepository): ObserveReturningLaunch = ObserveReturningLaunch(flags)
 
     @Provides
-    fun provideAcceptTerms(flags: AppFlagsRepository): AcceptTerms = AcceptTerms(flags)
+    fun provideShouldAskNotificationPermission(
+        flags: AppFlagsRepository,
+        sdk: SdkLevelProvider,
+        tracker: AdSessionTracker,
+    ): ShouldAskNotificationPermission = ShouldAskNotificationPermission(flags, sdk, tracker)
 
     @Provides
     fun provideMarkNotificationPromptAsked(flags: AppFlagsRepository): MarkNotificationPromptAsked =

@@ -16,7 +16,10 @@ import com.tm.meow.sudoku.puzzle.domain.consent.ConsentState
 import com.tm.meow.sudoku.puzzle.domain.model.Booster
 import com.tm.meow.sudoku.puzzle.domain.usecase.FakeInventoryRepository
 import com.tm.meow.sudoku.puzzle.domain.usecase.FakeTimeProvider
+import com.tm.meow.sudoku.puzzle.domain.usecase.GatherConsentAndInitAds
 import com.tm.meow.sudoku.puzzle.domain.usecase.GrantBoosterReward
+import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadInterstitialAd
+import com.tm.meow.sudoku.puzzle.domain.usecase.RetryAdsInit
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadBannerAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdSurfaces
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadRewardedAd
@@ -115,12 +118,14 @@ class AdsViewModelTest {
         fun viewModel() = AdsViewModel(
             recordLevelWon = RecordLevelWon(tracker),
             showInterstitial = ShowInterstitialIfAllowed(consent, interstitial, tracker, flags, config),
+            preloadInterstitial = PreloadInterstitialAd(consent, interstitial, config),
             observeAdSurfaces = ObserveAdSurfaces(flags, consent, sdk, rewarded, banner, config),
             preloadRewarded = PreloadRewardedAd(consent, sdk, rewarded, config),
             showRewarded = ShowRewardedAd(consent, sdk, rewarded, tracker, config),
             grantBoosterReward = GrantBoosterReward(inventory),
             loadBanner = LoadBannerAd(consent, sdk, banner, config),
             time = time,
+            retryAdsInit = RetryAdsInit(GatherConsentAndInitAds(consent, interstitial, flags, tracker)),
         )
     }
 

@@ -19,7 +19,6 @@ class AnalyticsEventTest {
         AnalyticsEvent.TutorialBegin,
         AnalyticsEvent.TutorialStep(2),
         AnalyticsEvent.TutorialComplete(skipped = true),
-        AnalyticsEvent.TermsAccept,
         AnalyticsEvent.NotificationPermission(granted = true),
         AnalyticsEvent.LevelStart(ctx),
         AnalyticsEvent.LevelResume(ctx, stats),
@@ -54,6 +53,7 @@ class AnalyticsEventTest {
         AnalyticsEvent.RewardedFailed("revive"),
         AnalyticsEvent.SettingChange("pattern_mode", true),
         AnalyticsEvent.SettingsOpen("screen"),
+        AnalyticsEvent.LanguageChange("zh-TW"),
         AnalyticsEvent.RatePrompt("submitted_low"),
     )
 

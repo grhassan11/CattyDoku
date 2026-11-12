@@ -2,6 +2,8 @@ package com.tm.meow.sudoku.puzzle.domain.usecase
 
 import com.tm.meow.sudoku.puzzle.domain.ads.AdFormat
 import com.tm.meow.sudoku.puzzle.domain.ads.AdFreePolicy
+import com.tm.meow.sudoku.puzzle.domain.ads.AdLogger
+import com.tm.meow.sudoku.puzzle.domain.ads.NoopAdLogger
 import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSurfaces
@@ -9,12 +11,15 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
 import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle
 import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.BannerPlacement
+import com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedPlacement
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedResult
 import com.tm.meow.sudoku.puzzle.domain.billing.AdsRemovedRepository
 import com.tm.meow.sudoku.puzzle.domain.billing.NoAdsRemoved
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
+import com.tm.meow.sudoku.puzzle.domain.network.AlwaysOnline
+import com.tm.meow.sudoku.puzzle.domain.network.ConnectivityObserver
 import com.tm.meow.sudoku.puzzle.domain.model.Booster
 import com.tm.meow.sudoku.puzzle.domain.model.GameState
 import com.tm.meow.sudoku.puzzle.domain.model.GameStatus
@@ -44,36 +49,45 @@ class ObserveAdSurfaces(
     private val banner: BannerAdRepository,
     private val config: AdPolicyConfig,
     private val adsRemovedRepository: AdsRemovedRepository = NoAdsRemoved,
+    private val logger: AdLogger = NoopAdLogger,
+    private val connectivity: ConnectivityObserver = AlwaysOnline,
 ) {
     operator fun invoke(screenLevel: Flow<Int>): Flow<AdSurfaces> =
         combine(
             flags.flags.map { it.lastPlayedLevel }.distinctUntilChanged(),
             screenLevel,
-            combine(consent.state, adsRemovedRepository.adsRemoved) { c, removed -> c to removed },
+            combine(consent.state, adsRemovedRepository.adsRemoved, connectivity.isOnline) { c, removed, online -> Triple(c, removed, online) },
             sdk.isInitialized,
             rewarded.loadState,
         ) { flagLevel, screen, consentAndRemoved, initialized, load ->
             val consentState = consentAndRemoved.first
             val removed = consentAndRemoved.second
+            val online = consentAndRemoved.third
             val level = maxOf(flagLevel, screen)
             val base = consentState.canRequestAds && initialized &&
                 AdFreePolicy.adsAllowed(level, config.adFreeThroughLevel)
             // Sudoku banner: no level gate (no level number there). Remove Ads still suppresses it.
             val sudokuBase = consentState.canRequestAds && initialized
             val rewardedBase = base && rewarded.isConfigured
+            logger.log(
+                "surfaces: level=$level adFreeThrough=${config.adFreeThroughLevel} canRequestAds=${consentState.canRequestAds} " +
+                    "sdkInit=$initialized rewardedConfigured=${rewarded.isConfigured} boostersShow=${config.levelsBoostersRewardedShow} " +
+                    "reviveShow=${config.levelsReviveRewardedShow} load=$load => levelsBoosters=${rewardedBase && config.levelsBoostersRewardedShow}",
+            )
             AdSurfaces(
                 playerLevel = level,
                 levelsBoosters = rewardedBase && config.levelsBoostersRewardedShow,
                 levelsRevive = rewardedBase && config.levelsReviveRewardedShow,
                 sudokuBoosters = rewardedBase && config.sudokuBoostersRewardedShow,
                 sudokuRevive = rewardedBase && config.sudokuReviveRewardedShow,
-                rewardedLoad = load,
+                rewardedLoad = if (online) load else RewardedLoadState.OFFLINE,
                 // Remove Ads suppresses the banner; rewarded is never suppressed (AdFreePolicy.isSuppressedByPurchase).
-                banner = base && config.levelsGameBannerShow && banner.isConfigured &&
+                banner = base && config.levelsGameBannerShow && banner.isConfigured && online &&
                     !AdFreePolicy.isSuppressedByPurchase(AdFormat.BANNER, removed),
-                sudokuBanner = sudokuBase && config.sudokuGameBannerShow && banner.isConfigured &&
+                sudokuBanner = sudokuBase && config.sudokuGameBannerShow && banner.isConfigured && online &&
                     !AdFreePolicy.isSuppressedByPurchase(AdFormat.BANNER, removed),
                 adsRemoved = removed,
+                online = online,
             )
         }.distinctUntilChanged()
 }
@@ -84,10 +98,12 @@ class PreloadRewardedAd(
     private val sdk: AdsSdkStatus,
     private val repository: RewardedAdRepository,
     private val config: AdPolicyConfig,
+    private val connectivity: ConnectivityObserver = AlwaysOnline,
 ) {
     operator fun invoke(playerLevel: Int) {
         try {
             if (!config.anyRewardedShow || !repository.isConfigured) return
+            if (!connectivity.isOnline.value) return
             if (AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel)) return
             if (!consent.state.value.canRequestAds || !sdk.isInitialized.value) return
             repository.preload()
@@ -109,9 +125,11 @@ class ShowRewardedAd(
     private val repository: RewardedAdRepository,
     private val tracker: AdSessionTracker,
     private val config: AdPolicyConfig,
+    private val connectivity: ConnectivityObserver = AlwaysOnline,
 ) {
     suspend operator fun invoke(playerLevel: Int, placement: RewardedPlacement): RewardedResult {
         if (!config.rewardedShowFor(placement) || !repository.isConfigured) return RewardedResult.NOT_READY
+        if (!connectivity.isOnline.value) return RewardedResult.NOT_READY // offline: never attempt a load or show
         if (AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel)) return RewardedResult.NOT_READY
         if (!consent.state.value.canRequestAds || !sdk.isInitialized.value) return RewardedResult.NOT_READY
         return try {

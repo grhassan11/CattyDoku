@@ -10,6 +10,8 @@ composeBom = "2026.06.01"
 coreKtx = "1.18.0"
 work = "2.11.2"
 coreSplashscreen = "1.0.1"
+# 1.7.1 = newest stable 1.7.x (compileSdk 35+ ok). Only used for AppCompatDelegate per-app locales + AppCompatActivity.
+appcompat = "1.7.1"
 activityCompose = "1.12.4"
 lifecycle = "2.10.0"
 navigation = "2.9.8"
@@ -22,9 +24,6 @@ turbine = "1.2.1"
 mockk = "1.14.11"
 # Ads / consent (phase 9). Kept as is: bump SDK + adapters TOGETHER.
 adsMobileSdk = "1.6.0"
-metaAdapter = "6.22.0.1"
-unityAds = "4.21.0"
-unityAdapter = "4.21.0.0"
 # Explicit UMP pin (Gradle picks the higher of this and the SDK transitive). 4.0.0 exists (major), not taken.
 ump = "3.2.0"
 # Play Billing (Store). 9.1.0 = newest stable billing-ktx on Google Maven (2026-11-06). Keep core + ktx on the same version.
@@ -45,6 +44,7 @@ testExtJunit = "1.3.0"
 androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
@@ -75,9 +75,6 @@ mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 
 # GMA Next-Gen SDK ONLY (com.google.android.libraries.ads.mobile.sdk). Legacy play-services-ads* excluded in app/build.gradle.kts.
 ads-mobile-sdk = { module = "com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk", version.ref = "adsMobileSdk" }
-ads-mediation-facebook = { module = "com.google.ads.mediation:facebook", version.ref = "metaAdapter" }
-ads-mediation-unity = { module = "com.google.ads.mediation:unity", version.ref = "unityAdapter" }
-unity-ads = { module = "com.unity3d.ads:unity-ads", version.ref = "unityAds" }
 ump = { module = "com.google.android.ump:user-messaging-platform", version.ref = "ump" }
 
 # Google Play Billing (KTX pulls in the core library).

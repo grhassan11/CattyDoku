@@ -7,7 +7,7 @@ import org.junit.Test
 
 class ScreenNamesTest {
     private val patterns = listOf(
-        Routes.SPLASH, Routes.WELCOME, Routes.NOTIFICATION, Routes.TUTORIAL, Routes.HOME, Routes.SUDOKU,
+        Routes.SPLASH, Routes.TUTORIAL, Routes.HOME, Routes.SUDOKU,
         Routes.SUDOKU_TUTORIAL_PATTERN, Routes.SUDOKU_GAME_PATTERN, Routes.STREAK, Routes.GAME_PATTERN,
         Routes.SETTINGS, Routes.SHOP_PATTERN,
     )

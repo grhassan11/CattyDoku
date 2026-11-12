@@ -7,16 +7,16 @@ import org.junit.Test
 
 class StarterCatPolicyTest {
     @Test
-    fun throughLevelIsTen() = assertEquals(10, StarterCatPolicy.STARTER_CAT_THROUGH_LEVEL)
+    fun throughLevelIsTwenty() = assertEquals(20, StarterCatPolicy.STARTER_CAT_THROUGH_LEVEL)
 
     @Test
-    fun levelsOneToTenApply() {
-        for (l in 1..10) assertTrue("level $l", StarterCatPolicy.appliesTo(l))
+    fun levelsOneToTwentyApply() {
+        for (l in 1..20) assertTrue("level $l", StarterCatPolicy.appliesTo(l))
     }
 
     @Test
-    fun levelElevenAndAboveDoNot() {
-        assertFalse(StarterCatPolicy.appliesTo(11))
+    fun levelTwentyOneAndAboveDoNot() {
+        assertFalse(StarterCatPolicy.appliesTo(21))
         assertFalse(StarterCatPolicy.appliesTo(500))
     }
 

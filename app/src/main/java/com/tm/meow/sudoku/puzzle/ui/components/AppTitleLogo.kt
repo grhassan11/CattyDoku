@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import com.tm.meow.sudoku.puzzle.R
 
 /**
- * App title image (plaque logo, 2:1 PNG, transparent). Used on Splash + Welcome.
+ * App title image (plaque logo, 2:1 PNG, transparent). Used on Splash.
  * Caller passes width via [modifier] (e.g. fillMaxWidth(0.8f)); [maxWidth] caps it on tablets.
  */
 @Composable

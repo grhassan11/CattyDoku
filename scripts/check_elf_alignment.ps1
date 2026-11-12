@@ -101,7 +101,7 @@ Write-Host ""
 Write-Host ("Native libs found: {0}. 64-bit misaligned: {1}." -f $total, $bad64)
 if ($total -eq 0) { Write-Host "No lib/*/*.so entries: nothing to check (wrong file?)." }
 if ($bad64 -gt 0) {
-    Write-Host "Fix: bump the owning dependency (Unity Ads / androidx.graphics.path / datastore) to a 16 KB-aligned release." -ForegroundColor Yellow
+    Write-Host "Fix: bump the owning dependency (androidx.graphics.path / datastore) to a 16 KB-aligned release." -ForegroundColor Yellow
     exit 1
 }
 exit 0

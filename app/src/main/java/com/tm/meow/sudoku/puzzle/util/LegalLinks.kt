@@ -7,7 +7,6 @@ import android.net.Uri
 
 /**
  * Privacy Policy. The ONE place that knows the URL.
- * Bump TermsPolicy.CURRENT_VERSION when the policy changes materially.
  */
 object LegalLinks {
     const val PRIVACY_URL: String = "https://toolsmania3.blogspot.com/2026/11/privacy-policy-of-catty-sudoku-game-on.html"

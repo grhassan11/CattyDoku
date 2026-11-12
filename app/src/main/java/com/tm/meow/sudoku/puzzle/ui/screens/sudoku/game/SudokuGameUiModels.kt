@@ -30,9 +30,6 @@ data class SudokuWinUi(
     val score: Int,
     val mistakes: Int,
     val hintsUsed: Int,
-    val newBestTime: Boolean,
-    val newBestScore: Boolean,
-    val unlocked: List<SudokuTier>,
 )
 
 /** Modal shown over the board. Restart / HintNeeded pause the clock while open. */

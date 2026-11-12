@@ -9,6 +9,8 @@ import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdRepository
 import com.tm.meow.sudoku.puzzle.domain.billing.AdsRemovedRepository
 import com.tm.meow.sudoku.puzzle.domain.billing.NoAdsRemoved
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
+import com.tm.meow.sudoku.puzzle.domain.network.AlwaysOnline
+import com.tm.meow.sudoku.puzzle.domain.network.ConnectivityObserver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -23,8 +25,9 @@ class LoadNativeAd(
     private val repository: NativeAdRepository,
     private val config: AdPolicyConfig,
     private val adsRemoved: AdsRemovedRepository = NoAdsRemoved,
+    private val connectivity: ConnectivityObserver = AlwaysOnline,
 ) {
-    /** Single policy gate: false = no slot at all (kill switch, Remove Ads, no consent, SDK off / placeholder ID). */
+    /** Single policy gate: false = no slot at all (kill switch, Remove Ads, offline, no consent, SDK off / placeholder ID). */
     fun isAllowed(placement: AdPlacement): Boolean {
         val unitOn = when (placement) {
             AdPlacement.LEVELS_HOME -> config.levelsHomeNativeShow
@@ -33,13 +36,14 @@ class LoadNativeAd(
         if (!unitOn) return false
         // Remove Ads: never even request the ad.
         if (AdFreePolicy.isSuppressedByPurchase(AdFormat.NATIVE_HOME, adsRemoved.adsRemoved.value)) return false
+        if (!connectivity.isOnline.value) return false
         if (!consent.state.value.canRequestAds) return false
         return repository.isConfigured
     }
 
-    /** [isAllowed] re-evaluated when consent, Remove Ads or SDK init change (so a late SDK init still gets an ad). */
+    /** [isAllowed] re-evaluated when consent, Remove Ads, SDK init or connectivity change (so a late SDK init still gets an ad). */
     fun allowedChanges(placement: AdPlacement): Flow<Boolean> =
-        combine(consent.state, adsRemoved.adsRemoved, repository.configuredChanges) { _, _, _ -> isAllowed(placement) }
+        combine(consent.state, adsRemoved.adsRemoved, repository.configuredChanges, connectivity.isOnline) { _, _, _, _ -> isAllowed(placement) }
             .distinctUntilChanged()
 
     suspend operator fun invoke(placement: AdPlacement): NativeAdHandle? {
@@ -54,7 +58,7 @@ class LoadNativeAd(
     }
 }
 
-/** Home reached: the start flow (Splash, Terms, consent, notification prompt, Tutorial) is over, app-open may now fire. */
+/** Home reached: the start flow (Splash with consent, Tutorial) is over, app-open may now fire. */
 class MarkStartFlowComplete(private val tracker: AdSessionTracker) {
     operator fun invoke() {
         tracker.startFlowComplete = true

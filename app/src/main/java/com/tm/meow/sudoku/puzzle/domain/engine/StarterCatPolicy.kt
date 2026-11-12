@@ -6,7 +6,7 @@ package com.tm.meow.sudoku.puzzle.domain.engine
  * Pure, no Android.
  */
 object StarterCatPolicy {
-    const val STARTER_CAT_THROUGH_LEVEL = 10
+    const val STARTER_CAT_THROUGH_LEVEL = 20
 
     fun appliesTo(level: Int, throughLevel: Int = STARTER_CAT_THROUGH_LEVEL): Boolean =
         level in 1..throughLevel

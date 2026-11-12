@@ -92,7 +92,11 @@ private val ContentMaxWidth = 480.dp
 private const val DIM_ALPHA = 0.74f
 private const val MARK_FILL_ALPHA = 0.16f
 private val BoardShape = RoundedCornerShape(14.dp)
-private val FingerSize = 56.dp
+private val FingerWidth = 64.dp
+private val FingerHeight = 71.dp // paw art aspect 0.9
+/** Paw tip (top of white toes) as a fraction of the icon size. */
+private const val PawTipX = 0.5f
+private const val PawTipY = 0.22f
 
 /**
  * Sudoku tutorial screen (2 lessons, one fixed board per size: 4x4, 6x6, 8x8, 9x9). Stateless: state + lambdas only
@@ -315,18 +319,18 @@ private fun TutorialBoard(state: SudokuTutorialUiState, side: Dp, onCellTap: (In
         if (state.pointerCell >= 0) {
             val pulse = rememberPulse()
             Image(
-                painter = painterResource(R.drawable.ic_finger_tap),
+                painter = painterResource(R.drawable.ic_paw_tutorial),
                 contentDescription = null,
                 modifier = Modifier
                     .offset(
-                        x = cellDp * ((state.pointerCell % n) + 0.5f) - FingerSize * 0.3f,
-                        y = cellDp * ((state.pointerCell / n) + 0.5f) - FingerSize * 0.3f,
+                        x = cellDp * ((state.pointerCell % n) + 0.5f) - FingerWidth * PawTipX,
+                        y = cellDp * ((state.pointerCell / n) + 0.5f) - FingerHeight * PawTipY,
                     )
-                    .size(FingerSize)
+                    .size(FingerWidth, FingerHeight)
                     .graphicsLayer {
                         scaleX = pulse.value
                         scaleY = pulse.value
-                        transformOrigin = TransformOrigin(0.3f, 0.3f)
+                        transformOrigin = TransformOrigin(PawTipX, PawTipY)
                     },
             )
         }
@@ -389,16 +393,16 @@ private fun TutorialPad(state: SudokuTutorialUiState, onDigit: (Int) -> Unit) {
                 if (enabled) {
                     val pulse = rememberPulse()
                     Image(
-                        painter = painterResource(R.drawable.ic_finger_tap),
+                        painter = painterResource(R.drawable.ic_paw_tutorial),
                         contentDescription = null,
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .offset(x = 6.dp, y = 22.dp)
-                            .size(48.dp)
+                            .offset(x = (-4).dp, y = 29.dp)
+                            .size(54.dp, 60.dp)
                             .graphicsLayer {
                                 scaleX = pulse.value
                                 scaleY = pulse.value
-                                transformOrigin = TransformOrigin(0.3f, 0.3f)
+                                transformOrigin = TransformOrigin(PawTipX, PawTipY)
                             },
                     )
                 }

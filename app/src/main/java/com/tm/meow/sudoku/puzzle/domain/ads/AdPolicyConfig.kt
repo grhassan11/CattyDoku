@@ -27,12 +27,11 @@ data class AdPolicyConfig(
      * considered only when the JUST-COMPLETED level number is a multiple of N (and past the ad-free levels).
      */
     val levelsInterstitialFrequency: Int = DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY,
-    /** No ad until the process has been alive this long (first minutes of a session). */
-    val minSessionAgeMs: Long = DEFAULT_MIN_SESSION_AGE_MS,
-    /** Minimum gap between two interstitials (monotonic clock). Hardcoded, not remote. */
-    val minIntervalMs: Long = DEFAULT_MIN_INTERVAL_MS,
-    /** Hard cap per process. */
-    val maxPerSession: Int = DEFAULT_MAX_PER_SESSION,
+    /**
+     * Sudoku win interstitial frequency N (remote `sudoku_game_completed_interstitial_ad_frequency`, 1..50), non-Easy tiers:
+     * shown when the tier's lifetime win count is past [adFreeThroughLevel] and a multiple of N. Easy has its own rule.
+     */
+    val sudokuWinInterstitialFrequency: Int = DEFAULT_SUDOKU_INTERSTITIAL_FREQUENCY,
     /** Max wait for a still-loading preloaded ad at the boundary, then fail open (continue without ad). */
     val loadWaitTimeoutMs: Long = DEFAULT_LOAD_WAIT_TIMEOUT_MS,
     /** Levels Home bottom native ad (remote `level_home_native_ad_show`). */
@@ -79,9 +78,7 @@ data class AdPolicyConfig(
 
     companion object {
         const val DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY = 5
-        const val DEFAULT_MIN_SESSION_AGE_MS = 120_000L
-        const val DEFAULT_MIN_INTERVAL_MS = 90_000L
-        const val DEFAULT_MAX_PER_SESSION = 6
+        const val DEFAULT_SUDOKU_INTERSTITIAL_FREQUENCY = 1
         const val DEFAULT_LOAD_WAIT_TIMEOUT_MS = 3_000L
 
         /** Default of every per-surface show switch. */

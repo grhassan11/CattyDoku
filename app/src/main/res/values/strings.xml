@@ -7,17 +7,7 @@
     <string name="splash_tagline">Every cat has a cozy spot. Go find it.</string>
 
     <!-- Welcome / terms (own wording; says nothing about ads or consent) -->
-    <string name="welcome_title">Welcome</string>
-    <string name="welcome_body">Please read and accept our Privacy Policy to continue.</string>
-    <string name="welcome_privacy">Privacy Policy</string>
-    <string name="welcome_accept">Accept</string>
-    <string name="welcome_link_failed">Couldn\'t open the link. Please try again later.</string>
 
-    <!-- Notification pre-prompt (own wording) -->
-    <string name="notif_title">Daily Challenge reminders</string>
-    <string name="notif_body">Want a friendly nudge when your Daily Challenge is ready? You can change this any time in your phone\'s settings.</string>
-    <string name="notif_allow">Allow</string>
-    <string name="notif_not_now">Not Now</string>
 
     <!-- Home screen -->
     <string name="home_daily_challenge">Daily Challenge</string>
@@ -96,7 +86,6 @@
     <string name="streak_current_label">Current Streak</string>
     <string name="streak_best_chip">Best Streak: %1$d</string>
     <string name="streak_close">Close</string>
-    <string name="streak_continue">Continue</string>
     <string name="streak_last_30">Last 30 days</string>
     <string name="streak_daily_total">Daily Challenges done: %1$d</string>
     <string name="streak_legend_played">Played</string>
@@ -187,6 +176,7 @@
     <string name="reward_watch_video">Watch Video - Get 1 Free</string>
     <string name="reward_loading">Loading video...</string>
     <string name="reward_try_again">Try Again</string>
+    <string name="reward_internet_required">Internet is required to watch Ad</string>
     <string name="reward_unavailable">No video available right now. Try again in a moment.</string>
     <string name="reward_cat_title">Need a cat?</string>
     <string name="reward_cat_subtitle">Use one cat to place the correct answer</string>
@@ -339,6 +329,12 @@
     <string name="settings_group_sound">Sound &amp; feel</string>
     <string name="settings_group_gameplay">Gameplay</string>
     <string name="settings_group_support">Support &amp; legal</string>
+    <string name="settings_group_general">General</string>
+    <string name="language_row_label">Language</string>
+    <string name="language_title">Language</string>
+    <string name="language_confirm">Confirm</string>
+    <string name="language_close">Close language picker</string>
+    <string name="language_selected">Selected</string>
     <string name="settings_music">Music</string>
     <string name="settings_sfx">Sound</string>
     <string name="settings_voice">Voice</string>

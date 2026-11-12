@@ -113,12 +113,14 @@ internal fun BoosterAdDialog(
             )
             Spacer(Modifier.height(20.dp))
 
+            val offline = load == RewardedLoadState.OFFLINE
             val ready = load == RewardedLoadState.READY && !busy
             val failed = load == RewardedLoadState.FAILED && !busy
             PillButton(
                 text = when {
                     failed -> stringResource(R.string.reward_try_again)
                     ready -> stringResource(R.string.reward_watch_video)
+                    offline -> stringResource(R.string.reward_watch_video) // visible but disabled (helper text below)
                     else -> stringResource(R.string.reward_loading)
                 },
                 onClick = {
@@ -138,6 +140,15 @@ internal fun BoosterAdDialog(
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (offline) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.reward_internet_required),
+                    color = GameColors.Body,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
             if (failed) {
                 Spacer(Modifier.height(6.dp))
                 Text(

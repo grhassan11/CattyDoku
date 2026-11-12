@@ -2,12 +2,10 @@ package com.tm.meow.sudoku.puzzle.domain.config
 
 import com.tm.meow.sudoku.puzzle.domain.ads.AdFreePolicy
 import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
-import com.tm.meow.sudoku.puzzle.domain.ads.AppOpenConfig
 
 /** Remote Config key names. STABLE: they are the contract with the Firebase console. */
 object RemoteConfigKeys {
     const val AD_FREE_THROUGH_LEVEL = "ad_free_through_level"
-    const val APP_OPEN_AD_SHOW = "app_open_ad_show"
     const val LEVEL_HOME_NATIVE_AD_SHOW = "level_home_native_ad_show"
     const val SUDOKU_HOME_NATIVE_AD_SHOW = "sudoku_home_native_ad_show"
     const val LEVELS_GAME_BANNER_AD_SHOW = "levels_game_banner_ad_show"
@@ -15,7 +13,8 @@ object RemoteConfigKeys {
     const val SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW = "sudoku_game_completed_interstitial_ad_show"
     const val LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW = "levels_game_completed_interstitial_ad_show"
     const val LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY = "levels_game_completed_interstitial_ad_frequency"
-    const val SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW = "sudoku_game_restarted_interstitial_ad_show"
+    const val SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY = "sudoku_game_completed_interstitial_ad_frequency"
+    const val SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW ="sudoku_game_restarted_interstitial_ad_show"
     const val LEVELS_GAME_RESTARTED_INTERSTITIAL_AD_SHOW = "levels_game_restarted_interstitial_ad_show"
     const val SUDOKU_GAME_BOOSTERS_REWARDED_AD_SHOW = "sudoku_game_boosters_rewarded_ad_show"
     const val LEVELS_GAME_BOOSTERS_REWARDED_AD_SHOW = "levels_game_boosters_rewarded_ad_show"
@@ -39,8 +38,6 @@ object RemoteConfigKeys {
  */
 data class AppRemoteConfig(
     val adFreeThroughLevel: Int = AdFreePolicy.AD_FREE_THROUGH_LEVEL,
-    /** App-wide app-open kill switch. */
-    val appOpenAdShow: Boolean = AppOpenConfig.DEFAULT_ENABLED,
     val levelHomeNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val sudokuHomeNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val levelsGameBannerAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
@@ -49,6 +46,8 @@ data class AppRemoteConfig(
     val levelsGameCompletedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     /** Levels win ad on every Nth completed level (level % N == 0), 1..50. */
     val levelsGameCompletedInterstitialAdFrequency: Int = AdPolicyConfig.DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY,
+    /** Sudoku win ad (non-Easy tiers) on every Nth tier win past the ad-free wins (N % freq == 0), 1..50. */
+    val sudokuGameCompletedInterstitialAdFrequency: Int = AdPolicyConfig.DEFAULT_SUDOKU_INTERSTITIAL_FREQUENCY,
     val sudokuGameRestartedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val levelsGameRestartedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val sudokuGameBoostersRewardedAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
@@ -65,6 +64,7 @@ data class AppRemoteConfig(
     fun toAdPolicyConfig(): AdPolicyConfig = AdPolicyConfig(
         adFreeThroughLevel = adFreeThroughLevel,
         levelsInterstitialFrequency = levelsGameCompletedInterstitialAdFrequency,
+        sudokuWinInterstitialFrequency = sudokuGameCompletedInterstitialAdFrequency,
         levelsHomeNativeShow = levelHomeNativeAdShow,
         sudokuHomeNativeShow = sudokuHomeNativeAdShow,
         levelsGameBannerShow = levelsGameBannerAdShow,
@@ -77,11 +77,6 @@ data class AppRemoteConfig(
         sudokuBoostersRewardedShow = sudokuGameBoostersRewardedAdShow,
         levelsReviveRewardedShow = levelsGameReviveRewardedAdShow,
         sudokuReviveRewardedShow = sudokuGameReviveRewardedAdShow,
-    )
-
-    fun toAppOpenConfig(): AppOpenConfig = AppOpenConfig(
-        enabled = appOpenAdShow,
-        adFreeThroughLevel = adFreeThroughLevel,
     )
 
     companion object {
@@ -99,7 +94,6 @@ object RemoteConfigParser {
             adFreeThroughLevel = int(
                 read(RemoteConfigKeys.AD_FREE_THROUGH_LEVEL), d.adFreeThroughLevel, AppRemoteConfig.AD_FREE_LEVEL_RANGE,
             ),
-            appOpenAdShow = bool(read(RemoteConfigKeys.APP_OPEN_AD_SHOW), d.appOpenAdShow),
             levelHomeNativeAdShow = bool(read(RemoteConfigKeys.LEVEL_HOME_NATIVE_AD_SHOW), d.levelHomeNativeAdShow),
             sudokuHomeNativeAdShow = bool(read(RemoteConfigKeys.SUDOKU_HOME_NATIVE_AD_SHOW), d.sudokuHomeNativeAdShow),
             levelsGameBannerAdShow = bool(read(RemoteConfigKeys.LEVELS_GAME_BANNER_AD_SHOW), d.levelsGameBannerAdShow),
@@ -113,6 +107,11 @@ object RemoteConfigParser {
             levelsGameCompletedInterstitialAdFrequency = int(
                 read(RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY),
                 d.levelsGameCompletedInterstitialAdFrequency,
+                AppRemoteConfig.INTERSTITIAL_FREQUENCY_RANGE,
+            ),
+            sudokuGameCompletedInterstitialAdFrequency = int(
+                read(RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY),
+                d.sudokuGameCompletedInterstitialAdFrequency,
                 AppRemoteConfig.INTERSTITIAL_FREQUENCY_RANGE,
             ),
             sudokuGameRestartedInterstitialAdShow = bool(
@@ -144,7 +143,6 @@ object RemoteConfigParser {
         val d = AppRemoteConfig()
         return mapOf(
             RemoteConfigKeys.AD_FREE_THROUGH_LEVEL to d.adFreeThroughLevel.toString(),
-            RemoteConfigKeys.APP_OPEN_AD_SHOW to d.appOpenAdShow.toString(),
             RemoteConfigKeys.LEVEL_HOME_NATIVE_AD_SHOW to d.levelHomeNativeAdShow.toString(),
             RemoteConfigKeys.SUDOKU_HOME_NATIVE_AD_SHOW to d.sudokuHomeNativeAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_BANNER_AD_SHOW to d.levelsGameBannerAdShow.toString(),
@@ -152,6 +150,7 @@ object RemoteConfigParser {
             RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to d.sudokuGameCompletedInterstitialAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to d.levelsGameCompletedInterstitialAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY to d.levelsGameCompletedInterstitialAdFrequency.toString(),
+            RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY to d.sudokuGameCompletedInterstitialAdFrequency.toString(),
             RemoteConfigKeys.SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW to d.sudokuGameRestartedInterstitialAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_RESTARTED_INTERSTITIAL_AD_SHOW to d.levelsGameRestartedInterstitialAdShow.toString(),
             RemoteConfigKeys.SUDOKU_GAME_BOOSTERS_REWARDED_AD_SHOW to d.sudokuGameBoostersRewardedAdShow.toString(),

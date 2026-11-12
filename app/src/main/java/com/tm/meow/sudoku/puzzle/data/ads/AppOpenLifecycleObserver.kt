@@ -4,7 +4,6 @@ import com.tm.meow.sudoku.puzzle.di.MainDispatcher
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadAppOpenAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.ShowAppOpenIfAllowed
@@ -21,8 +20,7 @@ import kotlinx.coroutines.launch
  *
  * ProcessLifecycleOwner is process-wide: hopping between our Activity and the Ads SDK / UMP / permission screens in the
  * same process never produces a stop/start pair, so only a real background -> foreground return reaches [onStart]. The
- * first ON_START of the process is the cold start and never shows. A tap on an ad can leave the app (browser / store):
- * [AdSessionTracker.consumeAdClicked] at stop makes the matching foreground a "return from ad", also skipped.
+ * first ON_START of the process is the cold start and never shows.
  * All show rules live in the pure domain policy ([ShowAppOpenIfAllowed]).
  */
 @Singleton
@@ -30,15 +28,12 @@ class AppOpenLifecycleObserver @Inject constructor(
     private val showAppOpen: ShowAppOpenIfAllowed,
     private val preloadAppOpen: PreloadAppOpenAd,
     private val sdk: AdsSdkStatus,
-    private val tracker: AdSessionTracker,
     @MainDispatcher main: CoroutineDispatcher,
 ) : DefaultLifecycleObserver {
 
     private val scope = CoroutineScope(SupervisorJob() + main)
 
     private var coldStartPending = true
-    private var backgroundedAtMs: Long? = null
-    private var leftViaAdClick = false
 
     /** Call once from `Application.onCreate` (main thread). */
     fun start() {
@@ -53,16 +48,6 @@ class AppOpenLifecycleObserver @Inject constructor(
     override fun onStart(owner: LifecycleOwner) {
         val cold = coldStartPending
         coldStartPending = false
-        val fromAd = leftViaAdClick
-        leftViaAdClick = false
-        val backgroundedAt = backgroundedAtMs
-        scope.launch {
-            showAppOpen(coldStart = cold, backgroundedAtMs = backgroundedAt, returnedFromAd = fromAd)
-        }
-    }
-
-    override fun onStop(owner: LifecycleOwner) {
-        backgroundedAtMs = tracker.now()
-        leftViaAdClick = tracker.consumeAdClicked()
+        scope.launch { showAppOpen(coldStart = cold) }
     }
 }

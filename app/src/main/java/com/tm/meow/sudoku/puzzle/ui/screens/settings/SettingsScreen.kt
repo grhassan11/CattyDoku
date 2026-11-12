@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -38,6 +39,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,6 +70,8 @@ fun SettingsScreen(
     onPrivacyPolicy: () -> Unit,
     onHowToPlay: () -> Unit,
     onAbout: () -> Unit,
+    languageName: String,
+    onLanguage: () -> Unit,
     modifier: Modifier = Modifier,
     onPrivacyOptions: (() -> Unit)? = null,
 ) {
@@ -88,6 +92,10 @@ fun SettingsScreen(
                     onSettingChanged,
                     gameplayExtra = { LinkRow(stringResource(R.string.settings_how_to_play), onHowToPlay, R.drawable.ic_game_tutorials, showChevron = true, hint = stringResource(R.string.settings_how_to_play_hint)) },
                 )
+
+                Group(stringResource(R.string.settings_group_general)) {
+                    LinkRow(stringResource(R.string.language_row_label), onLanguage, R.drawable.ic_language, showChevron = true, value = languageName)
+                }
 
                 Group(stringResource(R.string.settings_group_notifications)) {
                     ToggleRow(
@@ -220,7 +228,7 @@ private fun SettingsTopBar(onBack: () -> Unit) {
 private fun Group(title: String, content: @Composable () -> Unit) {
     Column {
         Text(
-            text = title.uppercase(),
+            text = title.uppercase(java.util.Locale.getDefault()), // locale-aware: Turkish dotted/dotless i
             modifier = Modifier.semantics { heading() },
             color = GameColors.Body,
             fontSize = 14.sp,
@@ -303,7 +311,14 @@ private fun ToggleRow(
 }
 
 @Composable
-private fun LinkRow(label: String, onClick: () -> Unit, @DrawableRes icon: Int? = null, showChevron: Boolean = false, hint: String? = null) {
+private fun LinkRow(
+    label: String,
+    onClick: () -> Unit,
+    @DrawableRes icon: Int? = null,
+    showChevron: Boolean = false,
+    hint: String? = null,
+    value: String? = null,
+) {
     Surface(onClick = onClick, color = Color.Transparent) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -323,6 +338,16 @@ private fun LinkRow(label: String, onClick: () -> Unit, @DrawableRes icon: Int? 
                 if (hint != null) {
                     Text(hint, color = GameColors.Body, fontSize = REMINDER_HINT_SIZE, lineHeight = REMINDER_HINT_SIZE * 1.3f)
                 }
+            }
+            if (value != null) {
+                Text(
+                    text = value,
+                    modifier = Modifier.widthIn(max = 140.dp),
+                    color = GameColors.Body,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             if (showChevron) {
                 IconImage(R.drawable.ic_chevron_forward, size = 24.dp, tint = GameColors.Body)

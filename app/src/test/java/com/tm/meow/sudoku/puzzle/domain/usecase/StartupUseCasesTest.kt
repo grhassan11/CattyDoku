@@ -1,11 +1,9 @@
 package com.tm.meow.sudoku.puzzle.domain.usecase
 
+import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.model.AppFlags
 import com.tm.meow.sudoku.puzzle.domain.startup.SdkLevelProvider
-import com.tm.meow.sudoku.puzzle.domain.startup.StartFlow
 import com.tm.meow.sudoku.puzzle.domain.startup.StartInputs
-import com.tm.meow.sudoku.puzzle.domain.startup.StartStep
-import com.tm.meow.sudoku.puzzle.domain.startup.TermsPolicy
 import com.tm.meow.sudoku.puzzle.ui.screens.game.FakeAppFlagsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -17,70 +15,41 @@ import org.junit.Test
 class StartupUseCasesTest {
 
     @Test
-    fun acceptTermsStoresFlagAndCurrentVersion() = runTest {
+    fun readStartInputsReflectsTutorialFlag() = runTest {
+        assertEquals(StartInputs(tutorialDone = false), ReadStartInputs(FakeAppFlagsRepository())())
+        assertEquals(StartInputs(tutorialDone = true), ReadStartInputs(FakeAppFlagsRepository(AppFlags(tutorialDone = true)))())
+    }
+
+    @Test
+    fun returningLaunchFollowsTutorialDone() = runTest {
+        assertFalse(ObserveReturningLaunch(FakeAppFlagsRepository()).invoke().first())
+        assertTrue(ObserveReturningLaunch(FakeAppFlagsRepository(AppFlags(tutorialDone = true))).invoke().first())
+    }
+
+    @Test
+    fun markNotificationPromptAskedIsIdempotent() = runTest {
         val repo = FakeAppFlagsRepository()
-        assertFalse(ObserveTermsAccepted(repo).invoke().first())
-        AcceptTerms(repo)()
-        val f = repo.flags.first()
-        assertTrue(f.termsAccepted)
-        assertEquals(TermsPolicy.CURRENT_VERSION, f.termsVersion)
-        assertTrue(ObserveTermsAccepted(repo).invoke().first())
-    }
-
-    @Test
-    fun acceptTermsIsIdempotentAndKeepsOtherFlags() = runTest {
-        val repo = FakeAppFlagsRepository(AppFlags(tutorialDone = true, lastPlayedLevel = 4))
-        AcceptTerms(repo)()
-        AcceptTerms(repo)()
-        assertEquals(
-            AppFlags(termsAccepted = true, termsVersion = TermsPolicy.CURRENT_VERSION, tutorialDone = true, lastPlayedLevel = 4),
-            repo.flags.first(),
-        )
-    }
-
-    @Test
-    fun termsVersionBumpRepromptsThenReaccepts() = runTest {
-        val repo = FakeAppFlagsRepository()
-        AcceptTerms(repo, version = 1)()
-        // app update raises the required version: acceptance of v1 no longer counts
-        assertFalse(TermsPolicy.isAccepted(repo.flags.first(), currentVersion = 2))
-        AcceptTerms(repo, version = 2)()
-        assertTrue(TermsPolicy.isAccepted(repo.flags.first(), currentVersion = 2))
-    }
-
-    @Test
-    fun oldAcceptedFlagWithoutVersionReadsNotAccepted() = runTest {
-        val repo = FakeAppFlagsRepository(AppFlags(termsAccepted = true))
-        assertFalse(ObserveTermsAccepted(repo).invoke().first())
-    }
-
-    @Test
-    fun notificationPromptAskedOnce() = runTest {
-        val repo = FakeAppFlagsRepository(AppFlags(termsAccepted = true, termsVersion = 1))
-        val sdk = SdkLevelProvider { 34 }
-        assertEquals(StartStep.NOTIFICATION, StartFlow.first(ReadStartInputs(repo, sdk)()))
-        assertEquals(StartStep.TUTORIAL, StartFlow.after(StartStep.NOTIFICATION, ReadStartInputs(repo, sdk)()))
-
         MarkNotificationPromptAsked(repo)()
         MarkNotificationPromptAsked(repo)()
-
-        val after = ReadStartInputs(repo, sdk)()
-        assertTrue(after.notificationPromptAsked)
-        assertEquals(StartStep.TUTORIAL, StartFlow.first(after))
+        assertTrue(repo.flags.first().notificationPromptAsked)
     }
 
     @Test
-    fun readStartInputsCombinesFlagsAndSdk() = runTest {
-        val repo = FakeAppFlagsRepository(AppFlags(termsAccepted = true, termsVersion = 1, tutorialDone = true))
-        assertEquals(
-            StartInputs(termsAccepted = true, notificationPromptAsked = false, tutorialDone = true, sdkInt = 30),
-            ReadStartInputs(repo, SdkLevelProvider { 30 })(),
-        )
+    fun shouldAskPureRule() {
+        assertTrue(ShouldAskNotificationPermission.shouldAsk(33, false))
+        assertTrue(ShouldAskNotificationPermission.shouldAsk(34, false))
+        assertFalse(ShouldAskNotificationPermission.shouldAsk(32, false))
+        assertFalse(ShouldAskNotificationPermission.shouldAsk(26, false))
+        assertFalse(ShouldAskNotificationPermission.shouldAsk(34, true))
     }
 
     @Test
-    fun readStartInputsTreatsStaleTermsAsNotAccepted() = runTest {
-        val repo = FakeAppFlagsRepository(AppFlags(termsAccepted = true, termsVersion = 0))
-        assertFalse(ReadStartInputs(repo, SdkLevelProvider { 34 })().termsAccepted)
+    fun asksOnlyOnceAndOnlyOnApi33Plus() = runTest {
+        val tracker = AdSessionTracker(FakeTimeProvider(today = 20_000L))
+        val repo = FakeAppFlagsRepository()
+        assertTrue(ShouldAskNotificationPermission(repo, SdkLevelProvider { 34 }, tracker)())
+        assertFalse(ShouldAskNotificationPermission(repo, SdkLevelProvider { 30 }, tracker)())
+        MarkNotificationPromptAsked(repo)()
+        assertFalse(ShouldAskNotificationPermission(repo, SdkLevelProvider { 34 }, tracker)())
     }
 }

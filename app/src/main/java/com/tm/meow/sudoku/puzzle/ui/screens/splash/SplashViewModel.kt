@@ -7,7 +7,7 @@ import com.tm.meow.sudoku.puzzle.domain.startup.SplashTiming
 import com.tm.meow.sudoku.puzzle.domain.usecase.RefreshRemoteConfig
 import com.tm.meow.sudoku.puzzle.domain.usecase.GatherConsentAndInitAds
 import com.tm.meow.sudoku.puzzle.domain.usecase.IsConsentFormShowing
-import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveTermsAccepted
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveReturningLaunch
 import com.tm.meow.sudoku.puzzle.domain.usecase.PrefetchLevel
 import com.tm.meow.sudoku.puzzle.domain.usecase.ResolveStartLevel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,7 +38,7 @@ sealed interface SplashEvent {
  */
 @HiltViewModel
 class SplashViewModel @Inject constructor(
-    private val observeTermsAccepted: ObserveTermsAccepted,
+    private val observeReturningLaunch: ObserveReturningLaunch,
     private val resolveStartLevel: ResolveStartLevel,
     private val prefetchLevel: PrefetchLevel,
     private val gather: GatherConsentAndInitAds,
@@ -58,9 +58,9 @@ class SplashViewModel @Inject constructor(
     }
 
     private suspend fun run() {
-        // Terms accepted = a returning launch (short minimum). A read failure counts as first launch.
+        // Tutorial done = a returning launch (short minimum). A read failure counts as first launch.
         val returning = try {
-            observeTermsAccepted().first()
+            observeReturningLaunch().first()
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {

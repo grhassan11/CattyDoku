@@ -55,7 +55,6 @@ import com.tm.meow.sudoku.puzzle.domain.model.MilestoneStatus
 import com.tm.meow.sudoku.puzzle.ui.components.Button3D
 import com.tm.meow.sudoku.puzzle.ui.components.ButtonStyle
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
-import com.tm.meow.sudoku.puzzle.ui.components.PillButton
 import com.tm.meow.sudoku.puzzle.ui.components.rememberPressScale
 import com.tm.meow.sudoku.puzzle.ui.theme.FredokaFamily
 import com.tm.meow.sudoku.puzzle.ui.components.homeBackground
@@ -178,17 +177,6 @@ fun StreakScreen(
             }
             Spacer(Modifier.height(16.dp))
         }
-
-        // fixed CTA slot (outside the scroll area)
-        PillButton(
-            text = stringResource(R.string.streak_continue),
-            onClick = onBack,
-            modifier = Modifier
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-                .widthIn(max = 360.dp)
-                .fillMaxWidth()
-                .align(Alignment.CenterHorizontally),
-        )
     }
 }
 

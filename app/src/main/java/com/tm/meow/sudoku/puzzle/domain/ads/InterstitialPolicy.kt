@@ -7,7 +7,7 @@ enum class AdTrigger {
 
     /**
      * User tapped Next puzzle / Back on the Sudoku win dialog. Tier rule lives in [SudokuAdRules]; the policy only checks
-     * per-surface switch, Remove Ads, tutorial and consent (no Queens ad-free level, frequency, session age, interval or cap).
+     * per-surface switch, Remove Ads, tutorial and consent (no Queens ad-free level or frequency).
      */
     SUDOKU_WON_CONTINUE,
 
@@ -35,12 +35,12 @@ enum class AdSkipReason {
     LEVEL_ALREADY_HAD_AD,
     /** Levels win: completed level number is not a multiple of the remote frequency. */
     LEVEL_NOT_ON_FREQUENCY,
-    SESSION_TOO_YOUNG,
-    TOO_SOON_AFTER_LAST_AD,
-    SESSION_CAP,
 
     /** Player bought Remove Ads (monthly active or forever). */
     ADS_REMOVED,
+
+    /** No validated internet connection: no ad can load, never wait for one. */
+    OFFLINE,
 }
 
 sealed interface AdDecision {
@@ -48,7 +48,7 @@ sealed interface AdDecision {
     data class Skip(val reason: AdSkipReason) : AdDecision
 }
 
-/** Everything the policy needs; no Android, no clock reads (times are passed in). */
+/** Everything the policy needs; no Android, no clock reads. */
 data class InterstitialContext(
     val trigger: AdTrigger,
     val canRequestAds: Boolean,
@@ -58,15 +58,12 @@ data class InterstitialContext(
     val inTutorial: Boolean = false,
     /** Diagnostic only (debug log). Not part of any decision: Levels cadence is level-number based. */
     val winsSinceLastAd: Int = 0,
-    val nowMs: Long,
-    val sessionStartMs: Long,
-    /** null = no ad shown yet this process. */
-    val lastAdShownMs: Long?,
     /** Persisted flag: level of the last interstitial (0 = none). */
     val lastInterstitialLevel: Int,
-    val adsShownThisSession: Int,
     /** Remove Ads owned (monthly active OR forever): no interstitial ever. */
     val adsRemoved: Boolean = false,
+    /** Validated internet connection present. Default true (callers that do not track connectivity). */
+    val online: Boolean = true,
 )
 
 /** Pure show/skip decision. Ad readiness is NOT decided here (that is the AdsRepository's job). */
@@ -83,6 +80,7 @@ object InterstitialPolicy {
         }
         if (ctx.inTutorial) return skip(AdSkipReason.TUTORIAL)
         if (ctx.isDaily) return skip(AdSkipReason.DAILY)
+        if (!ctx.online) return skip(AdSkipReason.OFFLINE)
         if (!ctx.canRequestAds) return skip(AdSkipReason.NO_CONSENT)
         // Sudoku: product rule (tier + win count, see SudokuAdRules) decides upstream; no Queens pacing applies.
         if (sudoku) return AdDecision.Show
@@ -94,10 +92,6 @@ object InterstitialPolicy {
             // level just won). Past the ad-free levels, show only when it is a multiple of the frequency. No exemptions.
             if (ctx.level % config.levelsInterstitialFrequency.coerceAtLeast(1) != 0) return skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY)
         }
-        if (ctx.nowMs - ctx.sessionStartMs < config.minSessionAgeMs) return skip(AdSkipReason.SESSION_TOO_YOUNG)
-        val last = ctx.lastAdShownMs
-        if (last != null && ctx.nowMs - last < config.minIntervalMs) return skip(AdSkipReason.TOO_SOON_AFTER_LAST_AD)
-        if (ctx.adsShownThisSession >= config.maxPerSession) return skip(AdSkipReason.SESSION_CAP)
         return AdDecision.Show
     }
 

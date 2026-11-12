@@ -7,8 +7,6 @@ package com.tm.meow.sudoku.puzzle.ui.navigation
  */
 internal fun screenNameFor(routePattern: String?): String? = when (routePattern) {
     Routes.SPLASH -> "splash"
-    Routes.WELCOME -> "welcome"
-    Routes.NOTIFICATION -> "notification_prompt"
     Routes.TUTORIAL -> "tutorial"
     Routes.HOME -> "home"
     Routes.SUDOKU -> "sudoku_entry"

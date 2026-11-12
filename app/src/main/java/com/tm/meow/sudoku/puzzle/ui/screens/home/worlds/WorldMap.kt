@@ -43,16 +43,29 @@ import androidx.compose.ui.unit.dp
 import com.tm.meow.sudoku.puzzle.domain.model.WorldRules
 import com.tm.meow.sudoku.puzzle.ui.components.StatusBarIconsEffect
 import kotlin.math.abs
+import kotlin.math.min
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.sin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Distance between node centres = width of one lazy item. 4 items = one wave period = 20 dash cycles (seamless wrap). */
+/** Distance between node centres = width of one lazy item (design size; multiply by the map scale). 4 items = one wave period = 20 dash cycles (seamless wrap). */
 private val ItemW = 114.dp
 private val TrailWidth = 22.dp // road edge (outline)
 private val CoreWidth = 14.dp // road body
+
+/** Design reference: screen width the map was drawn for, and the band height its nodes + PLAY tag + stars need (NodeAbove + NodeBelow). */
+private const val RefWidthDp = 360f
+private const val RefBandDp = 182f
+private const val MinMapScale = 0.7f
+
+/**
+ * One scale for the whole map (item pitch, nodes, stars, road width, vertical extents) so trail and nodes always stay in
+ * sync: min(width / 360, band / 182), clamped to 0.7..1. Normal phones (>= 360dp wide, band >= 182dp) get exactly 1.
+ */
+internal fun mapScale(widthDp: Float, bandDp: Float): Float =
+    min(widthDp / RefWidthDp, bandDp / RefBandDp).coerceIn(MinMapScale, 1f)
 
 /** Lane is taller than the trail band by this much above and below, so glow rings / stars are never clipped. */
 private val Slack = 20.dp
@@ -80,22 +93,26 @@ private class TrailShape(val amp: Dp, val midY: Dp)
  * Fit the sine wave into a band of [height]: the amplitude shrinks on short bands (down to a flat line); the trail is
  * centred vertically in the band.
  */
-private fun trailShape(height: Dp): TrailShape {
+private fun trailShape(height: Dp, scale: Float): TrailShape {
     val h = height.value
-    val amp = ((h - (NodeAbove + NodeBelow)) / 2f).coerceIn(0f, 72f)
-    val above = amp + NodeAbove
-    val need = above + amp + NodeBelow
+    val nodeAbove = NodeAbove * scale
+    val nodeBelow = NodeBelow * scale
+    val amp = ((h - (nodeAbove + nodeBelow)) / 2f).coerceIn(0f, 72f * scale)
+    val above = amp + nodeAbove
+    val need = above + amp + nodeBelow
     return TrailShape(amp = amp.dp, midY = (above + (h - need) / 2f).dp)
 }
 
 /** How far the node journey is shifted up on screen (dp), limited by the headroom [trailShape] leaves above the crest. */
 private const val JourneyLiftDp = 48f
 
-private fun journeyLift(height: Dp): Dp {
+private fun journeyLift(height: Dp, scale: Float): Dp {
     val h = height.value
-    val amp = ((h - (NodeAbove + NodeBelow)) / 2f).coerceIn(0f, 72f)
-    val spare = (h - (amp * 2 + NodeAbove + NodeBelow)) / 2f
-    return minOf(JourneyLiftDp, spare.coerceAtLeast(0f)).dp
+    val nodeAbove = NodeAbove * scale
+    val nodeBelow = NodeBelow * scale
+    val amp = ((h - (nodeAbove + nodeBelow)) / 2f).coerceIn(0f, 72f * scale)
+    val spare = (h - (amp * 2 + nodeAbove + nodeBelow)) / 2f
+    return minOf(JourneyLiftDp * scale, spare.coerceAtLeast(0f)).dp
 }
 
 /** +1 = crest (node above the centre line), -1 = trough, 0 = on the line. Period 4 nodes; exact for any index. */
@@ -155,8 +172,10 @@ private fun LoadedWorldMap(
 ) {
     BoxWithConstraints(modifier) {
         val density = LocalDensity.current
-        val itemPx = with(density) { ItemW.toPx() }
-        val sidePad = (maxWidth - ItemW) / 2 // first / last node can sit exactly in the centre
+        val ms = remember(maxWidth, bandHeight) { mapScale(maxWidth.value, bandHeight.value) }
+        val itemW = ItemW * ms
+        val itemPx = with(density) { itemW.toPx() }
+        val sidePad = (maxWidth - itemW) / 2 // first / last node can sit exactly in the centre
         val current = map.currentLevel
         val levels = map.visibleLevels
         val nodeCount = levels + 1 // + the "more worlds coming" tail
@@ -229,15 +248,16 @@ private fun LoadedWorldMap(
         }
 
         // ---- trail + nodes, in a lane slightly taller than the band
-        val shape = remember(bandHeight) { trailShape(bandHeight) }
+        val shape = remember(bandHeight, ms) { trailShape(bandHeight, ms) }
         // Lift the whole lane (trail + nodes), capped by the band's spare headroom so the PLAY tag never rides under the controls.
-        val lift = remember(bandHeight) { journeyLift(bandHeight) }
+        val lift = remember(bandHeight, ms) { journeyLift(bandHeight, ms) }
         val laneModifier = Modifier.fillMaxWidth().height(bandHeight + Slack * 2).offset(y = bandTop - Slack - lift)
         TrailLayer(
             shape = shape,
             nodeCount = nodeCount,
             currentIndex = current - 1,
             scrollX = scrollX,
+            scale = ms,
             modifier = laneModifier,
         )
         LazyRow(
@@ -252,6 +272,7 @@ private fun LoadedWorldMap(
                     levels = levels,
                     stars = map.starsByLevel[index + 1] ?: 1,
                     shape = shape,
+                    scale = ms,
                     onNodeClick = onNodeClick,
                 )
             }
@@ -274,14 +295,16 @@ private fun TrailItem(
     levels: Int,
     stars: Int,
     shape: TrailShape,
+    scale: Float,
     onNodeClick: (Int) -> Unit,
 ) {
-    Box(Modifier.width(ItemW).fillMaxHeight()) {
+    Box(Modifier.width(ItemW * scale).fillMaxHeight()) {
         val centerY = shape.midY + Slack - shape.amp * waveSign(index)
         if (index >= levels) {
             TailNode(
                 theme = WorldThemes.forLevel(levels + 1),
-                modifier = Modifier.align(Alignment.TopCenter).offset(y = centerY - TailRadius),
+                modifier = Modifier.align(Alignment.TopCenter).offset(y = centerY - TailRadius * scale),
+                sizeScale = scale,
             )
             return@Box
         }
@@ -300,7 +323,8 @@ private fun TrailItem(
             theme = theme,
             boss = boss,
             onClick = { onNodeClick(level) },
-            modifier = Modifier.align(Alignment.TopCenter).offset(y = centerY - nodeCellHeight(boss) / 2),
+            modifier = Modifier.align(Alignment.TopCenter).offset(y = centerY - nodeCellHeight(boss, scale) / 2),
+            sizeScale = scale,
         )
     }
 }
@@ -317,14 +341,17 @@ private fun TrailLayer(
     nodeCount: Int,
     currentIndex: Int,
     scrollX: () -> Float,
+    scale: Float,
     modifier: Modifier = Modifier,
 ) {
     val shapeState by rememberUpdatedState(shape)
+    val scaleState by rememberUpdatedState(scale)
     val countState by rememberUpdatedState(nodeCount)
     val currentState by rememberUpdatedState(currentIndex)
     Box(
         modifier.drawWithCache {
-            val itemPx = ItemW.toPx()
+            val sc = scaleState
+            val itemPx = (ItemW * sc).toPx()
             val period = itemPx * 4f
             val amp = shapeState.amp.toPx()
             val mid = (shapeState.midY + Slack).toPx()
@@ -339,8 +366,8 @@ private fun TrailLayer(
                     lineTo(x, mid - amp * sin(x / itemPx * HALF_PI))
                 }
             }
-            val edgeStyle = Stroke(width = TrailWidth.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-            val coreStyle = Stroke(width = CoreWidth.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+            val edgeStyle = Stroke(width = (TrailWidth * sc).toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+            val coreStyle = Stroke(width = (CoreWidth * sc).toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
             val stitchStyle = Stroke(
                 width = 3.dp.toPx(), cap = StrokeCap.Round,
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx())),

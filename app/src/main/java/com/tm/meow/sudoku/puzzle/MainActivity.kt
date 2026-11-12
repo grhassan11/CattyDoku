@@ -2,7 +2,7 @@ package com.tm.meow.sudoku.puzzle
 
 import android.os.Bundle
 import android.os.SystemClock
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -18,7 +18,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() { // AppCompat: per-app language recreation on API < 33 (Theme.CatPuzzle is AppCompat-derived)
     // Same instance AppNavHost gets via hiltViewModel() (both are activity-scoped, default key).
     private val startViewModel: AppStartViewModel by viewModels()
 

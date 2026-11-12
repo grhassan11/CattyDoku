@@ -42,7 +42,7 @@ ic_vibrate           VD      Settings: vibration tile (tinted)             ic_vi
 ic_appearance        VD      Settings: pattern mode row (tinted)           ic_appearance.svg
 ic_paw               VD      Imported, not used yet                        ic_paw.svg
 ic_yarn_ball         PNG     Imported, not used yet (gradient SVG)         ic_yarn_ball.svg / ic_yarn_ball.png
-ic_finger_tap        VD      Imported, reserved for tutorial (phase 6)     ic_finger_tap.svg
+ic_paw_tutorial      WEBP    Tutorial pointer (both tutorials, untinted)   ic_paw_tutorial.png (Original / licensed, user-provided; downscaled 847x940 -> 288x320, lossless WebP, res/drawable-nodpi)
 ic_bell              VD      Imported, not used yet                        ic_bell.svg
 ic_share             VD      Imported, not used yet                        ic_share.svg
 ic_more              VD      Imported, not used yet                        ic_more.svg

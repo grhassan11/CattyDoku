@@ -15,22 +15,14 @@ class InterstitialPolicyTest {
         level: Int = 20,
         isDaily: Boolean = false,
         inTutorial: Boolean = false,
-        now: Long = 1_000_000L,
-        sessionStart: Long = 0L,
-        lastAd: Long? = null,
         lastLevel: Int = 0,
-        shown: Int = 0,
     ) = InterstitialContext(
         trigger = trigger,
         canRequestAds = canRequestAds,
         level = level,
         isDaily = isDaily,
         inTutorial = inTutorial,
-        nowMs = now,
-        sessionStartMs = sessionStart,
-        lastAdShownMs = lastAd,
         lastInterstitialLevel = lastLevel,
-        adsShownThisSession = shown,
     )
 
     private fun skip(reason: AdSkipReason) = AdDecision.Skip(reason)
@@ -48,9 +40,6 @@ class InterstitialPolicyTest {
         assertEquals(9, cfg.adFreeThroughLevel)
         assertEquals(10, AdFreePolicy.FIRST_AD_LEVEL)
         assertEquals(5, cfg.levelsInterstitialFrequency)
-        assertEquals(90_000L, cfg.minIntervalMs)
-        assertEquals(120_000L, cfg.minSessionAgeMs)
-        assertEquals(6, cfg.maxPerSession)
         assertEquals(3_000L, cfg.loadWaitTimeoutMs)
         assertTrue(cfg.levelsWinInterstitialShow && cfg.sudokuWinInterstitialShow)
         assertTrue(cfg.levelsRestartInterstitialShow && cfg.sudokuRestartInterstitialShow)
@@ -59,12 +48,9 @@ class InterstitialPolicyTest {
     @Test
     fun sudokuTriggersIgnoreQueensPacingButKeepConsentSwitchAndRemoveAds() {
         for (t in listOf(AdTrigger.SUDOKU_WON_CONTINUE, AdTrigger.SUDOKU_RESTART)) {
-            // Queens ad-free level, frequency, level-already-had-ad, session age, interval and cap do not apply
+            // Queens ad-free level, frequency, level-already-had-ad does not apply
             assertEquals("$t", AdDecision.Show, InterstitialPolicy.decide(ok(trigger = t, level = 0, lastLevel = 99), cfg))
             assertEquals("$t", AdDecision.Show, InterstitialPolicy.decide(ok(trigger = t, level = 7), cfg))
-            assertEquals("$t", AdDecision.Show, InterstitialPolicy.decide(ok(trigger = t, now = 1L), cfg))
-            assertEquals("$t", AdDecision.Show, InterstitialPolicy.decide(ok(trigger = t, lastAd = 999_999L), cfg))
-            assertEquals("$t", AdDecision.Show, InterstitialPolicy.decide(ok(trigger = t, shown = cfg.maxPerSession), cfg))
             assertEquals("$t", skip(AdSkipReason.NO_CONSENT), InterstitialPolicy.decide(ok(trigger = t, canRequestAds = false), cfg))
         }
     }
@@ -178,24 +164,8 @@ class InterstitialPolicyTest {
 
     @Test
     fun frequencyKeepsOtherGates() {
-        assertEquals(skip(AdSkipReason.SESSION_TOO_YOUNG), InterstitialPolicy.decide(ok(level = 10, now = 60_000L), cfg))
         assertEquals(skip(AdSkipReason.NO_CONSENT), InterstitialPolicy.decide(ok(level = 10, canRequestAds = false), cfg))
         assertEquals(skip(AdSkipReason.DAILY), InterstitialPolicy.decide(ok(level = 10, isDaily = true), cfg))
-        assertEquals(skip(AdSkipReason.SESSION_CAP), InterstitialPolicy.decide(ok(level = 10, shown = cfg.maxPerSession), cfg))
-        assertEquals(skip(AdSkipReason.TOO_SOON_AFTER_LAST_AD), InterstitialPolicy.decide(ok(level = 10, lastAd = 1_000_000L - 10L), cfg))
-    }
-
-    @Test
-    fun sessionAgeBoundary() {
-        assertEquals(skip(AdSkipReason.SESSION_TOO_YOUNG), InterstitialPolicy.decide(ok(now = 119_999L), cfg))
-        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(now = 120_000L), cfg))
-    }
-
-    @Test
-    fun minIntervalSinceLastAdBoundary() {
-        val now = 1_000_000L
-        assertEquals(skip(AdSkipReason.TOO_SOON_AFTER_LAST_AD), InterstitialPolicy.decide(ok(now = now, lastAd = now - 89_999L), cfg))
-        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(now = now, lastAd = now - 90_000L), cfg))
     }
 
     @Test
@@ -203,12 +173,6 @@ class InterstitialPolicyTest {
         assertEquals(skip(AdSkipReason.LEVEL_ALREADY_HAD_AD), InterstitialPolicy.decide(ok(level = 20, lastLevel = 20), cfg))
         assertEquals(skip(AdSkipReason.LEVEL_ALREADY_HAD_AD), InterstitialPolicy.decide(ok(level = 20, lastLevel = 25), cfg))
         assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(level = 25, lastLevel = 20), cfg))
-    }
-
-    @Test
-    fun sessionCap() {
-        assertEquals(skip(AdSkipReason.SESSION_CAP), InterstitialPolicy.decide(ok(shown = cfg.maxPerSession), cfg))
-        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(shown = cfg.maxPerSession - 1), cfg))
     }
 
     @Test
@@ -237,15 +201,9 @@ class InterstitialPolicyTest {
     }
 
     @Test
-    fun loseRetryKeepsConsentLevelIntervalSessionAgeAndCap() {
+    fun loseRetryKeepsConsentAndAdFreeLevel() {
         assertEquals(skip(AdSkipReason.NO_CONSENT), InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, canRequestAds = false), cfg))
         assertEquals(skip(AdSkipReason.AD_FREE_LEVEL), InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, level = 9), cfg))
-        assertEquals(
-            skip(AdSkipReason.TOO_SOON_AFTER_LAST_AD),
-            InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, lastAd = 1_000_000L - 10L), cfg),
-        )
-        assertEquals(skip(AdSkipReason.SESSION_TOO_YOUNG), InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, now = 60_000L), cfg))
-        assertEquals(skip(AdSkipReason.SESSION_CAP), InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, shown = cfg.maxPerSession), cfg))
     }
 
     @Test
@@ -258,12 +216,12 @@ class InterstitialPolicyTest {
     fun matrixShowsOnlyWhenEveryRuleHolds() {
         var shows = 0
         for (consent in listOf(true, false)) for (tutorial in listOf(true, false)) for (daily in listOf(true, false)) {
-            for (level in listOf(1, 3, 9, 10, 11, 15, 40)) for (age in listOf(60_000L, 200_000L)) {
+            for (level in listOf(1, 3, 9, 10, 11, 15, 40)) {
                 val d = InterstitialPolicy.decide(
-                    ok(canRequestAds = consent, inTutorial = tutorial, isDaily = daily, level = level, now = age, lastLevel = 1), cfg,
+                    ok(canRequestAds = consent, inTutorial = tutorial, isDaily = daily, level = level, lastLevel = 1), cfg,
                 )
-                val expected = consent && !tutorial && !daily && level >= 10 && level % 5 == 0 && age >= 120_000L
-                assertEquals("c=$consent t=$tutorial d=$daily l=$level a=$age", expected, d == AdDecision.Show)
+                val expected = consent && !tutorial && !daily && level >= 10 && level % 5 == 0
+                assertEquals("c=$consent t=$tutorial d=$daily l=$level", expected, d == AdDecision.Show)
                 if (d == AdDecision.Show) shows++
             }
         }

@@ -1,5 +1,6 @@
 package com.tm.meow.sudoku.puzzle.di
 
+import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.repository.AppFlagsRepository
 import com.tm.meow.sudoku.puzzle.domain.sudoku.repository.SudokuRepository
@@ -75,5 +76,6 @@ object SudokuUseCaseModule {
     @Provides
     fun provideShowSudokuInterstitialIfAllowed(
         show: ShowInterstitialIfAllowed,
-    ): ShowSudokuInterstitialIfAllowed = ShowSudokuInterstitialIfAllowed(show)
+        config: AdPolicyConfig,
+    ): ShowSudokuInterstitialIfAllowed = ShowSudokuInterstitialIfAllowed(show, config)
 }

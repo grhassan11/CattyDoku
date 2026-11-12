@@ -1,6 +1,10 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.home
 
+import android.Manifest
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -47,6 +51,7 @@ fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
     adsViewModel: LevelsHomeAdsViewModel = hiltViewModel(),
     rateUsViewModel: RateUsViewModel = hiltViewModel(),
+    notificationAskViewModel: NotificationAskViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val nativeAdSlot by adsViewModel.slot.collectAsStateWithLifecycle()
@@ -91,6 +96,20 @@ fun HomeRoute(
         scope.launch {
             delay(RATE_US_CHECK_DELAY_MS)
             rateUsViewModel.tryShow()
+        }
+    }
+    // First Home entry: ask POST_NOTIFICATIONS once via the system dialog (API 33+ only). The launcher stays here (needs the
+    // Activity result registry). claimAsk() suspends while the UMP form or a full-screen ad is up and saves the "asked" flag
+    // before returning true, so denial is never re-prompted. The effect restarts per resume; once asked it returns false.
+    val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        notificationAskViewModel.onResult(granted)
+    }
+    var resumed by remember { mutableStateOf(false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { resumed = true }
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { resumed = false }
+    LaunchedEffect(resumed) {
+        if (resumed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && notificationAskViewModel.claimAsk()) {
+            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
     // Home leaves composition (Game opened, activity recreated): destroy the ad; ON_START loads a fresh one on return.

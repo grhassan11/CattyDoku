@@ -9,6 +9,8 @@ import android.os.Build
 import android.provider.Settings as AndroidSettings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
@@ -27,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tm.meow.sudoku.puzzle.R
+import com.tm.meow.sudoku.puzzle.domain.language.AppLanguages
 import com.tm.meow.sudoku.puzzle.ui.consent.PrivacyOptionsViewModel
 import com.tm.meow.sudoku.puzzle.ui.screens.game.SettingToggle
 import com.tm.meow.sudoku.puzzle.util.FeedbackEmail
@@ -68,9 +71,13 @@ fun SettingsRoute(
         notificationsOn = notificationsEnabled(context)
         // Granted from system settings while away: not-granted -> granted turns all reminders ON once.
         viewModel.syncNotificationPermission()
+        viewModel.refreshLanguage() // the system per-app language picker may have changed it while away
         onPauseOrDispose { }
     }
     var pending by rememberSaveable { mutableStateOf<SettingToggle?>(null) }
+    val languageTag by viewModel.languageTag.collectAsStateWithLifecycle()
+    val language = AppLanguages.ALL.firstOrNull { it.tag == languageTag } ?: AppLanguages.ENGLISH
+    var showLanguage by rememberSaveable { mutableStateOf(false) }
 
     fun toast(text: String) {
         scope.launch {
@@ -122,18 +129,33 @@ fun SettingsRoute(
         settings.copy(streakReminders = false, dailyReminders = false, sudokuReminders = false)
     }
 
-    SettingsScreen(
-        settings = shown,
-        snackbarHostState = snackbarHostState,
-        onBack = onBack,
-        onSettingChanged = ::onSettingChanged,
-        onFeedback = { if (!FeedbackEmail.open(context, feedbackSubject)) toast(noEmailApp) },
-        onPrivacyPolicy = { if (!LegalLinks.open(context, LegalLinks.PRIVACY_URL)) toast(linkFailed) },
-        onHowToPlay = onHowToPlay,
-        onAbout = onAbout,
-        modifier = modifier,
-        onPrivacyOptions = if (privacyRequired) privacyViewModel::open else null,
-    )
+    Box(modifier.fillMaxSize()) {
+        SettingsScreen(
+            settings = shown,
+            snackbarHostState = snackbarHostState,
+            onBack = onBack,
+            onSettingChanged = ::onSettingChanged,
+            onFeedback = { if (!FeedbackEmail.open(context, feedbackSubject)) toast(noEmailApp) },
+            onPrivacyPolicy = { if (!LegalLinks.open(context, LegalLinks.PRIVACY_URL)) toast(linkFailed) },
+            onHowToPlay = onHowToPlay,
+            onAbout = onAbout,
+            languageName = language.nativeName,
+            onLanguage = { showLanguage = true },
+            onPrivacyOptions = if (privacyRequired) privacyViewModel::open else null,
+        )
+        if (showLanguage) {
+            LanguageDialog(
+                languages = AppLanguages.ALL,
+                currentTag = language.tag,
+                onConfirm = { tag ->
+                    // Close first: applying the locale recreates the activity, and the dialog flag is saved state.
+                    showLanguage = false
+                    viewModel.onLanguageConfirmed(tag)
+                },
+                onDismiss = { showLanguage = false },
+            )
+        }
+    }
 }
 
 /** True when the OS lets the app post (API 33+: runtime permission; below: app-level switch). */

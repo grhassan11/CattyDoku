@@ -90,8 +90,5 @@ object SudokuGameUiMapper {
         score = game.score,
         mistakes = game.mistakes,
         hintsUsed = game.hintsUsed,
-        newBestTime = completion.isNewBestTime,
-        newBestScore = completion.isNewBestScore,
-        unlocked = completion.justUnlocked,
     )
 }

@@ -38,7 +38,6 @@ sealed class AnalyticsEvent(val name: String, val params: Map<String, Any> = emp
     data class TutorialComplete(val skipped: Boolean) :
         AnalyticsEvent("tutorial_complete", mapOf("skipped" to flag(skipped)))
 
-    data object TermsAccept : AnalyticsEvent("terms_accept")
 
     data class NotificationPermission(val granted: Boolean) :
         AnalyticsEvent("notification_permission", mapOf("granted" to flag(granted)))
@@ -217,6 +216,10 @@ sealed class AnalyticsEvent(val name: String, val params: Map<String, Any> = emp
     /** [setting]: lowercase toggle name (music, sfx, voice, haptics, pattern_mode). */
     data class SettingChange(val setting: String, val enabled: Boolean) :
         AnalyticsEvent("settings_change", mapOf("setting" to setting, "enabled" to flag(enabled)))
+
+    /** [language]: BCP-47 tag picked in the Language dialog (en, ja, zh-TW, nl, de, ko, it, es, fr, ru, tr). */
+    data class LanguageChange(val language: String) :
+        AnalyticsEvent("language_change", mapOf("language" to language))
 
     data class SettingsOpen(val entryPoint: String) :
         AnalyticsEvent("settings_open", mapOf("entry_point" to entryPoint))

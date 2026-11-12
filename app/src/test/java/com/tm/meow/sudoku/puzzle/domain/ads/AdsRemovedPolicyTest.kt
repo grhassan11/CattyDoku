@@ -42,11 +42,7 @@ class AdsRemovedPolicyTest {
         canRequestAds = true,
         level = 20,
         winsSinceLastAd = 2,
-        nowMs = 1_000_000L,
-        sessionStartMs = 0L,
-        lastAdShownMs = null,
         lastInterstitialLevel = 0,
-        adsShownThisSession = 0,
         adsRemoved = adsRemoved,
     )
 
@@ -75,16 +71,9 @@ class AdsRemovedPolicyTest {
         coldStart = false,
         canRequestAds = true,
         sdkInitialized = true,
-        startFlowComplete = true,
         fullScreenAdShowing = false,
         consentFormShowing = false,
-        returnedFromAd = false,
-        nowMs = 1_000_000L,
-        backgroundedAtMs = 0L,
-        lastAdShownMs = null,
-        appOpenShownThisSession = 0,
         adAgeMs = 1_000L,
-        playerLevel = 20,
         adsRemoved = adsRemoved,
     )
 

@@ -38,14 +38,14 @@ private val TailGap = 4.dp
  * Place it so the circle centre sits on the trail: offset by -[TailRadius] from the trail y. The label hangs below.
  */
 @Composable
-internal fun TailNode(theme: WorldTheme, modifier: Modifier = Modifier) {
+internal fun TailNode(theme: WorldTheme, modifier: Modifier = Modifier, sizeScale: Float = 1f) {
     val label = stringResource(R.string.world_tail_title)
     val description = stringResource(R.string.world_tail_description)
     Column(
         modifier.semantics(mergeDescendants = true) { contentDescription = description },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Canvas(Modifier.size(TailDiameter)) {
+        Canvas(Modifier.size(TailDiameter * sizeScale)) {
             val lipPx = 4.dp.toPx()
             val r = this.size.minDimension / 2f - lipPx / 2f
             val pal = theme.locked
@@ -67,7 +67,7 @@ internal fun TailNode(theme: WorldTheme, modifier: Modifier = Modifier) {
             textAlign = TextAlign.Center,
             maxLines = 3,
             modifier = Modifier
-                .width(112.dp)
+                .width(112.dp * sizeScale)
                 .background(theme.starPlate, RoundedCornerShape(12.dp))
                 .padding(horizontal = 6.dp, vertical = 3.dp)
                 .clearAndSetSemantics { },
@@ -77,3 +77,4 @@ internal fun TailNode(theme: WorldTheme, modifier: Modifier = Modifier) {
 
 /** Layout footprint above the tail circle's centre / below it, for vertical placement. */
 internal val TailRadius: Dp = TailDiameter / 2
+

@@ -1,5 +1,4 @@
-# Catty Sudoku R8 rules (full mode, AGP default). Hilt, Room, Compose, DataStore, Coroutines, Billing, Firebase, UMP, GMA Next-Gen,
-# Unity Ads and Meta Audience Network ship their own consumer rules: do NOT re-keep their packages here.
+# Catty Sudoku R8 rules (full mode, AGP default). Hilt, Room, Compose, DataStore, Coroutines, Billing, Firebase, UMP, GMA Next-Gen (all ship consumer rules).
 # No blanket keeps of com.tm.meow.sudoku.puzzle.** : the app has no reflection on its own classes (audited: no Class.forName / getDeclared* /
 # getIdentifier / Gson / Moshi / kotlinx.serialization). Persisted ids use StableIds (explicit ints / string keys), not enum
 # name() or ordinal, so obfuscation cannot change stored data.
@@ -19,9 +18,3 @@
     public static int d(...);
     public static int i(...);
 }
-
-# Mediation adapters are instantiated by class name by the GMA Next-Gen SDK. The SDK's own rule already keeps
-# MediationAdapter / Adapter implementations; the adapter AARs ship NO consumer rules, so pin the two entry classes
-# (class-level, no members) as a cheap guard against a rule-shape change in a future SDK bump.
--keep class com.google.ads.mediation.facebook.FacebookMediationAdapter
--keep class com.google.ads.mediation.unity.UnityMediationAdapter

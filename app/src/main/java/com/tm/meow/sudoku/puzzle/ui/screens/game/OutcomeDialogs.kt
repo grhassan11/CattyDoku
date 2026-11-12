@@ -624,6 +624,7 @@ internal fun LoseScreenLayout(
             )
             Spacer(Modifier.height(28.dp))
             if (onWatchRevive != null) {
+                val offline = rewardedLoad == RewardedLoadState.OFFLINE
                 val ready = rewardedLoad == RewardedLoadState.READY && !rewardedBusy
                 val failed = rewardedLoad == RewardedLoadState.FAILED && !rewardedBusy
                 val style = when {
@@ -651,7 +652,7 @@ internal fun LoseScreenLayout(
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                         )
-                        ready -> {
+                        ready || offline -> {
                             IconImage(R.drawable.ic_play, size = 22.dp, tint = style.content)
                             Text(
                                 reviveLabel,
@@ -669,6 +670,16 @@ internal fun LoseScreenLayout(
                             maxLines = 1,
                         )
                     }
+                }
+                if (offline) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.reward_internet_required),
+                        color = GameColors.WinMessage,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
                 }
                 Spacer(Modifier.height(12.dp))
             }

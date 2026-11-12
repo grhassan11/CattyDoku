@@ -12,9 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
  * Main-thread use; fields are @Volatile for safety.
  */
 class AdSessionTracker(private val time: TimeProvider) {
-    @Volatile var sessionStartMs: Long = time.monotonicMillis()
-        private set
-
     @Volatile var lastAdShownMs: Long? = null
         private set
 
@@ -23,13 +20,6 @@ class AdSessionTracker(private val time: TimeProvider) {
 
     /** Sudoku wins since the last shown interstitial (own cadence; Levels keeps [winsSinceLastAd]). */
     @Volatile var sudokuWinsSinceLastAd: Int = 0
-        private set
-
-    @Volatile var adsShown: Int = 0
-        private set
-
-    /** App-open ads shown this process (separate from [adsShown], which caps interstitials). */
-    @Volatile var appOpenShown: Int = 0
         private set
 
     private val fullScreenAdShowingFlow = MutableStateFlow(false)
@@ -50,6 +40,9 @@ class AdSessionTracker(private val time: TimeProvider) {
     /** The consent gather + ads init startup step has begun this process (in-app splash, or the restored-back-stack fallback). */
     @Volatile var startupGatherStarted: Boolean = false
 
+    /** The consent gather + first ads-init attempt have finished this process (success or not). Gate for init retries. */
+    @Volatile var startupGatherFinished: Boolean = false
+
     /** Home reached this process = Splash / Terms / consent / notification prompt / Tutorial are all behind us. */
     @Volatile var startFlowComplete: Boolean = false
 
@@ -68,17 +61,16 @@ class AdSessionTracker(private val time: TimeProvider) {
     }
 
     /**
-     * App-open shown: starts the shared full-screen cool-down (interstitial min interval reads [lastAdShownMs]) but does
-     * NOT reset [winsSinceLastAd] or count toward the interstitial [adsShown] cap.
+     * App-open shown: starts the shared full-screen cool-down ([lastAdShownMs], read by app-open and Rate us) but does
+     * NOT reset [winsSinceLastAd].
      */
     fun recordAppOpenShown() {
         lastAdShownMs = time.monotonicMillis()
-        appOpenShown += 1
     }
 
     /**
-     * Rewarded ad shown (user opted in): starts the shared full-screen cool-down ([lastAdShownMs], read by the interstitial
-     * min interval AND the 180 s app-open rule) but does NOT reset [winsSinceLastAd] or count toward the interstitial cap.
+     * Rewarded ad shown (user opted in): starts the shared full-screen cool-down ([lastAdShownMs], read by the 180 s app-open rule
+     * and Rate us) but does NOT reset [winsSinceLastAd].
      */
     fun recordRewardedShown() {
         lastAdShownMs = time.monotonicMillis()
@@ -96,7 +88,6 @@ class AdSessionTracker(private val time: TimeProvider) {
         lastAdShownMs = time.monotonicMillis()
         winsSinceLastAd = 0
         sudokuWinsSinceLastAd = 0
-        adsShown += 1
     }
 
     fun now(): Long = time.monotonicMillis()

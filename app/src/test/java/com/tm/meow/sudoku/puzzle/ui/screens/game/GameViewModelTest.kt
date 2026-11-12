@@ -670,56 +670,56 @@ class GameViewModelTest {
     }
 
     @Test
-    fun levelTenGetsStarterCat() = vmTest(starterRigAt(10)) { _, vm ->
-        assertEquals(10, vm.ready().levelNumber)
+    fun levelTwentyGetsStarterCat() = vmTest(starterRigAt(20)) { _, vm ->
+        assertEquals(20, vm.ready().levelNumber)
         assertEquals(1, vm.ready().cats().size)
         assertTrue(vm.ready().cats().single().locked)
     }
 
     @Test
-    fun levelElevenGetsNoStarterCat() = vmTest(starterRigAt(11)) { rig, vm ->
-        assertEquals(11, vm.ready().levelNumber)
+    fun levelTwentyOneGetsNoStarterCat() = vmTest(starterRigAt(21)) { rig, vm ->
+        assertEquals(21, vm.ready().levelNumber)
         assertEquals(0, vm.ready().cats().size)
         advanceUntilIdle()
-        assertTrue(rig.saved.rows[11]?.state?.lockedCells?.isEmpty() ?: true)
+        assertTrue(rig.saved.rows[21]?.state?.lockedCells?.isEmpty() ?: true)
     }
 
     @Test
-    fun restartAtLevelElevenGetsNoStarterCat() = vmTest(starterRigAt(11)) { _, vm ->
+    fun restartAtLevelTwentyOneGetsNoStarterCat() = vmTest(starterRigAt(21)) { _, vm ->
         vm.onRestart()
         advanceUntilIdle()
         assertEquals(0, vm.ready().cats().size)
     }
 
     @Test
-    fun restoreOfUntouchedSaveAtLevelElevenGetsNoStarterCat() = vmTest(
+    fun restoreOfUntouchedSaveAtLevelTwentyOneGetsNoStarterCat() = vmTest(
         GameRig(starterCat = true).also { rig ->
-            rig.puzzles.rows[11] = fixturePuzzle(11)
-            rig.saved.rows[11] = SavedGame(11, GameState.initial(4), elapsedMs = 1_000L, savedAtMs = 1L)
+            rig.puzzles.rows[21] = fixturePuzzle(21)
+            rig.saved.rows[21] = SavedGame(21, GameState.initial(4), elapsedMs = 1_000L, savedAtMs = 1L)
         },
     ) { rig, vm ->
-        assertEquals(11, vm.ready().levelNumber)
+        assertEquals(21, vm.ready().levelNumber)
         assertEquals(0, vm.ready().cats().size)
         advanceUntilIdle()
-        assertTrue(rig.saved.rows[11]!!.state.lockedCells.isEmpty())
+        assertTrue(rig.saved.rows[21]!!.state.lockedCells.isEmpty())
     }
 
     @Test
-    fun restoreAtLevelElevenKeepsStarterFromOlderBuild() = vmTest(
+    fun restoreAtLevelTwentyOneKeepsStarterFromOlderBuild() = vmTest(
         GameRig(starterCat = true).also { rig ->
-            val p = fixturePuzzle(11)
-            rig.puzzles.rows[11] = p
+            val p = fixturePuzzle(21)
+            rig.puzzles.rows[21] = p
             val pos = com.tm.meow.sudoku.puzzle.domain.engine.StarterCatPicker().pick(p)!!
             val state = com.tm.meow.sudoku.puzzle.domain.engine.GameEngine()
                 .placeStarter(p, GameState.initial(4), pos).state
-            rig.saved.rows[11] = SavedGame(11, state, elapsedMs = 1_000L, savedAtMs = 1L)
+            rig.saved.rows[21] = SavedGame(21, state, elapsedMs = 1_000L, savedAtMs = 1L)
         },
     ) { _, vm ->
         assertEquals(1, vm.ready().cats().size) // not stripped
     }
 
     @Test
-    fun winAtLevelElevenScoresAllPlacements() = vmTest(starterRigAt(11)) { _, vm ->
+    fun winAtLevelTwentyOneScoresAllPlacements() = vmTest(starterRigAt(21)) { _, vm ->
         for (p in solution) vm.onCellDoubleTap(p)
         advanceUntilIdle()
         val outcome = vm.ready().outcome as OutcomeUi.Won

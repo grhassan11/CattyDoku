@@ -57,12 +57,17 @@ private class FakeAds(
 ) : AdsRepository {
     var initCalls = 0
     var showCalls = 0
+    var preloadCalls = 0
     var lastWait = -1L
 
     override suspend fun initialize() {
         log.calls += "init"
         initCalls++
         if (initThrows) error("boom")
+    }
+
+    override fun preloadInterstitial() {
+        preloadCalls++
     }
 
     override suspend fun showIfReady(loadWaitTimeoutMs: Long): AdShowResult {
@@ -215,7 +220,7 @@ class AdsUseCasesTest {
         val show = ShowInterstitialIfAllowed(consent, ads, tracker, flags, config)
     }
 
-    /** Rig whose session is old enough (clock moved past the min session age after tracker creation). */
+    /** Rig with wins recorded and the clock advanced (session age no longer matters to the policy). */
     private fun rig(
         consentState: ConsentState = ConsentState(canRequestAds = true),
         adResult: AdShowResult = AdShowResult.SHOWN,
@@ -235,7 +240,6 @@ class AdsUseCasesTest {
         assertEquals(1, r.ads.showCalls)
         assertEquals(AdPolicyConfig.DEFAULT_LOAD_WAIT_TIMEOUT_MS, r.ads.lastWait)
         assertEquals(0, r.tracker.winsSinceLastAd)
-        assertEquals(1, r.tracker.adsShown)
         assertEquals(r.time.now, r.tracker.lastAdShownMs)
         val f = r.flags.flags.first()
         assertEquals(20, f.lastInterstitialLevel)
@@ -296,28 +300,18 @@ class AdsUseCasesTest {
             assertFalse("$res", r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
             assertEquals(1, r.ads.showCalls)
             assertEquals(2, r.tracker.winsSinceLastAd)
-            assertEquals(0, r.tracker.adsShown)
             assertEquals(0, r.flags.flags.first().lastInterstitialLevel)
         }
     }
 
     @Test
-    fun secondAdBlockedByMinIntervalThenAllowedAfterIt() = runTest {
-        val r = rig()
+    fun backToBackAdsAllowedNoCooldownNoSessionAgeNoCap() = runTest {
+        val r = rig(advanceMs = 0L)
         assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
         r.tracker.recordWin(); r.tracker.recordWin()
-        r.time.now += 10_000L
-        assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 25))
-        r.time.now += 90_000L
         assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 25))
-        assertEquals(2, r.flags.flags.first().sessionAdCount)
-    }
-
-    @Test
-    fun youngSessionBlocksAd() = runTest {
-        val r = rig(advanceMs = 30_000L)
-        assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
-        assertEquals(0, r.ads.showCalls)
+        assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 30))
+        assertEquals(3, r.flags.flags.first().sessionAdCount)
     }
 
     @Test
@@ -352,5 +346,23 @@ class AdsUseCasesTest {
         val r = rig()
         assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 10))
         assertEquals(1, r.ads.showCalls)
+    }
+
+    @Test
+    fun preloadInterstitialRespectsGates() {
+        fun preloads(playerLevel: Int?, consent: ConsentState = ConsentState(canRequestAds = true), config: AdPolicyConfig = AdPolicyConfig()): Int {
+            val log = CallLog()
+            val ads = FakeAds(log, AdShowResult.SHOWN)
+            PreloadInterstitialAd(FakeConsent(log, consent).also { it.set(consent) }, ads, config)(playerLevel)
+            return ads.preloadCalls
+        }
+        assertEquals("sudoku no level gate", 1, preloads(null))
+        assertEquals("levels past ad-free", 1, preloads(10))
+        assertEquals("levels ad-free", 0, preloads(9))
+        assertEquals("no consent", 0, preloads(10, ConsentState(canRequestAds = false)))
+        assertEquals("all switches off", 0, preloads(10, config = AdPolicyConfig(
+            levelsWinInterstitialShow = false, sudokuWinInterstitialShow = false,
+            levelsRestartInterstitialShow = false, sudokuRestartInterstitialShow = false,
+        )))
     }
 }

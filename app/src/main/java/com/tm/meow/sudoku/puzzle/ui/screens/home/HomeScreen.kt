@@ -16,6 +16,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -65,6 +66,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,6 +88,9 @@ import com.tm.meow.sudoku.puzzle.ui.components.rememberTapClick
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 
 private val ButtonMaxWidth = 360.dp
+
+/** Below this width (small phone / large display size) the top bar, gaps and Daily pill use a compact look; at or above it nothing changes. */
+private val CompactBelow = 340.dp
 
 /**
  * Stateless home screen: state in, lambdas out. No ViewModel here. [onNodeClick] = a done / current node was tapped (opens the level sheet), [onSheetDismiss] = sheet closed,
@@ -136,11 +141,14 @@ fun HomeScreen(
     var spacerTopPx by remember { mutableFloatStateOf(0f) }
     val jumpGapPx = with(density) { 12.dp.toPx() }
 
-    Box(
+    BoxWithConstraints(
         modifier
             .fillMaxSize()
             .homeBackground(),
     ) {
+        val compact = maxWidth < CompactBelow
+        val gap = if (compact) 4.dp else 8.dp
+        val topBarHeight = if (compact) 56.dp else 64.dp
         Column(Modifier.fillMaxSize()) {
             // Map region = everything above the native ad slot. The world map is full-bleed (behind the status bar and
             // the side/bottom insets); the controls are overlays on top, padded by contentInsets exactly as before.
@@ -183,8 +191,9 @@ fun HomeScreen(
                         .padding(horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(gap))
                     TopBar(
+                        compact = compact,
                         streak = state.streak,
                         rewardPending = state.streakRewardPending,
                         onOpenStreak = onOpenStreak,
@@ -193,7 +202,7 @@ fun HomeScreen(
                     )
                     // World-name pill on its own row under the top bar, at the true horizontal centre. The row keeps a
                     // 48 dp minimum height so the trail band does not shift while the pill is not yet shown.
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(gap))
                     Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp), contentAlignment = Alignment.Center) {
                         WorldNameLabel(worldIndex = { worldIndex })
                     }
@@ -208,7 +217,7 @@ fun HomeScreen(
                                 bandBottomPx = r.bottom
                             },
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
                     // Daily done today: hide the pill (and its top gap) entirely; it returns on the next date.
                     AnimatedVisibility(
                         visible = state.daily != DailyUi.Done,
@@ -216,9 +225,10 @@ fun HomeScreen(
                         exit = fadeOut() + shrinkVertically(),
                     ) {
                         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Spacer(Modifier.height(16.dp))
+                            Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
                             DailyChallengePill(
                                 daily = state.daily,
+                                compact = compact,
                                 onClick = onDailyChallenge,
                                 modifier = Modifier
                                     .widthIn(max = ButtonMaxWidth)
@@ -226,10 +236,10 @@ fun HomeScreen(
                             )
                         }
                     }
-                    Spacer(Modifier.height(12.dp).onGloballyPositioned { spacerTopPx = it.boundsInRoot().top })
+                    Spacer(Modifier.height(if (compact) 8.dp else 12.dp).onGloballyPositioned { spacerTopPx = it.boundsInRoot().top })
                 }
                 // Floating remove-ads badge: top-right directly under the Settings button, clear of the streak chip.
-                // 8 dp gap + 64 dp top bar (Shop is 64) + 8 dp gap = 80 dp from the content top. Box is 80 dp wide and the
+                // gap (8 dp, 4 compact) + top bar (64 dp, 56 compact) + gap = 80 dp (64 compact) from the content top. Box is 80 dp wide and the
                 // Settings button is 48 dp inset 16 dp, so end padding 0 centres the badge on Settings (16 + 24 = 40 = 80 / 2).
                 // AnimatedVisibility is unusable here: this Box sits inside a Column, so the ColumnScope overload wins and the
                 // scope marker rejects it. A plain alpha fade does the same job.
@@ -238,7 +248,7 @@ fun HomeScreen(
                     RemoveAdsBadge(onClick = onRemoveAds, modifier = Modifier
                         .align(Alignment.TopEnd)
                         .windowInsetsPadding(contentInsets)
-                        .padding(end = 0.dp, top = 80.dp)
+                        .padding(end = 0.dp, top = gap * 2 + topBarHeight)
                         .graphicsLayer { alpha = badgeAlpha })
                 }
                 }
@@ -331,6 +341,7 @@ private fun JumpToCurrentPill(
 
 @Composable
 private fun TopBar(
+    compact: Boolean,
     streak: Int,
     rewardPending: Boolean,
     onOpenStreak: () -> Unit,
@@ -338,7 +349,8 @@ private fun TopBar(
     onOpenShop: () -> Unit,
 ) {
     Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) {
-        ShopButton(onOpenShop, Modifier.align(Alignment.CenterStart), boxSize = 64.dp, iconSize = 64.dp)
+        val shopSize = if (compact) 52.dp else 64.dp
+        ShopButton(onOpenShop, Modifier.align(Alignment.CenterStart), boxSize = shopSize, iconSize = shopSize)
         StreakChip(streak, rewardPending, onOpenStreak, Modifier.align(Alignment.Center))
         SettingsButton(onOpenSettings, Modifier.align(Alignment.CenterEnd))
     }
@@ -493,7 +505,7 @@ private fun RemoveAdsBadge(onClick: () -> Unit, modifier: Modifier = Modifier) {
  * reads locked and done as disabled.
  */
 @Composable
-private fun DailyChallengePill(daily: DailyUi, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun DailyChallengePill(daily: DailyUi, onClick: () -> Unit, modifier: Modifier = Modifier, compact: Boolean = false) {
     val label = when (daily) {
         DailyUi.Done -> stringResource(R.string.home_daily_done)
         else -> stringResource(R.string.home_daily_challenge)
@@ -509,7 +521,7 @@ private fun DailyChallengePill(daily: DailyUi, onClick: () -> Unit, modifier: Mo
         style = if (daily == DailyUi.Available) ButtonStyle.Pink else ButtonStyle.Locked,
         contentDescription = description,
         markDisabled = daily != DailyUi.Available,
-        horizontalPadding = 20.dp,
+        horizontalPadding = if (compact) 14.dp else 20.dp,
     ) {
         // Calendar replaces the padlock; multi-colour so untinted. Dimmed while locked (grey pill + hint text carry the lock cue).
         IconImage(
@@ -528,18 +540,19 @@ private fun DailyChallengePill(daily: DailyUi, onClick: () -> Unit, modifier: Mo
             Text(
                 label,
                 color = labelColor,
-                fontSize = 22.sp,
+                fontSize = if (compact) 20.sp else 22.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FredokaFamily,
                 textAlign = TextAlign.Center,
-                maxLines = 2,
+                maxLines = if (compact) 1 else 2,
+                overflow = TextOverflow.Ellipsis,
                 style = labelShadow,
             )
             if (daily is DailyUi.Locked) {
                 Text(
                     stringResource(R.string.home_daily_locked_hint, daily.requiredLevel),
                     color = labelColor,
-                    fontSize = 14.sp,
+                    fontSize = if (compact) 12.sp else 14.sp,
                     fontWeight = FontWeight.Medium,
                     fontFamily = FredokaFamily,
                     textAlign = TextAlign.Center,

@@ -227,15 +227,13 @@ class GameAdUseCasesTest {
     }
 
     @Test
-    fun earnedRecordsSharedFullScreenTimeButNotInterstitialCounters() = runTest {
+    fun earnedRecordsSharedFullScreenTimeButNotWinCounter() = runTest {
         val r = ShowRig(RewardedResult.EARNED)
         r.tracker.recordWin()
         r.time.now += 5_000L
         assertEquals(RewardedResult.EARNED, r.show(playerLevel = 15))
         assertEquals(r.time.now, r.tracker.lastAdShownMs)
         assertEquals("wins untouched", 1, r.tracker.winsSinceLastAd)
-        assertEquals("interstitial cap untouched", 0, r.tracker.adsShown)
-        assertEquals("app-open count untouched", 0, r.tracker.appOpenShown)
     }
 
     @Test

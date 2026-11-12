@@ -6,6 +6,7 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.EnsureConsentAndAdsInit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -19,13 +20,16 @@ class StartupRecoveryViewModel @Inject constructor(
     private val ensureConsentAndAdsInit: EnsureConsentAndAdsInit,
 ) : ViewModel() {
 
-    private var requested = false
+    private var job: Job? = null
 
-    /** [currentRoute] = route pattern of the top back stack entry when the Activity resumed (null = not known yet, ignored). */
+    /**
+     * [currentRoute] = route pattern of the top back stack entry when the Activity resumed (null = not known yet, ignored).
+     * Every resume off the splash re-enters the idempotent use case: first time runs startup, later times only retry a
+     * failed ads init (no UMP form). Overlapping calls are dropped.
+     */
     fun onResumed(currentRoute: String?) {
-        if (requested || currentRoute == null || currentRoute == Routes.SPLASH) return
-        requested = true
-        viewModelScope.launch {
+        if (currentRoute == null || currentRoute == Routes.SPLASH || job?.isActive == true) return
+        job = viewModelScope.launch {
             try {
                 ensureConsentAndAdsInit()
             } catch (e: CancellationException) {

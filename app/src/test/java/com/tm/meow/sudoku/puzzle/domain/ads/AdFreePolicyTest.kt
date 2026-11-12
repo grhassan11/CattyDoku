@@ -12,7 +12,6 @@ class AdFreePolicyTest {
         assertEquals(9, AdFreePolicy.AD_FREE_THROUGH_LEVEL)
         assertEquals(10, AdFreePolicy.FIRST_AD_LEVEL)
         assertEquals(9, AdPolicyConfig().adFreeThroughLevel)
-        assertEquals(9, AppOpenConfig().adFreeThroughLevel)
     }
 
     @Test
@@ -40,39 +39,19 @@ class AdFreePolicyTest {
         assertTrue(AdFreePolicy.adsAllowed(1, throughLevel = 0))
     }
 
-    // ---- app-open uses the same rule ----
+    // ---- app-open has no level gate ----
 
-    private fun appOpenCtx(level: Int) = AppOpenContext(
+    private fun appOpenCtx() = AppOpenContext(
         coldStart = false,
         canRequestAds = true,
         sdkInitialized = true,
-        startFlowComplete = true,
         fullScreenAdShowing = false,
         consentFormShowing = false,
-        returnedFromAd = false,
-        nowMs = 1_000_000L,
-        backgroundedAtMs = 0L,
-        lastAdShownMs = null,
-        appOpenShownThisSession = 0,
         adAgeMs = 1_000L,
-        playerLevel = level,
     )
 
     @Test
-    fun appOpenSkipsThroughLevelNineAndShowsFromTen() {
-        for (l in listOf(0, 1, 5, 9)) {
-            assertEquals(
-                "L$l",
-                AppOpenDecision.Skip(AppOpenSkipReason.AD_FREE_LEVEL),
-                AppOpenPolicy.decide(appOpenCtx(l)),
-            )
-        }
-        assertEquals(AppOpenDecision.Show, AppOpenPolicy.decide(appOpenCtx(10)))
-    }
-
-    @Test
-    fun appOpenContextDefaultsToPastTheGate() {
-        val ctx = appOpenCtx(11).copy(playerLevel = Int.MAX_VALUE)
-        assertEquals(AppOpenDecision.Show, AppOpenPolicy.decide(ctx))
+    fun appOpenHasNoLevelGate() {
+        assertEquals(AppOpenDecision.Show, AppOpenPolicy.decide(appOpenCtx()))
     }
 }

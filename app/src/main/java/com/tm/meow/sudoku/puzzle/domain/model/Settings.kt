@@ -30,7 +30,7 @@ data class AppFlags(
     val installDateEpochDay: Long? = null,
     val lastInterstitialLevel: Int = 0,
     val sessionAdCount: Int = 0,
-    /** Version of the Terms/Privacy the user accepted (0 = none). See TermsPolicy. */
+    /** Legacy: Terms/Privacy version accepted on the removed Welcome screen. Kept only so stored prefs stay readable; unused. */
     val termsVersion: Int = 0,
     /** Rate us dialog was shown (the automatic prompt is once only, see RateUsPolicy). */
     val rateUsShown: Boolean = false,

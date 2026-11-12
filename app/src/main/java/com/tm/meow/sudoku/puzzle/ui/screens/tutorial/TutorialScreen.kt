@@ -47,7 +47,9 @@ import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-private const val FINGER_DP = 56f
+private const val FINGER_W_DP = 64f
+/** Paw art aspect 288x320 (w/h = 0.9). */
+private const val FINGER_H_DP = FINGER_W_DP / 0.9f
 
 /**
  * Room kept above / below the board for the instruction card and the bottom block (second card, hint
@@ -56,9 +58,9 @@ private const val FINGER_DP = 56f
 private const val TOP_RESERVE_DP = 150f
 private const val BOTTOM_RESERVE_DP = 190f
 
-/** Where the fingertip sits inside the icon (fraction of its size). Icon art is not documented: eyeballed. */
-private const val FINGER_TIP_X = 0.3f
-private const val FINGER_TIP_Y = 0.3f
+/** Where the paw tip (top of the white toes) sits inside the icon (fraction of its size). Eyeballed from ic_paw_tutorial. */
+private const val FINGER_TIP_X = 0.5f
+private const val FINGER_TIP_Y = 0.22f
 
 /** Root-space bounds of the board, written on layout, read in draw / layout phases only. */
 @Stable
@@ -172,7 +174,7 @@ internal fun rememberLoopProgress(): State<Float> {
 }
 
 /**
- * Hand pointer ([R.drawable.ic_finger_tap]). [positionDp] / [scale] are lambdas so the per-frame
+ * Paw pointer ([R.drawable.ic_paw_tutorial]). [positionDp] / [scale] are lambdas so the per-frame
  * values are read in layout / draw phase, not in composition. Decorative: no content description.
  * [positionDp] is relative to the parent's top-left.
  */
@@ -183,17 +185,17 @@ internal fun FingerImage(
     modifier: Modifier = Modifier,
 ) {
     Image(
-        painter = painterResource(R.drawable.ic_finger_tap),
+        painter = painterResource(R.drawable.ic_paw_tutorial),
         contentDescription = null,
         modifier = modifier
             .offset {
                 val p = positionDp()
                 IntOffset(
-                    ((p.x - FINGER_DP * FINGER_TIP_X).dp.toPx()).roundToInt(),
-                    ((p.y - FINGER_DP * FINGER_TIP_Y).dp.toPx()).roundToInt(),
+                    ((p.x - FINGER_W_DP * FINGER_TIP_X).dp.toPx()).roundToInt(),
+                    ((p.y - FINGER_H_DP * FINGER_TIP_Y).dp.toPx()).roundToInt(),
                 )
             }
-            .size(FINGER_DP.dp)
+            .size(FINGER_W_DP.dp, FINGER_H_DP.dp)
             .graphicsLayer {
                 val s = scale()
                 scaleX = s

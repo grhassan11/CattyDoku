@@ -30,7 +30,6 @@ import com.tm.meow.sudoku.puzzle.ui.screens.game.GameRoute
 import com.tm.meow.sudoku.puzzle.ui.screens.game.GameViewModel
 import com.tm.meow.sudoku.puzzle.ui.screens.home.HomeRoute
 import com.tm.meow.sudoku.puzzle.ui.screens.home.StreakRoute
-import com.tm.meow.sudoku.puzzle.ui.screens.notification.NotificationPromptRoute
 import com.tm.meow.sudoku.puzzle.ui.screens.settings.SettingsRoute
 import com.tm.meow.sudoku.puzzle.ui.screens.shop.ShopRoute
 import com.tm.meow.sudoku.puzzle.ui.screens.shop.ShopUiMapper
@@ -39,20 +38,16 @@ import com.tm.meow.sudoku.puzzle.ui.screens.sudoku.entry.SudokuEntryRoute
 import com.tm.meow.sudoku.puzzle.ui.screens.sudoku.game.SudokuGameRoute
 import com.tm.meow.sudoku.puzzle.ui.screens.sudoku.tutorial.SudokuTutorialRoute
 import com.tm.meow.sudoku.puzzle.ui.screens.tutorial.TutorialRoute
-import com.tm.meow.sudoku.puzzle.ui.screens.welcome.WelcomeRoute
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 
 /**
- * Flow: system splash -> in-app splash (UMP consent + ads init gate it, every launch) -> welcome / terms
- * (first launch) -> notification prompt (API 33+, once) -> tutorial (until done) -> home -> game. The order and which
+ * Flow: system splash -> in-app splash (UMP consent + ads init gate it, every launch) -> tutorial (until done)
+ * -> home (asks POST_NOTIFICATIONS once on first entry, API 33+) -> game. The order and which
  * steps apply live in the pure StartFlow. Every start step pops itself off the stack, so back never
- * returns to splash / welcome / prompt / tutorial and system back on Home exits the app.
- * String routes on purpose: type-safe routes need the kotlinx.serialization plugin (not added).
+ * returns to splash / tutorial and system back on Home exits the app.
  */
 object Routes {
     const val SPLASH = "splash"
-    const val WELCOME = "welcome"
-    const val NOTIFICATION = "notification"
     const val HOME = "home"
     const val GAME = "game"
 
@@ -162,18 +157,6 @@ fun AppNavHost(
         composable(Routes.SPLASH) {
             SplashRoute(
                 onFinished = { navController.goTo(StartFlow.first(inputs), from = Routes.SPLASH) },
-            )
-        }
-        composable(Routes.WELCOME) {
-            WelcomeRoute(
-                onAccepted = { navController.goTo(StartFlow.after(StartStep.WELCOME, inputs), from = Routes.WELCOME) },
-            )
-        }
-        composable(Routes.NOTIFICATION) {
-            NotificationPromptRoute(
-                onFinished = {
-                    navController.goTo(StartFlow.after(StartStep.NOTIFICATION, inputs), from = Routes.NOTIFICATION)
-                },
             )
         }
         composable(Routes.TUTORIAL) {

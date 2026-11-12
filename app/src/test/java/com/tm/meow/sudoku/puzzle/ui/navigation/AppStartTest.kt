@@ -1,7 +1,6 @@
 package com.tm.meow.sudoku.puzzle.ui.navigation
 
 import com.tm.meow.sudoku.puzzle.domain.model.AppFlags
-import com.tm.meow.sudoku.puzzle.domain.startup.SdkLevelProvider
 import com.tm.meow.sudoku.puzzle.domain.startup.StartFlow
 import com.tm.meow.sudoku.puzzle.domain.startup.StartInputs
 import com.tm.meow.sudoku.puzzle.domain.startup.StartStep
@@ -22,8 +21,6 @@ class AppStartTest {
 
     @Test
     fun everyStepHasItsOwnRoute() {
-        assertEquals(Routes.WELCOME, routeFor(StartStep.WELCOME))
-        assertEquals(Routes.NOTIFICATION, routeFor(StartStep.NOTIFICATION))
         assertEquals(Routes.TUTORIAL, routeFor(StartStep.TUTORIAL))
         assertEquals(Routes.HOME, routeFor(StartStep.HOME))
         assertEquals(StartStep.entries.size, StartStep.entries.map(::routeFor).toSet().size)
@@ -31,7 +28,7 @@ class AppStartTest {
 
     @Test
     fun routesAreDistinctFromSplashAndGame() {
-        val routes = listOf(Routes.SPLASH, Routes.WELCOME, Routes.NOTIFICATION, Routes.TUTORIAL, Routes.HOME, Routes.GAME)
+        val routes = listOf(Routes.SPLASH, Routes.TUTORIAL, Routes.HOME, Routes.GAME)
         assertEquals(routes.size, routes.toSet().size)
     }
 
@@ -39,19 +36,18 @@ class AppStartTest {
     fun viewModelPublishesInputsFromFlagsAndSdk() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         try {
-            val first = AppStartViewModel(ReadStartInputs(FakeAppFlagsRepository(AppFlags()), SdkLevelProvider { 34 }))
+            val first = AppStartViewModel(ReadStartInputs(FakeAppFlagsRepository(AppFlags())))
             assertEquals(
-                StartInputs(termsAccepted = false, notificationPromptAsked = false, tutorialDone = false, sdkInt = 34),
+                StartInputs(tutorialDone = false),
                 first.startInputs.value,
             )
-            assertEquals(StartStep.WELCOME, StartFlow.first(first.startInputs.value!!))
+            assertEquals(StartStep.TUTORIAL, StartFlow.first(first.startInputs.value!!))
 
             val later = AppStartViewModel(
                 ReadStartInputs(
                     FakeAppFlagsRepository(
-                        AppFlags(termsAccepted = true, termsVersion = 1, notificationPromptAsked = true, tutorialDone = true),
+                        AppFlags(tutorialDone = true),
                     ),
-                    SdkLevelProvider { 34 },
                 ),
             )
             assertNotNull(later.startInputs.value)
@@ -71,9 +67,9 @@ class AppStartTest {
                 override suspend fun update(transform: (AppFlags) -> AppFlags) = Unit
                 override suspend fun setInstallDateIfAbsent(epochDay: Long) = Unit
             }
-            val vm = AppStartViewModel(ReadStartInputs(repo, SdkLevelProvider { 34 }))
+            val vm = AppStartViewModel(ReadStartInputs(repo))
             assertEquals(
-                StartInputs(termsAccepted = false, notificationPromptAsked = false, tutorialDone = false, sdkInt = 34),
+                StartInputs(tutorialDone = false),
                 vm.startInputs.value,
             )
         } finally {

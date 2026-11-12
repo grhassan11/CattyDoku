@@ -56,6 +56,9 @@ abstract class HomeAdsViewModel(
         viewModelScope.launch {
             loadNativeAd.allowedChanges(placement).collect { allowed ->
                 if (allowed && screenStarted && _slot.value !is NativeAdSlotState.Loaded && loadJob?.isActive != true) onScreenStart()
+                // Not allowed any more while Home is up (offline, consent, kill switch): collapse the slot now. screenStarted stays
+                // true so the slot comes back and loads by itself when allowed again (connectivity returns).
+                else if (!allowed && screenStarted) collapse()
             }
         }
     }
@@ -101,6 +104,15 @@ abstract class HomeAdsViewModel(
                 _slot.value = NativeAdSlotState.Loaded(handle)
             }
         }
+    }
+
+    /** Hide the slot (no layout space) and drop the held / loading ad, but keep the screen "started" so a later allow reloads. */
+    private fun collapse() {
+        loadJob?.cancel()
+        loadJob = null
+        (_slot.value as? NativeAdSlotState.Loaded)?.ad?.destroy()
+        lastFailAtMs = null
+        _slot.value = NativeAdSlotState.Hidden
     }
 
     /** Destroy the held ad and cancel an in-flight load. Safe to call repeatedly. Slot resets to its idle state. */

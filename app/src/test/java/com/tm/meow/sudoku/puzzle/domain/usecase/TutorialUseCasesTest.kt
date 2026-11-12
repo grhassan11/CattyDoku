@@ -11,7 +11,7 @@ class TutorialUseCasesTest {
 
     @Test
     fun completeSetsTheFlagAndLeavesOtherFlagsAlone() = runTest {
-        val start = AppFlags(termsAccepted = true, lastPlayedLevel = 4, installDateEpochDay = 20_000L)
+        val start = AppFlags(lastPlayedLevel = 4, installDateEpochDay = 20_000L)
         val repo = FakeAppFlagsRepository(start)
         CompleteTutorial(repo)()
         assertEquals(start.copy(tutorialDone = true), repo.flags.first())

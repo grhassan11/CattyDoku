@@ -23,16 +23,20 @@ import com.tm.meow.sudoku.puzzle.domain.repository.InventoryRepository
 import com.tm.meow.sudoku.puzzle.domain.usecase.GrantBoosterReward
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadBannerAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdSurfaces
+import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadInterstitialAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadRewardedAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.ReviveGame
 import com.tm.meow.sudoku.puzzle.domain.usecase.ShowRewardedAd
 import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdRepository
 import com.tm.meow.sudoku.puzzle.domain.config.RemoteConfigRepository
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveOnline
+import com.tm.meow.sudoku.puzzle.domain.network.ConnectivityObserver
 import com.tm.meow.sudoku.puzzle.domain.repository.AppFlagsRepository
 import com.tm.meow.sudoku.puzzle.domain.time.TimeProvider
 import com.tm.meow.sudoku.puzzle.domain.usecase.EnsureConsentAndAdsInit
 import com.tm.meow.sudoku.puzzle.domain.usecase.GatherConsentAndInitAds
+import com.tm.meow.sudoku.puzzle.domain.usecase.RetryAdsInit
 import com.tm.meow.sudoku.puzzle.domain.usecase.IsConsentFormShowing
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadNativeAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkStartFlowComplete
@@ -79,10 +83,9 @@ object AdsModule {
     fun provideAdPolicyConfig(remoteConfig: RemoteConfigRepository): AdPolicyConfig =
         remoteConfig.current().toAdPolicyConfig()
 
-    /** Remote Config backed (frozen per process). Defaults = [AppOpenConfig] defaults. */
+    /** App-open policy constants (no remote switch, no level gate). */
     @Provides @Singleton
-    fun provideAppOpenConfig(remoteConfig: RemoteConfigRepository): AppOpenConfig =
-        remoteConfig.current().toAppOpenConfig()
+    fun provideAppOpenConfig(): AppOpenConfig = AppOpenConfig()
 
     @Provides @Singleton
     fun provideAdSessionTracker(time: TimeProvider): AdSessionTracker = AdSessionTracker(time)
@@ -94,6 +97,9 @@ object AdsModule {
         flags: AppFlagsRepository,
         tracker: AdSessionTracker,
     ): GatherConsentAndInitAds = GatherConsentAndInitAds(consent, ads, flags, tracker)
+
+    @Provides
+    fun provideRetryAdsInit(gather: GatherConsentAndInitAds): RetryAdsInit = RetryAdsInit(gather)
 
     @Provides
     fun provideEnsureConsentAndAdsInit(
@@ -131,8 +137,19 @@ object AdsModule {
         adsRemoved: AdsRemovedRepository,
         logger: AdLogger,
         analytics: AnalyticsLogger,
+        connectivity: ConnectivityObserver,
     ): ShowInterstitialIfAllowed =
-        ShowInterstitialIfAllowed(consent, ads, tracker, flags, config, adsRemoved, logger, analytics)
+        ShowInterstitialIfAllowed(consent, ads, tracker, flags, config, adsRemoved, logger, analytics, connectivity)
+
+    @Provides
+    fun providePreloadInterstitialAd(
+        consent: ConsentRepository,
+        ads: AdsRepository,
+        config: AdPolicyConfig,
+        adsRemoved: AdsRemovedRepository,
+        logger: AdLogger,
+        connectivity: ConnectivityObserver,
+    ): PreloadInterstitialAd = PreloadInterstitialAd(consent, ads, config, adsRemoved, logger, connectivity)
 
     @Provides
     fun provideLoadNativeAd(
@@ -140,7 +157,11 @@ object AdsModule {
         repository: NativeAdRepository,
         config: AdPolicyConfig,
         adsRemoved: AdsRemovedRepository,
-    ): LoadNativeAd = LoadNativeAd(consent, repository, config, adsRemoved)
+        connectivity: ConnectivityObserver,
+    ): LoadNativeAd = LoadNativeAd(consent, repository, config, adsRemoved, connectivity)
+
+    @Provides
+    fun provideObserveOnline(connectivity: ConnectivityObserver): ObserveOnline = ObserveOnline(connectivity)
 
     @Provides
     fun provideMarkStartFlowComplete(tracker: AdSessionTracker): MarkStartFlowComplete = MarkStartFlowComplete(tracker)
@@ -149,10 +170,10 @@ object AdsModule {
     fun providePreloadAppOpenAd(
         consent: ConsentRepository,
         sdk: AdsSdkStatus,
-        config: AppOpenConfig,
         repository: AppOpenAdRepository,
         adsRemoved: AdsRemovedRepository,
-    ): PreloadAppOpenAd = PreloadAppOpenAd(consent, sdk, config, repository, adsRemoved)
+        connectivity: ConnectivityObserver,
+    ): PreloadAppOpenAd = PreloadAppOpenAd(consent, sdk, repository, adsRemoved, connectivity)
 
     @Provides
     fun provideShowAppOpenIfAllowed(
@@ -162,9 +183,9 @@ object AdsModule {
         tracker: AdSessionTracker,
         config: AppOpenConfig,
         preload: PreloadAppOpenAd,
-        flags: AppFlagsRepository,
         adsRemoved: AdsRemovedRepository,
-    ): ShowAppOpenIfAllowed = ShowAppOpenIfAllowed(consent, sdk, repository, tracker, config, preload, flags, adsRemoved)
+        connectivity: ConnectivityObserver,
+    ): ShowAppOpenIfAllowed = ShowAppOpenIfAllowed(consent, sdk, repository, tracker, config, preload, adsRemoved, connectivity)
 
     // ---- Game screen: rewarded + sticky banner (shared ad-free early-level rule in AdPolicyConfig / AdFreePolicy) ----
 
@@ -177,7 +198,9 @@ object AdsModule {
         banner: BannerAdRepository,
         config: AdPolicyConfig,
         adsRemoved: AdsRemovedRepository,
-    ): ObserveAdSurfaces = ObserveAdSurfaces(flags, consent, sdk, rewarded, banner, config, adsRemoved)
+        logger: AdLogger,
+        connectivity: ConnectivityObserver,
+    ): ObserveAdSurfaces = ObserveAdSurfaces(flags, consent, sdk, rewarded, banner, config, adsRemoved, logger, connectivity)
 
     @Provides
     fun providePreloadRewardedAd(
@@ -185,7 +208,8 @@ object AdsModule {
         sdk: AdsSdkStatus,
         repository: RewardedAdRepository,
         config: AdPolicyConfig,
-    ): PreloadRewardedAd = PreloadRewardedAd(consent, sdk, repository, config)
+        connectivity: ConnectivityObserver,
+    ): PreloadRewardedAd = PreloadRewardedAd(consent, sdk, repository, config, connectivity)
 
     @Provides
     fun provideShowRewardedAd(
@@ -194,7 +218,8 @@ object AdsModule {
         repository: RewardedAdRepository,
         tracker: AdSessionTracker,
         config: AdPolicyConfig,
-    ): ShowRewardedAd = ShowRewardedAd(consent, sdk, repository, tracker, config)
+        connectivity: ConnectivityObserver,
+    ): ShowRewardedAd = ShowRewardedAd(consent, sdk, repository, tracker, config, connectivity)
 
     @Provides
     fun provideGrantBoosterReward(inventory: InventoryRepository): GrantBoosterReward = GrantBoosterReward(inventory)

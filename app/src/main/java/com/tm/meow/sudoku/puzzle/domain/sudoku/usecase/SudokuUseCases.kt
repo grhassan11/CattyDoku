@@ -1,6 +1,7 @@
 package com.tm.meow.sudoku.puzzle.domain.sudoku.usecase
 
 import com.tm.meow.sudoku.puzzle.domain.ads.AdTrigger
+import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
 import com.tm.meow.sudoku.puzzle.domain.ads.SudokuAdRules
 import com.tm.meow.sudoku.puzzle.domain.engine.SeededRng
 import com.tm.meow.sudoku.puzzle.domain.model.Booster
@@ -252,10 +253,14 @@ class GetActiveSudokuElapsed(private val repo: SudokuRepository) {
  */
 class ShowSudokuInterstitialIfAllowed(
     private val show: ShowInterstitialIfAllowed,
+    private val config: AdPolicyConfig,
 ) {
     /** [tierWinsIncludingThis] = lifetime wins in [tier] counting the win just recorded by [CompleteSudoku]. */
     suspend fun onWin(tier: SudokuTier, tierWinsIncludingThis: Int?): Boolean {
-        if (!SudokuAdRules.showOnWin(tier, tierWinsIncludingThis)) return false
+        if (!SudokuAdRules.showOnWin(
+                tier, tierWinsIncludingThis, config.sudokuWinInterstitialFrequency, config.adFreeThroughLevel,
+            )
+        ) return false
         return show(AdTrigger.SUDOKU_WON_CONTINUE, level = 0, isDaily = false, persistLevel = false)
     }
 

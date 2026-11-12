@@ -15,6 +15,9 @@ enum class RewardedLoadState {
 
     /** Last preload failed (no fill / network). A new [RewardedAdRepository.preload] retries. */
     FAILED,
+
+    /** Device has no validated internet connection (set by ObserveAdSurfaces, not the repository). CTAs stay visible, disabled, with a helper text. */
+    OFFLINE,
 }
 
 /** Outcome of showing a rewarded ad. Reward is granted ONLY on [EARNED], never on dismiss. */
@@ -95,10 +98,6 @@ data class AdSurfaces(
     val sudokuBanner: Boolean = false,
     /** Remove Ads owned. Banner is already folded to false; rewarded is unaffected. Informational for the UI. */
     val adsRemoved: Boolean = false,
-) {
-    /** Any Levels rewarded surface is live (drives Levels preload). */
-    val levelsRewarded: Boolean get() = levelsBoosters || levelsRevive
-
-    /** Any Sudoku rewarded surface is live (drives Sudoku preload). */
-    val sudokuRewarded: Boolean get() = sudokuBoosters || sudokuRevive
-}
+    /** Validated internet connection present. Rewarded CTAs stay visible but show a helper text and are disabled while false. */
+    val online: Boolean = true,
+)

@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
  * Call ONLY for a fresh start or restart of a game level, never for a restored save (it already holds
  * the cat) and never for the scripted tutorial board. Picker runs on [dispatcher].
  * Returns [state] unchanged (same instance) if no starter cell exists or the level is outside
- * [StarterCatPolicy] (level > 10, daily). An existing starter in an old save is never stripped.
+ * [StarterCatPolicy] (level > 20, daily). An existing starter in an old save is never stripped.
  */
 class ApplyStarterCat(
     private val picker: StarterCatPicker,

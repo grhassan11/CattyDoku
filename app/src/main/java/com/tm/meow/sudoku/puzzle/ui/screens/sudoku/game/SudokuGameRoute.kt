@@ -50,6 +50,8 @@ fun SudokuGameRoute(
     val surfaces by adsViewModel.surfaces.collectAsStateWithLifecycle()
     val rewardedBusy by adsViewModel.rewardedBusy.collectAsStateWithLifecycle()
     val bannerAd by adsViewModel.banner.collectAsStateWithLifecycle()
+    // First composition: re-try a failed ads SDK init (no-op when up / no consent).
+    LaunchedEffect(Unit) { adsViewModel.retryAdsInitOnEntry() }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
@@ -68,6 +70,9 @@ fun SudokuGameRoute(
     // PAUSE / RESUME (not STOP / START): a full-screen ad pauses the Activity without stopping it, so the clock holds then too.
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { viewModel.onAppStopped() }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onAppStarted() }
+
+    // Keep an interstitial loaded for the win / restart boundary (no level gate). Idempotent; re-kicks when consent / SDK state changes.
+    LaunchedEffect(surfaces, state.loading) { if (!state.loading) adsViewModel.preloadInterstitialAd(isSudoku = true) }
 
     // Keep a rewarded ad ready while the hint stock is empty, the out-of-hints dialog is open or the game-over dialog is open.
     val hintDialogOpen = state.dialog == SudokuDialogUi.HintNeeded

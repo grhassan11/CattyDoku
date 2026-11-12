@@ -1,5 +1,6 @@
 package com.tm.meow.sudoku.puzzle.di
 
+import com.tm.meow.sudoku.puzzle.data.language.AppCompatLanguageRepository
 import com.tm.meow.sudoku.puzzle.data.repository.AppFlagsRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.repository.InventoryRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.repository.ProgressRepositoryImpl
@@ -20,6 +21,7 @@ import com.tm.meow.sudoku.puzzle.domain.notification.StreakReminderScheduler
 import com.tm.meow.sudoku.puzzle.domain.notification.SudokuReminderScheduler
 import com.tm.meow.sudoku.puzzle.domain.repository.AppFlagsRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.InventoryRepository
+import com.tm.meow.sudoku.puzzle.domain.repository.LanguageRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.ProgressRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.PuzzleRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.SavedGameRepository
@@ -37,6 +39,8 @@ import dagger.hilt.components.SingletonComponent
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
+    @Binds abstract fun bindLanguage(impl: AppCompatLanguageRepository): LanguageRepository
+
     @Binds abstract fun bindProgress(impl: ProgressRepositoryImpl): ProgressRepository
 
     @Binds abstract fun bindPuzzle(impl: PuzzleRepositoryImpl): PuzzleRepository
