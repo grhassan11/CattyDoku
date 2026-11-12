@@ -34,7 +34,8 @@ object TutorialUiMapper {
             hintPill = step.expected == ExpectedAction.HINT_PILL,
             showContinue = step.expected == ExpectedAction.CONTINUE,
             continueIsFinal = step.expected == ExpectedAction.CONTINUE && isLast,
-            showSkip = step.skippable,
+            // Every step offers Skip; hidden only on the final step, where Start Game already completes.
+            showSkip = !(step.expected == ExpectedAction.CONTINUE && isLast),
             rejectCount = state.rejections,
             patternMode = settings.patternMode,
         )

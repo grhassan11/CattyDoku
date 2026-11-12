@@ -248,7 +248,7 @@ class GetActiveSudokuElapsed(private val repo: SudokuRepository) {
 /**
  * Sudoku interstitials (rules in [SudokuAdRules]): after a win (called when the player taps Next puzzle / Back) and before a
  * restart. Reuses [ShowInterstitialIfAllowed] with the own triggers [AdTrigger.SUDOKU_WON_CONTINUE] / [AdTrigger.SUDOKU_RESTART]:
- * kill switch, Remove Ads, consent and ad readiness still apply; the Queens ad-free level, cadence and caps do not.
+ * kill switch, Remove Ads, consent and ad readiness still apply; the Queens ad-free level, cadence and caps do not (Sudoku wins use only the tier-win frequency rule, no ad-free gate).
  * Queens lastInterstitialLevel is left alone. Both return true when an ad was shown; false = proceed at once (fail open).
  */
 class ShowSudokuInterstitialIfAllowed(
@@ -258,7 +258,7 @@ class ShowSudokuInterstitialIfAllowed(
     /** [tierWinsIncludingThis] = lifetime wins in [tier] counting the win just recorded by [CompleteSudoku]. */
     suspend fun onWin(tier: SudokuTier, tierWinsIncludingThis: Int?): Boolean {
         if (!SudokuAdRules.showOnWin(
-                tier, tierWinsIncludingThis, config.sudokuWinInterstitialFrequency, config.adFreeThroughLevel,
+                tier, tierWinsIncludingThis, config.sudokuWinInterstitialFrequency,
             )
         ) return false
         return show(AdTrigger.SUDOKU_WON_CONTINUE, level = 0, isDaily = false, persistLevel = false)

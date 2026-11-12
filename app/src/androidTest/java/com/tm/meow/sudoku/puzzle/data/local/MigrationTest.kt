@@ -129,9 +129,28 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate1To4InOneGo() {
+    fun migrate4To5KeepsSavedGameAndDefaultsWrongXEmpty() {
+        helper.createDatabase(TEST_DB, 4).apply {
+            execSQL(
+                "INSERT INTO saved_game (levelIndex, marks, hearts, status, elapsedMs, hintsUsed, correctPlacements, " +
+                    "rewardedCells, lockedCells, undo, charges, updatedAt) " +
+                    "VALUES (9, X'00', 2, 0, 4000, 1, 3, X'0000', X'0000', X'0000', X'0000', 77)",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(TEST_DB, 5, true, MeowdokuDatabase.MIGRATION_4_5)
+        db.query("SELECT hearts, elapsedMs, wrongX FROM saved_game WHERE levelIndex = 9").use {
+            assertTrue(it.moveToFirst())
+            assertEquals(2, it.getInt(0))
+            assertEquals(4000L, it.getLong(1))
+            assertEquals(0, it.getBlob(2).size)
+        }
+    }
+
+    @Test
+    fun migrate1To5InOneGo() {
         helper.createDatabase(TEST_DB, 1).apply { seedV1(); close() }
-        val db = helper.runMigrationsAndValidate(TEST_DB, 4, true, *MeowdokuDatabase.ALL_MIGRATIONS)
+        val db = helper.runMigrationsAndValidate(TEST_DB, 5, true, *MeowdokuDatabase.ALL_MIGRATIONS)
         db.assertV1DataSurvived()
         for (table in listOf("granted_purchase", "streak_reward_claim", "sudoku_progress", "sudoku_saved_game")) {
             db.assertTableExists(table)

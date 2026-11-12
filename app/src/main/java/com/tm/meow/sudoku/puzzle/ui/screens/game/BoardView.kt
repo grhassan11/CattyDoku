@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
@@ -44,7 +46,17 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import com.tm.meow.sudoku.puzzle.ui.components.RegionBurst
+import com.tm.meow.sudoku.puzzle.ui.components.rememberLowRamDevice
+import androidx.compose.ui.graphics.drawscope.translate
+import kotlin.math.abs
+import kotlin.math.max
 import com.tm.meow.sudoku.puzzle.R
 import com.tm.meow.sudoku.puzzle.domain.engine.CatVariants
 import com.tm.meow.sudoku.puzzle.domain.model.PieceSkin
@@ -73,6 +85,10 @@ fun BoardView(
     pieceSkin: PieceSkin = PieceSkin.cats(),
     /** Identity of the level being shown (level number / daily day). A new non-null key plays the intro wave once. Null = no wave. */
     introKey: Long? = null,
+    /** Transient wrong-move cue (red flash + broken heart; red cross for a wrong cat). Each new token plays once. Null (tutorial) = none. */
+    wrongMove: WrongMoveUi? = null,
+    /** Latest region completed by a clean placement (tint wave + confetti burst). Each new token plays once. Null (tutorial) = none. */
+    regionCleared: RegionClearedUi? = null,
 ) {
     val n = board.size
     val gridSideDp = metrics.gridSideDp(n)
@@ -103,6 +119,7 @@ fun BoardView(
     // re-entry / restored state never replays; only a token that arrives later plays. Skipped when animations are off.
     val animationsOn = rememberAnimationsEnabled(null)
     val fx = remember { PlacementFx() }
+    val lowRam = rememberLowRamDevice()
     var doneToken by remember { mutableIntStateOf(lastCorrectPlacement?.token ?: 0) }
     LaunchedEffect(lastCorrectPlacement?.token) {
         val p = lastCorrectPlacement ?: return@LaunchedEffect
@@ -110,6 +127,33 @@ fun BoardView(
         if (animationsOn) fx.run(p.token)
         doneToken = p.token
     }
+    // Region-clear effects (tint wave + burst): same token pattern. `clearDone` starts at the token already present.
+    val clearFx = remember { RegionClearFx() }
+    var clearDone by remember { mutableIntStateOf(regionCleared?.token ?: 0) }
+    LaunchedEffect(regionCleared?.token) {
+        val rc = regionCleared ?: return@LaunchedEffect
+        if (rc.token == clearDone) return@LaunchedEffect
+        if (animationsOn) clearFx.run(rc.token)
+        clearDone = rc.token
+    }
+    val clearToken = if (animationsOn && regionCleared != null && regionCleared.token != clearDone) regionCleared.token else 0
+    // "+N" popup text, measured once per value (never per frame).
+    val textMeasurer = rememberTextMeasurer()
+    // Popup grows (1.0 -> 1.4) and shifts colour (gold -> amber -> orange -> pink) with the combo level.
+    val plusStreak = lastCorrectPlacement?.streak ?: 0
+    val plusStyle = remember(density, metrics.cellDp, plusStreak) {
+        TextStyle(
+            color = Color(ComboStyle.colorArgb(plusStreak)),
+            fontSize = with(density) { (metrics.cellDp.dp * 0.42f * ComboStyle.scale(plusStreak)).toSp() },
+            fontWeight = FontWeight.Black,
+            shadow = Shadow(Color(0xCC000000), Offset(2f, 2f), 4f),
+        )
+    }
+    val plusPoints = lastCorrectPlacement?.points ?: 0
+    val plusLayout = remember(plusPoints, plusStyle, textMeasurer) {
+        if (plusPoints > 0) textMeasurer.measure("+$plusPoints", plusStyle) else null
+    }
+
     // New-level intro wave: corner-diagonal sweep, per-cell scale + alpha read in the layer phase (no per-frame recomposition).
     // Saveable per key so rotation / resume / undo / revive never replay it; only a changed key (new level) does.
     val intro = rememberBoardIntro(introKey, animationsOn)
@@ -143,8 +187,22 @@ fun BoardView(
         jiggles = emptyMap()
     }
 
+    // Wrong-move cue: `wrongDone` starts at the token already present, so rotation / re-entry never replays. Skipped when animations are off.
+    val wrongFx = remember { WrongMoveFx() }
+    var wrongDone by remember { mutableIntStateOf(wrongMove?.token ?: 0) }
+    LaunchedEffect(wrongMove?.token) {
+        val w = wrongMove ?: return@LaunchedEffect
+        if (w.token == wrongDone) return@LaunchedEffect
+        if (animationsOn) wrongFx.run(w.token)
+        wrongDone = w.token
+    }
+    val wrongActive = animationsOn && wrongMove != null && wrongMove.token != wrongDone
+    val heartPainter = painterResource(R.drawable.ic_heart_broken)
+
     val fxToken = if (animationsOn && lastCorrectPlacement != null && lastCorrectPlacement.token != doneToken) lastCorrectPlacement.token else 0
     val fxIdx = if (fxToken != 0 && lastCorrectPlacement != null) lastCorrectPlacement.row * n + lastCorrectPlacement.col else -1
+    val fxRow = if (fxIdx >= 0) fxIdx / n else -1
+    val fxCol = if (fxIdx >= 0) fxIdx % n else -1
 
     val colorNames = stringArrayResource(R.array.region_color_names)
     val boardLabel = stringResource(R.string.board_description, n)
@@ -176,7 +234,10 @@ fun BoardView(
                 .drawWithContent {
                     drawContent()
                     // Above all cells, not clipped by neighbours. Draw-phase reads only.
-                    if (fxToken != 0) drawPlacementFx(fx, fxToken, fxIdx, board, metrics.gapDp.dp.toPx())
+                    if (fxToken != 0) drawPlacementFx(fx, fxToken, fxIdx, board, metrics.gapDp.dp.toPx(), plusLayout, halfSparkles = lowRam)
+                    if (clearToken != 0 && regionCleared != null) {
+                        drawRegionWave(clearFx.time(clearToken), regionCleared, board, metrics.gapDp.dp.toPx())
+                    }
                 }
                 .pointerInput(n, sidePx, enabled) {
                     if (!enabled) return@pointerInput
@@ -240,6 +301,17 @@ fun BoardView(
                             if (cell.conflict) stringResource(R.string.cell_state_conflict, stateText) else stateText,
                         )
                         val pos = Pos(r, c)
+                        // X marks on the placed cat's row / column or touching it pop in a wave radiating outward (draw-phase delay).
+                        val waveDist = if (fxIdx >= 0 && cell.mark == CellMarkUi.X) {
+                            val dr = abs(r - fxRow)
+                            val dc = abs(c - fxCol)
+                            if ((dr == 0) != (dc == 0) || (dr <= 1 && dc <= 1 && dr + dc > 0)) max(dr, dc) else 0
+                        } else {
+                            0
+                        }
+                        val wrongOwn = wrongActive && wrongMove != null && (r * n + c) in wrongMove.cells
+                        val wrongPartner = wrongActive && wrongMove != null && (r * n + c) in wrongMove.partners
+                        val wrongHere = wrongOwn || wrongPartner
                         BoardCell(
                             cell = cell,
                             patternMode = patternMode,
@@ -253,8 +325,15 @@ fun BoardView(
                             },
                             placementFx = if (r * n + c == fxIdx) fx else null,
                             placementToken = fxToken,
+                            waveFx = if (waveDist > 0) fx else null,
+                            waveToken = fxToken,
+                            waveDist = waveDist,
                             jiggle = jiggle,
                             jiggleStartMs = jiggles[r * n + c] ?: -1L,
+                            wrongFx = if (wrongHere) wrongFx else null,
+                            wrongToken = if (wrongHere && wrongMove != null) wrongMove.token else 0,
+                            heartPainter = if (wrongHere) heartPainter else null,
+                            wrongPartner = wrongPartner,
                             modifier = intro.layer(r, c, n).semantics {
                                 contentDescription = description
                                 role = Role.Button
@@ -280,7 +359,38 @@ fun BoardView(
                 }
             }
         }
+        // Finite confetti over the cleared region: <= 36 pieces, one Canvas, clock read in draw only.
+        if (clearToken != 0 && regionCleared != null) {
+            val cellPx = with(density) { metrics.cellDp.dp.toPx() }
+            val gapPx = with(density) { metrics.gapDp.dp.toPx() }
+            val origins = remember(clearToken) { regionCenters(board, regionCleared.region, cellPx, gapPx) }
+            val burstColors = remember(regionCleared.region) {
+                val c = GameColors.region(regionCleared.region)
+                listOf(c, lerp(c, Color.White, 0.5f), Color(0xFFFFD54F), Color.White)
+            }
+            RegionBurst(
+                token = clearToken,
+                progress = { clearFx.time(clearToken) },
+                origins = origins,
+                cellPx = cellPx,
+                colors = burstColors,
+                modifier = Modifier.size(gridSideDp.dp),
+            )
+        }
     }
+}
+
+/** Pixel centres (x, y pairs) of every cell of [region], in the grid's own coordinate space. */
+private fun regionCenters(board: BoardUi, region: Int, cellPx: Float, gapPx: Float): FloatArray {
+    val pitch = cellPx + gapPx
+    val out = ArrayList<Float>()
+    for (c in board.cells) {
+        if (c.region == region) {
+            out.add(c.col * pitch + cellPx / 2f)
+            out.add(c.row * pitch + cellPx / 2f)
+        }
+    }
+    return out.toFloatArray()
 }
 
 private const val ARM_WINDOW_MS = 500L
@@ -299,6 +409,16 @@ private fun BoardCell(
     /** Cross jiggle clock + this cell's start (-1 = none). Clock is read in draw only, and only while jiggling. */
     jiggle: CrossJiggle? = null,
     jiggleStartMs: Long = -1L,
+    /** Wrong-move cue: non-null only for an affected cell while its effect runs. Time read in draw only. */
+    wrongFx: WrongMoveFx? = null,
+    wrongToken: Int = 0,
+    heartPainter: Painter? = null,
+    /** This cell holds a cat touching the wrong move: it shakes and pulses red instead of drawing the wrong cross. */
+    wrongPartner: Boolean = false,
+    /** X-mark wave pop (row / column / neighbours of the just-placed cat): non-null only for an affected X while the effect runs. */
+    waveFx: PlacementFx? = null,
+    waveToken: Int = 0,
+    waveDist: Int = 0,
 ) {
     Canvas(modifier.size(sideDp.dp)) {
         val s = this.size.minDimension
@@ -320,11 +440,17 @@ private fun BoardCell(
         }
 
         when (cell.mark) {
-            CellMarkUi.X -> {
-                val xColor = GameColors.XMark.copy(alpha = if (previewing) 0.25f else 1f)
+            // Wrong-CAT fx draws this cell's X itself (red -> normal), so skip the plain X while it runs.
+            CellMarkUi.X -> if (!(wrongFx != null && wrongToken != 0 && wrongFx.time(wrongToken) < 1f)) {
+                val xColor = (if (cell.wrongX) WrongX else GameColors.XMark).copy(alpha = if (previewing) 0.25f else 1f)
                 val elapsed = if (jiggle != null && jiggleStartMs >= 0L) jiggle.clock - jiggleStartMs else Long.MAX_VALUE
                 if (jiggle == null || elapsed >= CrossJiggle.DURATION_MS) {
-                    drawXMark(Offset.Zero, s, xColor)
+                    val wave = if (waveFx != null && waveToken != 0 && waveDist > 0) xWaveScale(waveFx.time(waveToken), waveDist) else 1f
+                    if (wave != 1f) {
+                        scale(wave, pivot = Offset(s / 2f, s / 2f)) { drawXMark(Offset.Zero, s, xColor) }
+                    } else {
+                        drawXMark(Offset.Zero, s, xColor)
+                    }
                 } else {
                     val pivot = Offset(s / 2f, s / 2f)
                     rotate(jiggle.angle(elapsed), pivot) {
@@ -333,6 +459,13 @@ private fun BoardCell(
                 }
             }
             CellMarkUi.CAT -> catPainter?.let { painter ->
+              val shakeDx = if (wrongPartner && wrongFx != null && wrongToken != 0) {
+                  val wt = wrongFx.time(wrongToken)
+                  if (wt < 1f) wrongPartnerShake(wt, s) else 0f
+              } else {
+                  0f
+              }
+              translate(left = shakeDx) {
                 if (placementFx == null) {
                     inset(s * 0.08f) {
                         val iconSize = this.size
@@ -349,8 +482,17 @@ private fun BoardCell(
                         }
                     }
                 }
+              }
             }
             CellMarkUi.EMPTY -> if (previewing) drawXMark(Offset.Zero, s, GameColors.XMark.copy(alpha = 0.5f))
+        }
+
+        // Wrong-move cue layered over marks, UNDER the existing conflict (red outline) + hint strokes below, which stay untouched.
+        if (wrongFx != null && wrongToken != 0) {
+            val wt = wrongFx.time(wrongToken)
+            if (wt < 1f) {
+                clipRect(0f, 0f, s, s) { drawWrongMove(wt, heartPainter, s, radius, wrongPartner) }
+            }
         }
 
         if (cell.conflict) {

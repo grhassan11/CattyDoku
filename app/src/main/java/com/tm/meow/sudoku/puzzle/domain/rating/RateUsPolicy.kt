@@ -7,7 +7,7 @@ enum class RateAction {
     /** 4-5 stars: open the Play Store listing so the player rates there. */
     STORE_LISTING,
 
-    /** 1-3 stars: nothing opens; the UI just confirms "Rating Submitted". */
+    /** 1-3 stars: the UI opens the feedback email draft (enum name kept for stable analytics/tests). */
     SUBMITTED_LOW,
 }
 

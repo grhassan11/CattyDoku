@@ -149,9 +149,6 @@
 
     <string name="rate_title">Oyunu beğendin mi?</string>
     <string name="rate_subtitle">Deneyimini puanlamak için bir yıldıza dokun</string>
-    <string name="rate_submit">Gönder</string>
-    <string name="rate_not_now">Şimdi Değil</string>
-    <string name="rate_submitted">Puan Gönderildi</string>
     <plurals name="rate_star_description">
         <item quantity="one">%d yıldız</item>
         <item quantity="other">%d yıldız</item>
@@ -318,6 +315,8 @@
     <string name="settings_off">Kapalı</string>
     <string name="settings_pattern">Desen modu</string>
     <string name="settings_pattern_hint">Her renge bir desen ekler</string>
+    <string name="settings_reduce_effects">Efektleri azalt</string>
+    <string name="settings_reduce_effects_hint">Daha az parçacık ve animasyon. Eski telefonlar ve pil için daha hafif.</string>
     <string name="settings_group_notifications">Bildirimler</string>
     <string name="settings_streak_reminders">Seri hatırlatıcıları</string>
     <string name="settings_streak_reminders_hint">Serin kopmadan önce akşam bir dürtme</string>
@@ -326,6 +325,7 @@
     <string name="settings_sudoku_reminders">Sudoku hatırlatıcısı</string>
     <string name="settings_sudoku_reminders_hint">Yarım bıraktığın oyundan birkaç saat sonra bir dürtme</string>
     <string name="settings_about">Hakkında</string>
+    <string name="settings_rate_us">Bizi Değerlendir</string>
     <string name="about_title">Hakkında</string>
     <string name="about_app_icon">%1$s uygulama simgesi</string>
     <string name="about_version">Sürüm %1$s</string>
@@ -349,9 +349,9 @@
     <string name="tutorial_find_last">**Son kediyi** bul!</string>
     <string name="tutorial_find_last_sub">Yerleştirmek için boş hücreye çift dokun.</string>
     <string name="tutorial_excellent">Mükemmel! Kuralları öğrendin!</string>
-    <string name="tutorial_bottom_tap_empty">Boş hücreleri dışlamak için dokun.</string>
+    <string name="tutorial_bottom_tap_empty">Boş hücreleri dışlamak için tek dokun.</string>
     <string name="tutorial_bottom_swipe">Bu hücreleri dışlamak için üzerlerinde kaydır.</string>
-    <string name="tutorial_hint_pill">İpucu için buraya dokun.</string>
+    <string name="tutorial_hint_pill">İpucu için buraya tek dokun.</string>
     <string name="tutorial_got_it">Anladım!</string>
     <string name="tutorial_start_game">Oyuna Başla</string>
     <string name="tutorial_replay">Eğitimi Tekrar Oynat</string>
@@ -552,4 +552,12 @@
     <string name="sudoku_tut_next_tricks">Sonraki: Çözüm Püf Noktaları</string>
     <string name="sudoku_tut_start_playing">Oynamaya Başla!</string>
 
+    <!-- Game feel: streak / region praise + combo chip -->
+    <string name="praise_nice">Güzel!</string>
+    <string name="praise_purrfect">Mırmırfekt!</string>
+    <string name="praise_meowvelous">Miyav-harika!</string>
+    <string name="praise_clawsome">Pençe-harika!</string>
+    <string name="praise_clear">Tamam!</string>
+    <string name="combo_chip">x%1$d</string>
+    <string name="combo_description">Kombo x%1$d</string>
 </resources>

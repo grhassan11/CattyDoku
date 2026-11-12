@@ -103,7 +103,7 @@ class InterstitialPolicyTest {
         // other switches do not affect interstitial
         val others = cfg.copy(
             levelsBoostersRewardedShow = false, sudokuBoostersRewardedShow = false, levelsReviveRewardedShow = false,
-            sudokuReviveRewardedShow = false, levelsGameBannerShow = false, levelsHomeNativeShow = false, sudokuHomeNativeShow = false,
+            sudokuReviveRewardedShow = false, levelsGameNativeShow = false, levelsHomeNativeShow = false, sudokuHomeNativeShow = false,
         )
         assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(), others))
     }
@@ -114,11 +114,33 @@ class InterstitialPolicyTest {
     }
 
     @Test
-    fun adFreeThroughLevelNineThenAdsFromTen() {
+    fun loseRetryIgnoresAdFreeLevelsAndShowsFromLevelOne() {
+        for (l in 1..10) {
+            assertEquals("L$l", AdDecision.Show, InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, level = l), cfg))
+        }
+    }
+
+    @Test
+    fun levelsWinIgnoresAdFreeLevelsAndStartsAtLevelOne() {
         val every = cfg.copy(levelsInterstitialFrequency = 1)
-        for (l in 1..9) assertEquals("L$l", skip(AdSkipReason.AD_FREE_LEVEL), InterstitialPolicy.decide(ok(level = l), every))
-        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(level = 10), every))
-        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(level = 40), every))
+        for (l in 1..12) assertEquals("L$l", AdDecision.Show, winAt(l, every, lastLevel = l - 1))
+    }
+
+    @Test
+    fun levelsWinDefaultFrequencyShowsFiveTenFifteenAndSkipsThree() {
+        assertEquals(AdDecision.Show, winAt(5, cfg))
+        assertEquals(AdDecision.Show, winAt(10, cfg))
+        assertEquals(skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY), winAt(3, cfg))
+        for (l in listOf(1, 2, 4, 6, 9)) assertEquals("L$l", skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY), winAt(l, cfg))
+    }
+
+    @Test
+    fun levelsWinEarlyLevelKeepsOtherGates() {
+        assertEquals(skip(AdSkipReason.LEVEL_ALREADY_HAD_AD), winAt(5, cfg, lastLevel = 5))
+        assertEquals(skip(AdSkipReason.NO_CONSENT), InterstitialPolicy.decide(ok(level = 5, canRequestAds = false), cfg))
+        assertEquals(skip(AdSkipReason.DAILY), InterstitialPolicy.decide(ok(level = 5, isDaily = true), cfg))
+        assertEquals(skip(AdSkipReason.TUTORIAL), InterstitialPolicy.decide(ok(level = 5, inTutorial = true), cfg))
+        assertEquals(skip(AdSkipReason.DISABLED), InterstitialPolicy.decide(ok(level = 5), cfg.copy(levelsWinInterstitialShow = false)))
     }
 
     @Test
@@ -144,9 +166,10 @@ class InterstitialPolicyTest {
     }
 
     @Test
-    fun levelNineNeverShowsAtAnyFrequency() {
-        for (n in listOf(1, 3, 5, 9, 10)) {
-            assertEquals("N$n", skip(AdSkipReason.AD_FREE_LEVEL), winAt(9, cfg.copy(levelsInterstitialFrequency = n)))
+    fun levelNineFollowsFrequencyOnly() {
+        for (n in listOf(1, 3, 9)) assertEquals("N$n", AdDecision.Show, winAt(9, cfg.copy(levelsInterstitialFrequency = n)))
+        for (n in listOf(2, 5, 10)) {
+            assertEquals("N$n", skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY), winAt(9, cfg.copy(levelsInterstitialFrequency = n)))
         }
     }
 
@@ -201,9 +224,9 @@ class InterstitialPolicyTest {
     }
 
     @Test
-    fun loseRetryKeepsConsentAndAdFreeLevel() {
+    fun loseRetryKeepsConsentAndSwitch() {
         assertEquals(skip(AdSkipReason.NO_CONSENT), InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, canRequestAds = false), cfg))
-        assertEquals(skip(AdSkipReason.AD_FREE_LEVEL), InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, level = 9), cfg))
+        assertEquals(skip(AdSkipReason.DISABLED), InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, level = 1), AdPolicyConfig(levelsRestartInterstitialShow = false)))
     }
 
     @Test
@@ -220,7 +243,7 @@ class InterstitialPolicyTest {
                 val d = InterstitialPolicy.decide(
                     ok(canRequestAds = consent, inTutorial = tutorial, isDaily = daily, level = level, lastLevel = 1), cfg,
                 )
-                val expected = consent && !tutorial && !daily && level >= 10 && level % 5 == 0
+                val expected = consent && !tutorial && !daily && level % 5 == 0
                 assertEquals("c=$consent t=$tutorial d=$daily l=$level", expected, d == AdDecision.Show)
                 if (d == AdDecision.Show) shows++
             }

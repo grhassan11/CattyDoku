@@ -19,7 +19,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tm.meow.sudoku.puzzle.R
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerPlacement
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState
+import com.tm.meow.sudoku.puzzle.domain.usecase.AdPlacement
 import com.tm.meow.sudoku.puzzle.domain.model.Booster
 import com.tm.meow.sudoku.puzzle.ui.ads.AdsUiEvent
 import com.tm.meow.sudoku.puzzle.ui.ads.AdsViewModel
@@ -49,7 +50,7 @@ fun SudokuGameRoute(
     val timeText by viewModel.timeText.collectAsStateWithLifecycle()
     val surfaces by adsViewModel.surfaces.collectAsStateWithLifecycle()
     val rewardedBusy by adsViewModel.rewardedBusy.collectAsStateWithLifecycle()
-    val bannerAd by adsViewModel.banner.collectAsStateWithLifecycle()
+    val gameNative by adsViewModel.gameNative.collectAsStateWithLifecycle()
     // First composition: re-try a failed ads SDK init (no-op when up / no consent).
     LaunchedEffect(Unit) { adsViewModel.retryAdsInitOnEntry() }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -87,14 +88,13 @@ fun SudokuGameRoute(
         if (!surfaces.sudokuBoosters && hintDialogOpen) viewModel.onHintDialog(false)
     }
 
-    // Sticky banner (Sudoku placement, no level gate): load when allowed, destroy when the surface turns off or on leave.
-    val bannerWidthDp = LocalConfiguration.current.screenWidthDp
-    LaunchedEffect(surfaces.sudokuBanner, bannerWidthDp) {
-        if (surfaces.sudokuBanner) adsViewModel.requestBanner(bannerWidthDp, BannerPlacement.SUDOKU_GAME) else adsViewModel.releaseBanner()
+    // Compact native slot (Sudoku placement, no level gate; driven by sudoku_game_native_ad_show): load when allowed, destroy when the surface turns off or on leave.
+    LaunchedEffect(surfaces.sudokuGameNative) {
+        if (surfaces.sudokuGameNative) adsViewModel.requestGameNative(AdPlacement.SUDOKU_GAME) else adsViewModel.releaseGameNative()
     }
-    DisposableEffect(adsViewModel) { onDispose { adsViewModel.releaseBanner() } }
-    // No banner under dialogs (restart / win / game over / out of hints): slot stays reserved, ad view detaches. Pause does NOT affect it.
-    val bannerVisible = state.dialog == SudokuDialogUi.None && !state.loading
+    DisposableEffect(adsViewModel) { onDispose { adsViewModel.releaseGameNative() } }
+    // No native ad under dialogs (restart / win / game over / out of hints): slot stays reserved, ad view detaches. Pause does NOT affect it.
+    val nativeVisible = state.dialog == SudokuDialogUi.None && !state.loading
 
     LaunchedEffect(adsViewModel) {
         adsViewModel.events.collect { event ->
@@ -182,7 +182,7 @@ fun SudokuGameRoute(
             onOpenShop(Booster.HINT)
         },
         modifier = modifier,
-        bannerReserved = surfaces.sudokuBanner,
-        bannerAd = if (bannerVisible) bannerAd else null,
+        nativeReserved = surfaces.sudokuGameNative,
+        nativeSlot = if (nativeVisible) gameNative else NativeAdSlotState.Hidden,
     )
 }

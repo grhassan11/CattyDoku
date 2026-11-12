@@ -111,4 +111,5 @@ private fun Settings.toUi() = SettingsUi(
     streakReminders = streakReminders,
     dailyReminders = dailyReminders,
     sudokuReminders = sudokuReminders,
+    reduceEffects = reduceEffects,
 )

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Broken heart: two halves with a zigzag gap. Tinted in code (drawn white by the wrong-move effect). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,21.35 L10.55,20.03 C5.4,15.36 2,12.28 2,8.5 C2,5.42 4.42,3 7.5,3 C9.24,3 10.91,3.81 12,5.09 L10.8,9 L13,11.5 L11,15.2 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,21.35 L13.45,20.03 C18.6,15.36 22,12.28 22,8.5 C22,5.42 19.58,3 16.5,3 C14.76,3 13.09,3.81 12,5.09 L12.2,9 L14.4,11.5 L12.4,15.2 Z" />
+</vector>

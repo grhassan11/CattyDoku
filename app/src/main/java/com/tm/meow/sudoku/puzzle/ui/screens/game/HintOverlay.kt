@@ -1,7 +1,14 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -47,6 +54,8 @@ import com.tm.meow.sudoku.puzzle.ui.components.HintBulb
 import com.tm.meow.sudoku.puzzle.ui.components.PillButton
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 
+private const val HINT_PULSE_MS = 800
+
 /** Board position (root space) + the metrics it was laid out with, for the spotlight cut-outs. */
 internal data class BoardGeo(val bounds: Rect, val metrics: BoardMetrics)
 
@@ -66,8 +75,21 @@ internal fun HintOverlay(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     pieceSkin: PieceSkin = PieceSkin.cats(),
+    /** Flat indices of the hint's target cell(s): their stroke breathes (glow pulse) while the overlay is up. */
+    targets: Set<Int> = emptySet(),
 ) {
     BackHandler(onBack = onDismiss)
+    // Breathing phase 0..1..0. The infinite transition exists ONLY while this overlay is composed (= visible); none when animations are off.
+    val pulse: State<Float>? = if (rememberAnimationsEnabled(null) && targets.isNotEmpty()) {
+        rememberInfiniteTransition(label = "hintPulse").animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(HINT_PULSE_MS, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "hintPulsePhase",
+        )
+    } else {
+        null
+    }
     val dismissLabel = stringResource(R.string.hint_overlay_dismiss)
     val origin = remember { mutableStateOf(Offset.Zero) }
     Box(
@@ -110,6 +132,31 @@ internal fun HintOverlay(
                     cornerRadius = CornerRadius(radius),
                     blendMode = BlendMode.Clear,
                 )
+            }
+            // Target cell: breathing gold stroke + an expanding soft halo (static stroke when animations are off).
+            val phase = pulse?.value ?: 0.5f
+            for (i in targets) {
+                val r = i / boardSize
+                val c = i % boardSize
+                val tl = Offset(left + c * pitch, top + r * pitch)
+                val w = (3f + 3f * phase).dp.toPx()
+                drawRoundRect(
+                    color = GameColors.HintTarget.copy(alpha = 0.55f + 0.45f * phase),
+                    topLeft = Offset(tl.x + w / 2f, tl.y + w / 2f),
+                    size = Size(cell - w, cell - w),
+                    cornerRadius = CornerRadius((radius - w / 2f).coerceAtLeast(0f)),
+                    style = Stroke(w),
+                )
+                if (pulse != null) {
+                    val g = (2f + 6f * phase).dp.toPx()
+                    drawRoundRect(
+                        color = GameColors.HintTarget.copy(alpha = 0.45f * (1f - phase)),
+                        topLeft = Offset(tl.x - g, tl.y - g),
+                        size = Size(cell + 2f * g, cell + 2f * g),
+                        cornerRadius = CornerRadius(radius + g),
+                        style = Stroke(3.dp.toPx()),
+                    )
+                }
             }
         }
         HintRuleCard(

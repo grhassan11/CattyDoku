@@ -5,7 +5,6 @@ import com.tm.meow.sudoku.puzzle.BuildConfig
 import com.tm.meow.sudoku.puzzle.domain.ads.AdLogger
 import com.tm.meow.sudoku.puzzle.data.ads.AdsRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.ads.AppOpenAdRepositoryImpl
-import com.tm.meow.sudoku.puzzle.data.ads.BannerAdRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.ads.RewardedAdRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.ads.NativeAdRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.consent.ConsentRepositoryImpl
@@ -15,13 +14,11 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AdsRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
 import com.tm.meow.sudoku.puzzle.domain.ads.AppOpenAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.AppOpenConfig
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedAdRepository
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.billing.AdsRemovedRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.InventoryRepository
 import com.tm.meow.sudoku.puzzle.domain.usecase.GrantBoosterReward
-import com.tm.meow.sudoku.puzzle.domain.usecase.LoadBannerAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdSurfaces
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadInterstitialAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadRewardedAd
@@ -47,6 +44,12 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.RecordLevelWon
 import com.tm.meow.sudoku.puzzle.domain.usecase.RefreshRemoteConfig
 import com.tm.meow.sudoku.puzzle.domain.usecase.ShowInterstitialIfAllowed
 import com.tm.meow.sudoku.puzzle.domain.usecase.ShowPrivacyOptions
+import com.tm.meow.sudoku.puzzle.domain.ads.GameNativeAdCache
+import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadGameNativeAd
+import com.tm.meow.sudoku.puzzle.domain.usecase.TakeGameNativeAd
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -68,8 +71,6 @@ abstract class AdsBindsModule {
     @Binds abstract fun bindAppOpen(impl: AppOpenAdRepositoryImpl): AppOpenAdRepository
 
     @Binds abstract fun bindRewarded(impl: RewardedAdRepositoryImpl): RewardedAdRepository
-
-    @Binds abstract fun bindBanner(impl: BannerAdRepositoryImpl): BannerAdRepository
 
     @Binds abstract fun bindConsent(impl: ConsentRepositoryImpl): ConsentRepository
 }
@@ -160,6 +161,25 @@ object AdsModule {
         connectivity: ConnectivityObserver,
     ): LoadNativeAd = LoadNativeAd(consent, repository, config, adsRemoved, connectivity)
 
+    /** One preloaded game-screen native per mode, process-wide (survives navigation); destroyed on expiry / Remove Ads. */
+    @Provides @Singleton
+    fun provideGameNativeAdCache(
+        time: TimeProvider,
+        adsRemoved: AdsRemovedRepository,
+        @MainDispatcher main: CoroutineDispatcher,
+    ): GameNativeAdCache = GameNativeAdCache(time, CoroutineScope(SupervisorJob() + main), adsRemoved)
+
+    @Provides
+    fun providePreloadGameNativeAd(
+        loadNative: LoadNativeAd,
+        cache: GameNativeAdCache,
+        flags: AppFlagsRepository,
+    ): PreloadGameNativeAd = PreloadGameNativeAd(loadNative, cache, flags)
+
+    @Provides
+    fun provideTakeGameNativeAd(loadNative: LoadNativeAd, cache: GameNativeAdCache): TakeGameNativeAd =
+        TakeGameNativeAd(loadNative, cache)
+
     @Provides
     fun provideObserveOnline(connectivity: ConnectivityObserver): ObserveOnline = ObserveOnline(connectivity)
 
@@ -187,7 +207,7 @@ object AdsModule {
         connectivity: ConnectivityObserver,
     ): ShowAppOpenIfAllowed = ShowAppOpenIfAllowed(consent, sdk, repository, tracker, config, preload, adsRemoved, connectivity)
 
-    // ---- Game screen: rewarded + sticky banner (shared ad-free early-level rule in AdPolicyConfig / AdFreePolicy) ----
+    // ---- Game screen: rewarded + compact native slot (shared ad-free early-level rule in AdPolicyConfig / AdFreePolicy) ----
 
     @Provides
     fun provideObserveAdSurfaces(
@@ -195,12 +215,12 @@ object AdsModule {
         consent: ConsentRepository,
         sdk: AdsSdkStatus,
         rewarded: RewardedAdRepository,
-        banner: BannerAdRepository,
+        nativeAds: NativeAdRepository,
         config: AdPolicyConfig,
         adsRemoved: AdsRemovedRepository,
         logger: AdLogger,
         connectivity: ConnectivityObserver,
-    ): ObserveAdSurfaces = ObserveAdSurfaces(flags, consent, sdk, rewarded, banner, config, adsRemoved, logger, connectivity)
+    ): ObserveAdSurfaces = ObserveAdSurfaces(flags, consent, sdk, rewarded, nativeAds, config, adsRemoved, logger, connectivity)
 
     @Provides
     fun providePreloadRewardedAd(
@@ -226,13 +246,4 @@ object AdsModule {
 
     @Provides
     fun provideReviveGame(): ReviveGame = ReviveGame()
-
-    @Provides
-    fun provideLoadBannerAd(
-        consent: ConsentRepository,
-        sdk: AdsSdkStatus,
-        repository: BannerAdRepository,
-        config: AdPolicyConfig,
-        adsRemoved: AdsRemovedRepository,
-    ): LoadBannerAd = LoadBannerAd(consent, sdk, repository, config, adsRemoved)
 }

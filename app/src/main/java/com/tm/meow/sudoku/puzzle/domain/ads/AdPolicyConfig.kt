@@ -20,16 +20,17 @@ enum class RewardedPlacement {
  * in AdsModule. Nothing else reads raw numbers. There is NO master switch: every format has its own per-surface switch.
  */
 data class AdPolicyConfig(
-    /** Levels 1..this are ad-free for EVERY format (see [AdFreePolicy]). Ads start at this + 1 (default: Lv 10). */
+    /** Levels 1..this are ad-free for rewarded; NOT for the Levels win / lose-retry interstitials or the game native slots (see [AdFreePolicy]). Ads start at this + 1 (default: Lv 10). */
     val adFreeThroughLevel: Int = AdFreePolicy.AD_FREE_THROUGH_LEVEL,
     /**
      * Levels win interstitial frequency N (remote `levels_game_completed_interstitial_ad_frequency`, 1..50): an ad is
-     * considered only when the JUST-COMPLETED level number is a multiple of N (and past the ad-free levels).
+     * considered only when the JUST-COMPLETED level number is a multiple of N. The ad-free levels
+     * ([adFreeThroughLevel]) do NOT apply to this interstitial: it can show from Level 1 (default N=5: Lv 5, 10, 15...).
      */
     val levelsInterstitialFrequency: Int = DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY,
     /**
-     * Sudoku win interstitial frequency N (remote `sudoku_game_completed_interstitial_ad_frequency`, 1..50), non-Easy tiers:
-     * shown when the tier's lifetime win count is past [adFreeThroughLevel] and a multiple of N. Easy has its own rule.
+     * Sudoku win interstitial frequency N (remote `sudoku_game_completed_interstitial_ad_frequency`, 1..50), all tiers:
+     * shown when the tier's lifetime win count is a multiple of N (from win 1; no ad-free gate).
      */
     val sudokuWinInterstitialFrequency: Int = DEFAULT_SUDOKU_INTERSTITIAL_FREQUENCY,
     /** Max wait for a still-loading preloaded ad at the boundary, then fail open (continue without ad). */
@@ -38,10 +39,10 @@ data class AdPolicyConfig(
     val levelsHomeNativeShow: Boolean = DEFAULT_SHOW,
     /** Sudoku entry bottom native ad (remote `sudoku_home_native_ad_show`). */
     val sudokuHomeNativeShow: Boolean = DEFAULT_SHOW,
-    /** Levels game-screen sticky banner (remote `levels_game_banner_ad_show`). */
-    val levelsGameBannerShow: Boolean = DEFAULT_SHOW,
-    /** Sudoku game-screen sticky banner (remote `sudoku_game_banner_ad_show`). */
-    val sudokuGameBannerShow: Boolean = DEFAULT_SHOW,
+    /** Levels game-screen compact native slot (remote `levels_game_native_ad_show`). */
+    val levelsGameNativeShow: Boolean = DEFAULT_SHOW,
+    /** Sudoku game-screen compact native slot (remote `sudoku_game_native_ad_show`). */
+    val sudokuGameNativeShow: Boolean = DEFAULT_SHOW,
     /** Interstitial on Levels win (remote `levels_game_completed_interstitial_ad_show`). */
     val levelsWinInterstitialShow: Boolean = DEFAULT_SHOW,
     /** Interstitial on Sudoku win (remote `sudoku_game_completed_interstitial_ad_show`), ANDed with [SudokuAdRules]. */

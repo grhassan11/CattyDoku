@@ -146,9 +146,6 @@
 
     <string name="rate_title">玩得開心嗎？</string>
     <string name="rate_subtitle">點選星星為你的體驗評分</string>
-    <string name="rate_submit">送出</string>
-    <string name="rate_not_now">稍後再說</string>
-    <string name="rate_submitted">評分已送出</string>
     <plurals name="rate_star_description">
         <item quantity="other">%d顆星</item>
     </plurals>
@@ -314,6 +311,8 @@
     <string name="settings_off">關</string>
     <string name="settings_pattern">圖樣模式</string>
     <string name="settings_pattern_hint">為每種顏色加上圖樣</string>
+    <string name="settings_reduce_effects">減少特效</string>
+    <string name="settings_reduce_effects_hint">減少粒子與動畫。對舊手機與電池更友善。</string>
     <string name="settings_group_notifications">通知</string>
     <string name="settings_streak_reminders">連續紀錄提醒</string>
     <string name="settings_streak_reminders_hint">連續紀錄中斷前的傍晚提醒</string>
@@ -322,6 +321,7 @@
     <string name="settings_sudoku_reminders">數獨提醒</string>
     <string name="settings_sudoku_reminders_hint">離開未完成的遊戲幾小時後提醒你</string>
     <string name="settings_about">關於</string>
+    <string name="settings_rate_us">給我們評分</string>
     <string name="about_title">關於</string>
     <string name="about_app_icon">%1$s應用程式圖示</string>
     <string name="about_version">版本%1$s</string>
@@ -345,9 +345,9 @@
     <string name="tutorial_find_last">找出**最後一隻貓**！</string>
     <string name="tutorial_find_last_sub">連點兩下空格來放置。</string>
     <string name="tutorial_excellent">太棒了！你已經掌握規則了！</string>
-    <string name="tutorial_bottom_tap_empty">點選空格來排除它們。</string>
+    <string name="tutorial_bottom_tap_empty">點一下空格來排除它們。</string>
     <string name="tutorial_bottom_swipe">在這些格子上滑過去來排除它們。</string>
-    <string name="tutorial_hint_pill">點這裡取得提示。</string>
+    <string name="tutorial_hint_pill">點一下這裡取得提示。</string>
     <string name="tutorial_got_it">知道了！</string>
     <string name="tutorial_start_game">開始遊戲</string>
     <string name="tutorial_replay">重看教學</string>
@@ -547,4 +547,12 @@
     <string name="sudoku_tut_next_tricks">下一課：解題技巧</string>
     <string name="sudoku_tut_start_playing">開始玩！</string>
 
+    <!-- Game feel: streak / region praise + combo chip -->
+    <string name="praise_nice">不錯！</string>
+    <string name="praise_purrfect">喵美極了！</string>
+    <string name="praise_meowvelous">喵喵超讚！</string>
+    <string name="praise_clawsome">爪爪霸氣！</string>
+    <string name="praise_clear">完成！</string>
+    <string name="combo_chip">x%1$d</string>
+    <string name="combo_description">連擊 x%1$d</string>
 </resources>

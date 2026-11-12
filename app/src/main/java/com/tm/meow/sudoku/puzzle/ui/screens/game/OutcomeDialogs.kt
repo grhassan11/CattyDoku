@@ -37,6 +37,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -82,6 +83,9 @@ import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.PillButton
 import com.tm.meow.sudoku.puzzle.ui.components.StatusBarIconsEffect
 import com.tm.meow.sudoku.puzzle.ui.components.Sunburst
+import com.tm.meow.sudoku.puzzle.ui.components.sprite.CatSprite
+import com.tm.meow.sudoku.puzzle.ui.components.sprite.CatSprites
+import com.tm.meow.sudoku.puzzle.ui.components.sprite.SpriteSheet
 import com.tm.meow.sudoku.puzzle.ui.theme.FredokaFamily
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 
@@ -203,6 +207,7 @@ private fun WinDialog(
         message = message,
         mascotRes = mascotRes,
         mascotDescription = mascotDescription,
+        mascotSheet = if (animalSet == null) CatSprites.Cheer else null,
         score = outcome.score,
         stats = {
             StatChip(
@@ -241,7 +246,7 @@ private fun WinDialog(
 
 /**
  * Shared win screen (Levels "Level Completed" + Sudoku "Puzzle solved"): confetti, ribbon headline, mascot stage,
- * message, optional [extra] notes, score count-up, stat chip row, then [HOME icon] + CTA. Text and stats come in as params.
+ * message, score count-up, stat chip row, then [HOME icon] + CTA. Text and stats come in as params.
  * [inputArmed] false = buttons inert (Sudoku guards against a stray tap as the screen appears).
  */
 @Composable
@@ -259,7 +264,7 @@ internal fun WinScreenLayout(
     homeDescription: String = stringResource(R.string.win_home),
     confetti: Boolean = true,
     inputArmed: Boolean = true,
-    extra: @Composable () -> Unit = {},
+    mascotSheet: SpriteSheet? = null,
 ) {
     DialogScrim(Modifier.semantics { paneTitle = headline }, scrimColor = GameColors.OutcomeScrim) {
         StatusBarIconsEffect()
@@ -279,6 +284,7 @@ internal fun WinScreenLayout(
             MascotStage(
                 mascotRes = mascotRes,
                 description = mascotDescription,
+                sheet = mascotSheet,
             )
 
             Text(
@@ -290,7 +296,6 @@ internal fun WinScreenLayout(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.widthIn(max = 320.dp),
             )
-            extra()
             Spacer(Modifier.height(16.dp))
 
             ScoreCountUp(score = score)
@@ -419,41 +424,61 @@ private fun HeadlineRibbon(text: String) {
     }
 }
 
-/** Sunburst + mascot placeholder (user cat art). Springs in, then bobs gently. */
+/** Sunburst + mascot. Springs in; static art bobs gently, [sheet] (cat cheer loop) animates itself. */
 @Composable
-private fun MascotStage(mascotRes: Int, description: String) {
+private fun MascotStage(mascotRes: Int, description: String, sheet: SpriteSheet?) {
     val pop = remember { Animatable(0.5f) }
-    LaunchedEffect(Unit) {
+    val popAnimated = rememberAnimationsEnabled(null)
+    LaunchedEffect(popAnimated) {
+        if (!popAnimated) {
+            pop.snapTo(1f)
+            return@LaunchedEffect
+        }
         pop.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
     }
-    val bob = rememberInfiniteTransition(label = "mascotBob")
-    val bobY by bob.animateFloat(
-        initialValue = -5f,
-        targetValue = 5f,
-        animationSpec = infiniteRepeatable(tween(1_400), RepeatMode.Reverse),
-        label = "mascotBobY",
-    )
+    // Reduce effects / animations off: pop-in snaps, no bob (and no infinite transition).
+    val animationsOn = rememberAnimationsEnabled(null)
+    val bob: State<Float>? = if (animationsOn) {
+        rememberInfiniteTransition(label = "mascotBob").animateFloat(
+            initialValue = -5f,
+            targetValue = 5f,
+            animationSpec = infiniteRepeatable(tween(1_400), RepeatMode.Reverse),
+            label = "mascotBobY",
+        )
+    } else {
+        null
+    }
     Box(Modifier.size(260.dp), contentAlignment = Alignment.Center) {
         Sunburst(Modifier.requiredSize(340.dp))
-        androidx.compose.foundation.Image(
-            painter = painterResource(mascotRes),
-            contentDescription = description,
-            modifier = Modifier
-                .size(220.dp)
-                .graphicsLayer {
-                    scaleX = pop.value
-                    scaleY = pop.value
-                    translationY = bobY * density
-                },
-        )
+        val popMod = Modifier
+            .size(220.dp)
+            .graphicsLayer {
+                scaleX = pop.value
+                scaleY = pop.value
+                translationY = if (sheet == null) (bob?.value ?: 0f) * density else 0f
+            }
+        if (sheet != null) {
+            CatSprite(sheet, popMod, contentDescription = description)
+        } else {
+            androidx.compose.foundation.Image(
+                painter = painterResource(mascotRes),
+                contentDescription = description,
+                modifier = popMod,
+            )
+        }
     }
 }
 
 /** "Score" label + number that counts up to [score]. Screen readers get the final value only. */
 @Composable
 private fun ScoreCountUp(score: Int) {
+    val animationsOn = rememberAnimationsEnabled(null)
     val progress = remember { Animatable(0f) }
-    LaunchedEffect(score) {
+    LaunchedEffect(score, animationsOn) {
+        if (!animationsOn) {
+            progress.snapTo(1f)
+            return@LaunchedEffect
+        }
         progress.animateTo(
             1f,
             tween(OutcomeLogic.countUpDurationMs(score), easing = FastOutSlowInEasing),
@@ -578,13 +603,18 @@ internal fun LoseScreenLayout(
     inputArmed: Boolean = true,
 ) {
 
-    val sway = rememberInfiniteTransition(label = "failedSway")
-    val swayDeg by sway.animateFloat(
-        initialValue = -4f,
-        targetValue = 4f,
-        animationSpec = infiniteRepeatable(tween(2_200), RepeatMode.Reverse),
-        label = "failedSwayDeg",
-    )
+    // Reduce effects / animations off: no sway, no infinite transition.
+    val swayState: State<Float>? = if (rememberAnimationsEnabled(null)) {
+        rememberInfiniteTransition(label = "failedSway").animateFloat(
+            initialValue = -4f,
+            targetValue = 4f,
+            animationSpec = infiniteRepeatable(tween(2_200), RepeatMode.Reverse),
+            label = "failedSwayDeg",
+        )
+    } else {
+        null
+    }
+    val swayDeg = swayState?.value ?: 0f
 
     DialogScrim(Modifier.semantics { paneTitle = title }, scrimColor = GameColors.OutcomeScrim) {
     StatusBarIconsEffect()

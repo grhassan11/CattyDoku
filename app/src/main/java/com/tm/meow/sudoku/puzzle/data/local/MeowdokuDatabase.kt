@@ -47,7 +47,7 @@ import com.tm.meow.sudoku.puzzle.data.local.entity.SudokuSavedGameEntity
         SudokuProgressEntity::class,
         SudokuSavedGameEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class MeowdokuDatabase : RoomDatabase() {
@@ -124,7 +124,17 @@ abstract class MeowdokuDatabase : RoomDatabase() {
             }
         }
 
-        /** Append MIGRATION_4_5 etc. here, in order. */
-        val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        /**
+         * v4 -> v5 (red-X marker persistence): `saved_game.wrongX` BLOB NOT NULL DEFAULT X'' (empty = no red X).
+         * Existing rows keep all data. Must match SavedGameEntity.wrongX (@ColumnInfo defaultValue = "X''").
+         */
+        val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `saved_game` ADD COLUMN `wrongX` BLOB NOT NULL DEFAULT X''")
+            }
+        }
+
+        /** Append MIGRATION_5_6 etc. here, in order. */
+        val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
     }
 }

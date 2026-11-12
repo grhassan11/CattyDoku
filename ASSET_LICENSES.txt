@@ -80,12 +80,12 @@ Audio
   sfx_award.ogg                 Vorbis mono 44.1 kHz, 7.6 s        level won on milestone levels 1/5/10/25 (MediaPlayer)
   sfx_blocked.ogg               Vorbis mono 44.1 kHz, 1.0 s        refused action (no charges, locked cell, tutorial wrong)
 
-App icon (added 2026-10-26)
-  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\App Icon\AppIcons
+App icon (replaced 2026-11-12 with Final set)
+  Source folder: D:\3TechSoft\AIOS-3TechSoft\Projects\Catty Sudoku\Design\App Icon\Final
   Status: Original / licensed (user-provided)
   File (app/src/main/res/)                    Source file                       Used for
-  drawable-nodpi/ic_launcher_foreground.png   android/adaptive-foreground.png   adaptive icon foreground (1024x1024) + splash icon (via drawable/ic_splash_icon.xml inset)
-  (legacy mipmap-*dpi/ic_launcher*.png removed 2026-11-05: minSdk 26 uses mipmap-anydpi-v26 adaptive icons only)
+  drawable-nodpi/ic_launcher_foreground.webp  android/adaptive-foreground.png   adaptive icon foreground (1024x1024, lossless WebP) + splash icon + About screen (via drawable/ic_splash_icon.xml inset)
+  mipmap-{m,h,xh,xxh,xxxh}dpi/ic_launcher.png android/mipmap-*/ic_launcher.png   legacy full-bleed icon (unused at minSdk 26; adaptive XML wins)
   (playstore.png is Play Console only, not bundled)
 
 ic_mouse (added 2026-10-29)

@@ -19,4 +19,5 @@ fun Settings.withToggle(toggle: SettingToggle, enabled: Boolean): Settings = whe
     SettingToggle.STREAK_REMINDERS -> copy(streakReminders = enabled)
     SettingToggle.DAILY_REMINDERS -> copy(dailyReminders = enabled)
     SettingToggle.SUDOKU_REMINDERS -> copy(sudokuReminders = enabled)
+    SettingToggle.REDUCE_EFFECTS -> copy(reduceEffects = enabled)
 }

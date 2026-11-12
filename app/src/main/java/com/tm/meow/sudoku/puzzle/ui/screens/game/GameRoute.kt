@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -14,7 +15,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalConfiguration
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState
+import com.tm.meow.sudoku.puzzle.domain.usecase.AdPlacement
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -49,7 +51,7 @@ fun GameRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val surfaces by adsViewModel.surfaces.collectAsStateWithLifecycle()
     val rewardedBusy by adsViewModel.rewardedBusy.collectAsStateWithLifecycle()
-    val bannerAd by adsViewModel.banner.collectAsStateWithLifecycle()
+    val gameNative by adsViewModel.gameNative.collectAsStateWithLifecycle()
     // Current level / mode for the ad boundary (daily never shows an interstitial).
     val content = (state as? GameUiState.Ready)?.content
     val adLevel = content?.levelNumber ?: 0
@@ -73,6 +75,11 @@ fun GameRoute(
     var settingsVisible by rememberSaveable { mutableStateOf(false) }
     // "Next level" action waiting for the Rate us dialog to close (not saved: lost on process death, then the player taps again).
     var pendingNextLevel by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    // Transient wrong-move cue (animation only; not saved, so rotation / process death never replays it).
+    var wrongMove by remember { mutableStateOf<WrongMoveUi?>(null) }
+    var wrongMoveSeq by remember { mutableIntStateOf(0) }
+    val latestBoard = rememberUpdatedState(content?.board)
 
     // Idle nudge: screen resumed flag (paused for Settings / Shop / ads / app stop) + press/release clock.
     var resumed by remember { mutableStateOf(true) }
@@ -108,20 +115,19 @@ fun GameRoute(
     // Boosters rewarded turned off underneath an open dialog (e.g. consent revoked): close it.
     LaunchedEffect(surfaces.levelsBoosters) { if (!surfaces.levelsBoosters) boosterDialog = null }
 
-    // Sticky banner: load when allowed, destroy when the surface turns off. Slot width = screen width.
-    val bannerWidthDp = LocalConfiguration.current.screenWidthDp
-    LaunchedEffect(surfaces.banner, bannerWidthDp) {
-        if (surfaces.banner) adsViewModel.requestBanner(bannerWidthDp) else adsViewModel.releaseBanner()
+    // Compact native slot (driven by levels_game_native_ad_show): load when allowed, destroy when the surface turns off.
+    LaunchedEffect(surfaces.levelsGameNative) {
+        if (surfaces.levelsGameNative) adsViewModel.requestGameNative(AdPlacement.LEVELS_GAME) else adsViewModel.releaseGameNative()
     }
-    // No banner under dialogs (win / lose / booster): the slot stays reserved, the ad view detaches.
-    val bannerVisible = content?.outcome == null && boosterDialog == null && !settingsVisible
+    // No native ad under dialogs (win / lose / booster): the slot stays reserved, the ad view detaches.
+    val nativeVisible = content?.outcome == null && boosterDialog == null && !settingsVisible
     val adsUi = GameAdsUi(
         rewardedSurface = surfaces.levelsBoosters,
         reviveSurface = surfaces.levelsRevive,
         rewardedLoad = surfaces.rewardedLoad,
         rewardedBusy = rewardedBusy,
-        bannerReserved = surfaces.banner,
-        bannerAd = if (bannerVisible) bannerAd else null,
+        nativeReserved = surfaces.levelsGameNative,
+        nativeSlot = if (nativeVisible) gameNative else NativeAdSlotState.Hidden,
     )
 
     LaunchedEffect(adsViewModel) {
@@ -143,12 +149,17 @@ fun GameRoute(
             when (event) {
                 is GameUiEvent.Haptic -> haptics.performHapticFeedback(
                     when (event.kind) {
+                        // Distinct feel per outcome. Confirm / Reject use the platform constants on API 30+; Compose falls
+                        // back to a plain click on older devices. Whole thing is skipped when the haptics setting is off
+                        // (the ViewModel never emits Haptic then).
                         HapticKind.TICK -> HapticFeedbackType.TextHandleMove
-                        HapticKind.CORRECT, HapticKind.PLACE, HapticKind.WRONG, HapticKind.WIN, HapticKind.LOSE ->
-                            HapticFeedbackType.LongPress
+                        HapticKind.CORRECT -> HapticFeedbackType.Confirm
+                        HapticKind.PLACE -> HapticFeedbackType.ContextClick
+                        HapticKind.WRONG, HapticKind.LOSE -> HapticFeedbackType.Reject
+                        HapticKind.WIN -> HapticFeedbackType.LongPress
                     },
                 )
-                is GameUiEvent.Sfx -> audio?.playSfx(event.kind)
+                is GameUiEvent.Sfx -> audio?.playSfx(event.kind, event.rate)
                 is GameUiEvent.NoCharges -> scope.launch {
                     snackbarHostState.currentSnackbarData?.dismiss()
                     snackbarHostState.showSnackbar(
@@ -163,6 +174,18 @@ fun GameRoute(
                 // only ever shows later, when the user taps "Level N+1".
                 is GameUiEvent.LevelWon -> adsViewModel.onLevelWon(isDaily = event.level <= 0)
                 is GameUiEvent.LevelLost -> Unit // dialogs render from state.outcome
+                // Visual-only: hand the transient cue to the board (it plays once per token, skips if animations are off).
+                // Touching violation: cats in the 8-neighbourhood of the wrong cell (read from the board the UI already shows) shake
+                // and pulse red too. No partners = plain wrong move, unchanged.
+                is GameUiEvent.WrongMove -> {
+                    val board = latestBoard.value
+                    val partners = if (board != null && event.cells.size == 1) {
+                        WrongMoveLogic.touchingCats(board.size, event.cells.first()) { board.cells[it].mark == CellMarkUi.CAT }
+                    } else {
+                        emptySet()
+                    }
+                    wrongMove = WrongMoveUi(++wrongMoveSeq, event.cells, partners)
+                }
             }
         }
     }
@@ -226,6 +249,7 @@ fun GameRoute(
         onCatBooster = viewModel::onCatBooster,
         onMouseBooster = viewModel::onMouseBooster,
         onMouseAnimDone = viewModel::onMouseAnimDone,
+        wrongMove = wrongMove,
         onRetryLoad = viewModel::onRetryLoad,
         // User-initiated boundary: maybe an interstitial BEFORE navigating (ad-free through Lv 9), then ALWAYS
         // continue (fail open).

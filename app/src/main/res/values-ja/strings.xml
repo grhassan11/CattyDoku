@@ -146,9 +146,6 @@
 
     <string name="rate_title">ゲームを楽しんでいますか？</string>
     <string name="rate_subtitle">星をタップして評価してください</string>
-    <string name="rate_submit">送信</string>
-    <string name="rate_not_now">あとで</string>
-    <string name="rate_submitted">評価を送信しました</string>
     <plurals name="rate_star_description">
         <item quantity="other">星%d個</item>
     </plurals>
@@ -314,6 +311,8 @@
     <string name="settings_off">オフ</string>
     <string name="settings_pattern">パターンモード</string>
     <string name="settings_pattern_hint">すべての色に模様を追加します</string>
+    <string name="settings_reduce_effects">エフェクトを減らす</string>
+    <string name="settings_reduce_effects_hint">パーティクルとアニメーションを減らします。古い端末やバッテリーにやさしい設定です。</string>
     <string name="settings_group_notifications">通知</string>
     <string name="settings_streak_reminders">連続記録リマインダー</string>
     <string name="settings_streak_reminders_hint">連続記録が途切れる前に夜のお知らせ</string>
@@ -322,6 +321,7 @@
     <string name="settings_sudoku_reminders">数独リマインダー</string>
     <string name="settings_sudoku_reminders_hint">ゲームを途中でやめた数時間後にお知らせ</string>
     <string name="settings_about">アプリについて</string>
+    <string name="settings_rate_us">アプリを評価</string>
     <string name="about_title">アプリについて</string>
     <string name="about_app_icon">%1$sのアプリアイコン</string>
     <string name="about_version">バージョン%1$s</string>
@@ -345,9 +345,9 @@
     <string name="tutorial_find_last">**最後のネコ**を見つけよう！</string>
     <string name="tutorial_find_last_sub">空のマスをダブルタップして置こう。</string>
     <string name="tutorial_excellent">すばらしい！ルールをマスターしました！</string>
-    <string name="tutorial_bottom_tap_empty">空のマスをタップして除外しよう。</string>
+    <string name="tutorial_bottom_tap_empty">空のマスをシングルタップして除外しよう。</string>
     <string name="tutorial_bottom_swipe">このマスをなぞって除外しよう。</string>
-    <string name="tutorial_hint_pill">ここをタップするとヒントが出ます。</string>
+    <string name="tutorial_hint_pill">ここをシングルタップするとヒントが出ます。</string>
     <string name="tutorial_got_it">わかった！</string>
     <string name="tutorial_start_game">ゲーム開始</string>
     <string name="tutorial_replay">チュートリアルをもう一度</string>
@@ -547,4 +547,12 @@
     <string name="sudoku_tut_next_tricks">次へ：解き方のコツ</string>
     <string name="sudoku_tut_start_playing">プレイ開始！</string>
 
+    <!-- Game feel: streak / region praise + combo chip -->
+    <string name="praise_nice">いいね！</string>
+    <string name="praise_purrfect">ニャンペキ！</string>
+    <string name="praise_meowvelous">ニャンダフル！</string>
+    <string name="praise_clawsome">ツメすごい！</string>
+    <string name="praise_clear">クリア！</string>
+    <string name="combo_chip">x%1$d</string>
+    <string name="combo_description">コンボ x%1$d</string>
 </resources>

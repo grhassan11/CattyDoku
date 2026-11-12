@@ -15,6 +15,8 @@ data class Settings(
     val dailyReminders: Boolean = true,
     /** "Unfinished Sudoku game" notification (~4 h after leaving). Default ON (still needs the OS permission). */
     val sudokuReminders: Boolean = true,
+    /** Cosmetic: turns off particles / looping motion / long effects (Levels). Default OFF = effects on. Never changes gameplay or score. */
+    val reduceEffects: Boolean = false,
 )
 
 /**

@@ -44,6 +44,8 @@ class SavedGameEntity(
     val undo: ByteArray,
     val charges: ByteArray,
     val updatedAt: Long,
+    /** IndexSetCodec blob of red-X cells (v5). Empty blob = none (default for rows migrated from v4). */
+    @ColumnInfo(defaultValue = "X''") val wrongX: ByteArray = ByteArray(0),
 )
 
 /** One row per played local date. */

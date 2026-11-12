@@ -5,7 +5,10 @@ import com.tm.meow.sudoku.puzzle.domain.rating.RateAction
 import com.tm.meow.sudoku.puzzle.domain.rating.RateUsPolicy
 import com.tm.meow.sudoku.puzzle.domain.repository.AppFlagsRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.ProgressRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 /**
  * Asks [RateUsPolicy] whether the Rate us dialog is due now. Reads highest won level, persisted flags and the in-memory
@@ -39,6 +42,11 @@ class DismissRateUs(private val flags: AppFlagsRepository) {
     suspend operator fun invoke() {
         flags.update { it.copy(rateUsDismissedCount = it.rateUsDismissedCount + 1) }
     }
+}
+
+/** Stream of "user already rated 4-5 stars" (drives hiding Rate us content on the exit sheet). */
+class ObserveRateUsRated(private val flags: AppFlagsRepository) {
+    operator fun invoke(): Flow<Boolean> = flags.flags.map { it.rateUsRated }.distinctUntilChanged()
 }
 
 /** A star rating was submitted. 4-5 marks the app as rated; returns what the UI does next. */

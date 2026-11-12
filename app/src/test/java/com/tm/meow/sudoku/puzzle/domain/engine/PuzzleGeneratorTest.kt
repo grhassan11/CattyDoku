@@ -117,9 +117,9 @@ class PuzzleGeneratorTest {
     }
 
     @Test
-    fun levels1to10HaveOneCellRegionAndStayValid() {
+    fun levels1to20HaveOneCellRegionAndStayValid() {
         var ok = 0
-        for (level in 1..10) {
+        for (level in 1..20) {
             assertTrue(DifficultyCurve.specFor(level).singletonRegion)
             for (seed in 1L..10L) {
                 val r = gen(level, seed * 31L) as? GenerationResult.Success ?: continue
@@ -129,12 +129,12 @@ class PuzzleGeneratorTest {
                 assertTrue("L$level seed $seed: no 1-cell region", sizes.any { it == 1 })
             }
         }
-        assertTrue("ok $ok/100", ok >= 90)
+        assertTrue("ok $ok/200", ok >= 180)
     }
 
     @Test
-    fun level11PlusSpecUnchanged() {
-        for (level in listOf(11, 12, 13, 24, 25, 40, 100)) {
+    fun levelsPastSingleBlockRangeSpecUnchanged() {
+        for (level in listOf(51, 52, 60, 100)) {
             assertEquals(false, DifficultyCurve.specFor(level).singletonRegion)
         }
     }

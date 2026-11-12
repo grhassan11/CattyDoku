@@ -9,8 +9,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import com.tm.meow.sudoku.puzzle.audio.AudioController
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveSettings
 import com.tm.meow.sudoku.puzzle.ui.components.LocalAudioController
+import com.tm.meow.sudoku.puzzle.ui.components.LocalReduceEffects
 import com.tm.meow.sudoku.puzzle.ui.navigation.AppNavHost
 import com.tm.meow.sudoku.puzzle.ui.navigation.AppStartViewModel
 import com.tm.meow.sudoku.puzzle.ui.theme.CatTheme
@@ -24,6 +31,9 @@ class MainActivity : AppCompatActivity() { // AppCompat: per-app language recrea
 
     /** App-wide singleton (started in CatPuzzleApp); exposed to composables through [LocalAudioController]. */
     @Inject lateinit var audioController: AudioController
+
+    /** Live "Reduce effects" setting for [LocalReduceEffects] (cosmetic only). */
+    @Inject lateinit var observeSettings: ObserveSettings
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Must run before super.onCreate: swaps Theme.CatPuzzle.Splash for Theme.CatPuzzle afterwards.
@@ -44,7 +54,12 @@ class MainActivity : AppCompatActivity() { // AppCompat: per-app language recrea
             ),
         )
         setContent {
-            CompositionLocalProvider(LocalAudioController provides audioController) {
+            val reduceEffectsFlow = remember { observeSettings().map { it.reduceEffects }.distinctUntilChanged() }
+            val reduceEffects by reduceEffectsFlow.collectAsState(initial = false)
+            CompositionLocalProvider(
+                LocalAudioController provides audioController,
+                LocalReduceEffects provides reduceEffects,
+            ) {
                 CatTheme {
                     AppNavHost()
                 }

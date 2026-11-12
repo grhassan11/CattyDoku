@@ -56,6 +56,7 @@ fun SavedGame.toEntity(): SavedGameEntity = SavedGameEntity(
     undo = UndoCodec.encode(state.undoStack),
     charges = ChargesCodec.encode(state.charges),
     updatedAt = savedAtMs,
+    wrongX = if (wrongX.isEmpty()) ByteArray(0) else IndexSetCodec.encode(wrongX),
 )
 
 /** @throws CodecException on a corrupt row. */
@@ -74,7 +75,18 @@ fun SavedGameEntity.toDomain(): SavedGame = SavedGame(
     ),
     elapsedMs = elapsedMs,
     savedAtMs = updatedAt,
+    wrongX = decodeWrongX(wrongX),
 )
+
+/** Cosmetic marker: empty (old row) or corrupt blob yields an empty set; never fails the whole save. */
+private fun decodeWrongX(bytes: ByteArray): Set<Int> {
+    if (bytes.isEmpty()) return emptySet()
+    return try {
+        IndexSetCodec.decode(bytes)
+    } catch (e: CodecException) {
+        emptySet()
+    }
+}
 
 fun Booster.storageKey(): String = StableIds.boosterKey(this)
 

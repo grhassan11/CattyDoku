@@ -8,17 +8,19 @@ import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSurfaces
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedPlacement
 import com.tm.meow.sudoku.puzzle.domain.ads.AdTrigger
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerPlacement
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedResult
 import com.tm.meow.sudoku.puzzle.domain.model.Booster
 import com.tm.meow.sudoku.puzzle.domain.network.AlwaysOnline
 import com.tm.meow.sudoku.puzzle.domain.time.TimeProvider
 import com.tm.meow.sudoku.puzzle.domain.usecase.GrantBoosterReward
-import com.tm.meow.sudoku.puzzle.domain.usecase.LoadBannerAd
+import com.tm.meow.sudoku.puzzle.domain.usecase.AdPlacement
+import com.tm.meow.sudoku.puzzle.domain.usecase.LoadNativeAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdSurfaces
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveOnline
+import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadGameNativeAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadInterstitialAd
+import com.tm.meow.sudoku.puzzle.domain.usecase.TakeGameNativeAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadRewardedAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.RecordLevelWon
 import com.tm.meow.sudoku.puzzle.domain.usecase.RetryAdsInit
@@ -54,7 +56,8 @@ sealed interface AdsUiEvent {
  * [afterWin] / [beforeRetry] ALWAYS call [onDone] exactly once, ad or no ad (fail open). One full-screen ad action at a
  * time: [busy] ignores taps while an interstitial or rewarded request is in flight (no double navigation / double grant).
  * Rewarded: [watchBoosterAd] / [watchReviveAd] call their callback ONLY after the earned-reward result, never on dismiss.
- * Banner: held here (survives recomposition / dialogs), destroyed when the surface turns off or the VM clears.
+ * Game native slot (banner-sized compact native, replaces the old banner): held here (survives recomposition / dialogs /
+ * Activity recreation), destroyed when the surface turns off or the VM clears.
  */
 @HiltViewModel
 class AdsViewModel @Inject constructor(
@@ -65,7 +68,9 @@ class AdsViewModel @Inject constructor(
     private val preloadRewarded: PreloadRewardedAd,
     private val showRewarded: ShowRewardedAd,
     private val grantBoosterReward: GrantBoosterReward,
-    private val loadBanner: LoadBannerAd,
+    private val loadNative: LoadNativeAd,
+    private val takeGameNative: TakeGameNativeAd,
+    private val preloadGameNative: PreloadGameNativeAd,
     private val time: TimeProvider,
     private val retryAdsInit: RetryAdsInit,
     observeOnline: ObserveOnline = ObserveOnline(AlwaysOnline),
@@ -104,7 +109,7 @@ class AdsViewModel @Inject constructor(
         screenLevel.value = level
     }
 
-    /** Live ad surfaces (rewarded / banner) after kill switches, ad-free levels, consent and SDK state. */
+    /** Live ad surfaces (rewarded / game native slots) after kill switches, ad-free levels, consent and SDK state. */
     val surfaces: StateFlow<AdSurfaces> = observeAdSurfaces(screenLevel)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AdSurfaces())
 
@@ -122,7 +127,7 @@ class AdsViewModel @Inject constructor(
     // ------------------------------------------------------------ interstitial
 
     /**
-     * Keep an interstitial loaded for the next boundary. [isSudoku] true = no level gate; Levels skips ad-free levels.
+     * Keep an interstitial loaded for the next boundary. [isSudoku] true = no level gate; Levels skips ad-free levels only when the win interstitial is off.
      * Call on game-screen entry (and again once the level number / ads state is known). Idempotent; policy in the use case.
      */
     fun preloadInterstitialAd(isSudoku: Boolean) {
@@ -133,7 +138,7 @@ class AdsViewModel @Inject constructor(
     /** Call when a level is WON (diagnostic win counter). Daily wins are ignored. */
     fun onLevelWon(isDaily: Boolean) = recordLevelWon(isDaily)
 
-    /** Win dialog "Level N+1": maybe show an interstitial BEFORE [onDone] (navigates). Ad-free through Lv 9. */
+    /** Win dialog "Level N+1": maybe show an interstitial BEFORE [onDone] (navigates). Not ad-free gated: frequency rule only. */
     fun afterWin(level: Int, isDaily: Boolean, onDone: () -> Unit) =
         run(AdTrigger.LEVEL_WON_CONTINUE, level, isDaily, onDone)
 
@@ -224,26 +229,34 @@ class AdsViewModel @Inject constructor(
         }
     }
 
-    // ------------------------------------------------------------ banner
+    // ------------------------------------------------------------ game native slot (was banner)
 
-    private val _banner = MutableStateFlow<BannerAdHandle?>(null)
+    private val _gameNative = MutableStateFlow<NativeAdSlotState>(NativeAdSlotState.Hidden)
 
-    /** Loaded sticky banner, or null (loading, failed, no consent, ad-free level, off). */
-    val banner: StateFlow<BannerAdHandle?> = _banner.asStateFlow()
+    /**
+     * Compact game-screen native slot. [NativeAdSlotState.Loading] while a request is in flight (UI shows the skeleton),
+     * [NativeAdSlotState.Loaded] when ready, [NativeAdSlotState.Failed] on no fill / timeout (UI keeps the slot height,
+     * blank), [NativeAdSlotState.Hidden] before the first request / after [releaseGameNative].
+     */
+    val gameNative: StateFlow<NativeAdSlotState> = _gameNative.asStateFlow()
 
-    private var bannerJob: Job? = null
-    private var bannerFailedAtMs: Long? = null
+    private var gameNativeJob: Job? = null
+    private var gameNativeFailedAtMs: Long? = null
 
-    /** Load the banner once for [widthDp] and [placement] (no-op when held / loading / failed within the last minute). */
-    fun requestBanner(widthDp: Int, placement: BannerPlacement = BannerPlacement.LEVELS_GAME) {
-        // The UI host destroys the banner on Activity recreation (it binds the view to the old Activity): drop it and reload.
-        if (_banner.value?.isDestroyed == true) _banner.value = null
-        if (_banner.value != null || bannerJob?.isActive == true) return
-        val failedAt = bannerFailedAtMs
-        if (failedAt != null && time.monotonicMillis() - failedAt < BANNER_RETRY_AFTER_FAIL_MS) return
-        bannerJob = viewModelScope.launch {
+    /**
+     * Load the native ad for [placement] ([AdPlacement.LEVELS_GAME] or [AdPlacement.SUDOKU_GAME]). No-op when one is held,
+     * loading, or a load failed within the last minute (no refetch thrash on recomposition / re-entry).
+     */
+    fun requestGameNative(placement: AdPlacement) {
+        if (_gameNative.value is NativeAdSlotState.Loaded || gameNativeJob?.isActive == true) return
+        val failedAt = gameNativeFailedAtMs
+        if (failedAt != null && time.monotonicMillis() - failedAt < NATIVE_RETRY_AFTER_FAIL_MS) return
+        _gameNative.value = NativeAdSlotState.Loading
+        gameNativeJob = viewModelScope.launch {
+            val level = surfaces.value.playerLevel.coerceAtLeast(screenLevel.value)
+            // Preloaded ad first (instant bind); fall back to a live request when the cache has nothing.
             val handle = try {
-                loadBanner(surfaces.value.playerLevel.coerceAtLeast(screenLevel.value), widthDp, placement)
+                takeGameNative(placement, level) ?: loadNative(placement, level)
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
@@ -254,27 +267,29 @@ class AdsViewModel @Inject constructor(
                 return@launch
             }
             if (handle == null) {
-                bannerFailedAtMs = time.monotonicMillis()
+                gameNativeFailedAtMs = time.monotonicMillis()
+                _gameNative.value = NativeAdSlotState.Failed
             } else {
-                bannerFailedAtMs = null
-                _banner.value = handle
+                gameNativeFailedAtMs = null
+                _gameNative.value = NativeAdSlotState.Loaded(handle)
+                preloadGameNative(placement) // next game of this mode (no-op when gated / already cached / loading)
             }
         }
     }
 
-    /** Destroy the held banner and cancel an in-flight load (surface turned off). */
-    fun releaseBanner() {
-        bannerJob?.cancel()
-        bannerJob = null
-        _banner.value?.destroy()
-        _banner.value = null
+    /** Destroy the held native ad and cancel an in-flight load (surface turned off / screen left). */
+    fun releaseGameNative() {
+        gameNativeJob?.cancel()
+        gameNativeJob = null
+        (_gameNative.value as? NativeAdSlotState.Loaded)?.ad?.destroy()
+        _gameNative.value = NativeAdSlotState.Hidden
     }
 
     override fun onCleared() {
-        releaseBanner()
+        releaseGameNative()
     }
 
     private companion object {
-        const val BANNER_RETRY_AFTER_FAIL_MS = 60_000L
+        const val NATIVE_RETRY_AFTER_FAIL_MS = 60_000L
     }
 }

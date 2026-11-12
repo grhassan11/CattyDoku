@@ -6,7 +6,7 @@ package com.tm.meow.sudoku.puzzle.domain.engine
  * Pure; the UI drives it with delays and only reads these constants / predicates.
  */
 object IdleNudgePolicy {
-    const val IDLE_DELAY_MS = 8_000L
+    const val IDLE_DELAY_MS = 10_000L
     const val NUDGE_DURATION_MS = 4_000L
 
     /** A booster is worth nudging only with stock; an ad refill alone is not enough. */

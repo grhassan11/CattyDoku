@@ -13,13 +13,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tm.meow.sudoku.puzzle.R
+import com.tm.meow.sudoku.puzzle.util.FeedbackEmail
 import com.tm.meow.sudoku.puzzle.util.LegalLinks
 import com.tm.meow.sudoku.puzzle.util.StoreLinks
 
 /**
  * Renders the Rate us dialog when [viewModel] says so and performs its one-shot follow-ups (store listing, low-star
- * toast). Place it as the LAST child of a full-screen Box so the scrim covers the screen below.
- * [onClosed] fires once each time the dialog goes from visible to hidden (submit, Not now, back): the Game route uses it
+ * feedback email). Place it as the LAST child of a full-screen Box so the scrim covers the screen below.
+ * [onClosed] fires once each time the dialog goes from visible to hidden (star tap, close X, back): the Game route uses it
  * to continue to the next level.
  */
 @Composable
@@ -30,7 +31,8 @@ fun RateUsHost(
 ) {
     val visible by viewModel.visible.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val submitted = stringResource(R.string.rate_submitted)
+    val feedbackSubject = stringResource(R.string.settings_feedback_subject, stringResource(R.string.app_name))
+    val noEmailApp = stringResource(R.string.settings_feedback_no_app)
     val linkFailed = stringResource(R.string.shop_link_failed)
     val latestOnClosed by rememberUpdatedState(onClosed)
     var wasVisible by remember { mutableStateOf(false) }
@@ -43,8 +45,10 @@ fun RateUsHost(
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                RateUsEvent.ShowSubmitted ->
-                    Toast.makeText(context, submitted, Toast.LENGTH_SHORT).show()
+                RateUsEvent.OpenFeedbackEmail ->
+                    if (!FeedbackEmail.open(context, feedbackSubject)) {
+                        Toast.makeText(context, noEmailApp, Toast.LENGTH_SHORT).show()
+                    }
                 RateUsEvent.OpenStoreListing ->
                     if (!LegalLinks.open(context, StoreLinks.listingUrl(context.packageName))) {
                         snackbarHostState.currentSnackbarData?.dismiss()
@@ -55,6 +59,6 @@ fun RateUsHost(
     }
 
     if (visible) {
-        RateUsDialog(onSubmit = viewModel::onSubmit, onDismiss = viewModel::onDismiss)
+        RateUsDialog(onStarSelected = viewModel::onSubmit, onClose = viewModel::onDismiss)
     }
 }

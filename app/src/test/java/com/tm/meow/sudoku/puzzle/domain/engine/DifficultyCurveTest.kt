@@ -120,6 +120,21 @@ class DifficultyCurveTest {
     }
 
     @Test
+    fun singleBlockRangeDefaultsTo50AndIsParameterised() {
+        assertEquals(50, DifficultyCurve.SINGLE_BLOCK_THROUGH_LEVEL)
+        for (lvl in 1..50) assertTrue("L$lvl", DifficultyCurve.specFor(lvl).singletonRegion)
+        for (lvl in listOf(51, 60, 500)) assertEquals(false, DifficultyCurve.specFor(lvl).singletonRegion)
+        // custom range
+        for (lvl in 1..30) assertTrue("L$lvl", DifficultyCurve.specFor(lvl, 30).singletonRegion)
+        assertEquals(false, DifficultyCurve.specFor(31, 30).singletonRegion)
+        // 0 = off
+        for (lvl in listOf(1, 10, 40)) assertEquals(false, DifficultyCurve.specFor(lvl, 0).singletonRegion)
+        // fallbacks keep the flag
+        assertTrue(DifficultyCurve.fallbackSpecsFor(41, 50).all { it.singletonRegion })
+        assertTrue(DifficultyCurve.fallbackSpecsFor(41, 0).none { it.singletonRegion })
+    }
+
+    @Test
     fun firstLevelsAreEasy() {
         assertEquals(1, DifficultyCurve.specFor(1).targetTechnique)
         assertEquals(1, DifficultyCurve.specFor(1).minRegionSize)

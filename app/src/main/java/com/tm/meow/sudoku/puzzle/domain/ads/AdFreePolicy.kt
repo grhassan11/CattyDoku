@@ -1,10 +1,10 @@
 package com.tm.meow.sudoku.puzzle.domain.ads
 
 /** Ad formats the app can show. [REWARDED] is never suppressed by a purchase. */
-enum class AdFormat { NATIVE_HOME, BANNER, INTERSTITIAL, APP_OPEN, REWARDED }
+enum class AdFormat { NATIVE_HOME, NATIVE_GAME, INTERSTITIAL, APP_OPEN, REWARDED }
 
 /**
- * The ONE early-level rule for every ad format (banner, interstitial, rewarded prompts). App-open has no level gate.
+ * The ONE early-level rule for rewarded prompts (Levels interstitials ignore it). App-open, Home native and the game native slots (Levels + Sudoku) have no level gate.
  * Levels 1..[AD_FREE_THROUGH_LEVEL] are ad-free; ads start at level [FIRST_AD_LEVEL].
  * Also holds the purchase rule ([isSuppressedByPurchase]). Pure, no clock, no Android. Callers pass the level they care about (level just completed / being played / highest
  * level reached from progress state). Level <= 0 (nothing played yet, or daily with no level) counts as ad-free.
@@ -18,7 +18,7 @@ object AdFreePolicy {
     fun adsAllowed(level: Int, throughLevel: Int = AD_FREE_THROUGH_LEVEL): Boolean = !isAdFree(level, throughLevel)
 
     /**
-     * The ONE purchase rule for every format: a bought "Remove ads" (active monthly OR forever) suppresses native, banner,
+     * The ONE purchase rule for every format: a bought "Remove ads" (active monthly OR forever) suppresses native (home + game slot),
      * interstitial and app-open. [AdFormat.REWARDED] is NEVER suppressed: it is opt-in value for the player, not an ad shown
      * to them. Callers must also skip preloading / loading a suppressed format.
      */

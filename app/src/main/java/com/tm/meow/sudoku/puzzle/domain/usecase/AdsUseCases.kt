@@ -120,7 +120,8 @@ class RecordSudokuWon(private val tracker: AdSessionTracker) {
 
 /**
  * Keep an interstitial loaded for the next win / restart boundary. Idempotent, never throws.
- * [playerLevel] = Levels level on screen / progress (ad-free levels never preload); null = Sudoku (no level gate).
+ * [playerLevel] = Levels level on screen / progress (ad-free levels skip preload only when both Levels interstitials
+ * (win, lose-retry) are off); null = Sudoku (no level gate).
  */
 class PreloadInterstitialAd(
     private val consent: ConsentRepository,
@@ -135,7 +136,10 @@ class PreloadInterstitialAd(
             val why = when {
                 !config.anyInterstitialShow -> "all interstitial switches off"
                 AdFreePolicy.isSuppressedByPurchase(AdFormat.INTERSTITIAL, adsRemoved.adsRemoved.value) -> "ads removed"
-                playerLevel != null && AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel) -> "ad-free level $playerLevel"
+                // Levels win and lose-retry interstitials both ignore ad-free levels, so preload there whenever either is
+                // on; the level gate only still applies when neither Levels interstitial is on.
+                playerLevel != null && !config.levelsWinInterstitialShow && !config.levelsRestartInterstitialShow &&
+                    AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel) -> "ad-free level $playerLevel"
                 !connectivity.isOnline.value -> "offline"
                 !consent.state.value.canRequestAds -> "no consent"
                 !ads.isSdkInitialized -> "sdk not initialized"

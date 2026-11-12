@@ -49,33 +49,6 @@ interface RewardedAdRepository {
     suspend fun show(): RewardedResult
 }
 
-/** Opaque loaded banner. The SDK object lives behind it; the UI adapter (ui/ads) hosts its view. */
-interface BannerAdHandle {
-    /** Release the SDK ad. Idempotent. */
-    fun destroy()
-
-    /** True once [destroy] ran (also when the UI host destroyed it on Activity recreation). Destroyed handles must not be hosted. */
-    val isDestroyed: Boolean get() = false
-}
-
-/** Which screen hosts a banner. Each placement has its own remote kill switch and gate (see LoadBannerAd / ObserveAdSurfaces). */
-enum class BannerPlacement {
-    /** Levels (Queens) game screen: ad-free early levels apply. */
-    LEVELS_GAME,
-
-    /** Sudoku game screen: no level gate (Sudoku has no level number). */
-    SUDOKU_GAME,
-}
-
-/** Anchored adaptive banner SDK boundary. Impl lives in data/ads. */
-interface BannerAdRepository {
-    /** False when the release unit id is still the placeholder. */
-    val isConfigured: Boolean
-
-    /** One anchored adaptive banner [widthDp] wide, or null (SDK not ready, no fill, timeout). Never throws. */
-    suspend fun load(widthDp: Int): BannerAdHandle?
-}
-
 /**
  * Which ad surfaces the game screen may show right now. Everything (kill switch, ad-free early levels, consent, SDK init,
  * real unit ids) is already folded in: UI shows a surface iff its flag is true.
@@ -92,11 +65,11 @@ data class AdSurfaces(
     /** Sudoku game-over revive CTA may appear. */
     val sudokuRevive: Boolean = false,
     val rewardedLoad: RewardedLoadState = RewardedLoadState.IDLE,
-    /** Sticky banner slot may be reserved on the game screen. */
-    val banner: Boolean = false,
-    /** Sudoku game-screen banner slot may be reserved. Independent of [banner] and of the ad-free level gate. */
-    val sudokuBanner: Boolean = false,
-    /** Remove Ads owned. Banner is already folded to false; rewarded is unaffected. Informational for the UI. */
+    /** Levels game-screen compact native slot may be reserved. Driven by remote `levels_game_native_ad_show`. */
+    val levelsGameNative: Boolean = false,
+    /** Sudoku game-screen compact native slot may be reserved. Independent of [levelsGameNative] and of the ad-free level gate. Remote `sudoku_game_native_ad_show`. */
+    val sudokuGameNative: Boolean = false,
+    /** Remove Ads owned. The game native slots are already folded to false; rewarded is unaffected. Informational for the UI. */
     val adsRemoved: Boolean = false,
     /** Validated internet connection present. Rewarded CTAs stay visible but show a helper text and are disabled while false. */
     val online: Boolean = true,

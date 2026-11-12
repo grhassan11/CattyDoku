@@ -78,6 +78,29 @@ class MappersTest {
     }
 
     @Test
+    fun savedGameRoundTripKeepsWrongX() {
+        val saved = SavedGame(7, richState(), 1L, 2L, wrongX = setOf(3, 9))
+        assertEquals(setOf(3, 9), saved.toEntity().toDomain().wrongX)
+    }
+
+    @Test
+    fun oldRowWithEmptyWrongXBlobLoadsEmpty() {
+        val e = SavedGame(1, richState(), 0L, 0L).toEntity() // empty set encodes to the v4->v5 default blob
+        assertEquals(0, e.wrongX.size)
+        assertEquals(emptySet<Int>(), e.toDomain().wrongX)
+    }
+
+    @Test
+    fun corruptWrongXBlobDoesNotDropTheSave() {
+        val e = SavedGame(1, richState(), 0L, 0L).toEntity()
+        val bad = com.tm.meow.sudoku.puzzle.data.local.entity.SavedGameEntity(
+            e.levelIndex, e.marks, e.hearts, e.status, e.elapsedMs, e.hintsUsed, e.correctPlacements,
+            e.rewardedCells, e.lockedCells, e.undo, e.charges, e.updatedAt, byteArrayOf(1),
+        )
+        assertEquals(emptySet<Int>(), bad.toDomain().wrongX)
+    }
+
+    @Test
     fun savedGameRoundTripForEveryStatus() {
         for (status in GameStatus.entries) {
             val saved = SavedGame(1, GameState.initial(4).copy(status = status), 0L, 5L)

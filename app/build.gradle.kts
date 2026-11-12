@@ -30,7 +30,7 @@ android {
         //   interstitial ca-app-pub-4314093941046206/9472125240
         //   native     ca-app-pub-4314093941046206/4495130734
         //   app open   ca-app-pub-4314093941046206/4609671647
-        //   banner     ca-app-pub-4314093941046206/7814419481
+        //   (banner unit 7814419481 retired: game screens now use the native unit above)
         //   rewarded   ca-app-pub-4314093941046206/9921708076
         // Placeholder guard (PLACEHOLDER_MARK contains-check) passes for both sets, so ads stay enabled.
         // No setTestDeviceIds is set: with REAL IDs do NOT run the release build on a dev device (invalid-traffic / policy risk).
@@ -38,14 +38,12 @@ android {
         val admobInterstitialId = "ca-app-pub-3940256099942544/1033173712"
         val admobNativeId = "ca-app-pub-3940256099942544/2247696110"
         val admobAppOpenId = "ca-app-pub-3940256099942544/9257395921"
-        val admobBannerId = "ca-app-pub-3940256099942544/9214589741"
         val admobRewardedId = "ca-app-pub-3940256099942544/5224354917"
         manifestPlaceholders["admobAppId"] = admobAppId
         buildConfigField("String", "ADMOB_APP_ID", "\"$admobAppId\"")
         buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"$admobInterstitialId\"")
         buildConfigField("String", "ADMOB_NATIVE_ID", "\"$admobNativeId\"")
         buildConfigField("String", "ADMOB_APP_OPEN_ID", "\"$admobAppOpenId\"")
-        buildConfigField("String", "ADMOB_BANNER_ID", "\"$admobBannerId\"")
         buildConfigField("String", "ADMOB_REWARDED_ID", "\"$admobRewardedId\"")
         // UMP_DEBUG_GEOGRAPHY (debug builds only): "" = real location, "EEA", "NOT_EEA", "US_STATE".
         // UMP_TEST_DEVICE_HASHED_ID: logcat prints it on first UMP request; blank = none.

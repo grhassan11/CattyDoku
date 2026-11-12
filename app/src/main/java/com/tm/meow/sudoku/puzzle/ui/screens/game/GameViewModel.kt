@@ -141,12 +141,19 @@ class GameViewModel @Inject constructor(
         val correctPlacement: CorrectPlacementUi? = null,
         /** Lose-dialog restarts of this level this VM session; part of the board intro-wave key. */
         val restartCount: Int = 0,
+        /** Cell indices holding the red X left by a wrong cat. Saved with the autosave ([SavedGame.wrongX]) and restored on resume. */
+        val wrongX: Set<Int> = emptySet(),
+        /** Cosmetic combo: consecutive clean correct placements this run. Not saved, not scored; a new Session resets it. */
+        val streak: Int = 0,
+        /** Latest region completed by a clean placement; set only by [applyStep]. */
+        val regionCleared: RegionClearedUi? = null,
     )
 
     private var mouseRunSeq = 0
     private var placementSeq = 0
+    private var regionSeq = 0
 
-    private class SaveRequest(val level: Int, val state: GameState, val elapsedMs: Long)
+    private class SaveRequest(val level: Int, val state: GameState, val elapsedMs: Long, val wrongX: Set<Int>)
 
     private val _state = MutableStateFlow<GameUiState>(GameUiState.Loading(null))
     val state: StateFlow<GameUiState> = _state.asStateFlow()
@@ -179,7 +186,7 @@ class GameViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            for (req in saveQueue) bestEffort { saveGame(req.level, req.state, req.elapsedMs) }
+            for (req in saveQueue) bestEffort { saveGame(req.level, req.state, req.elapsedMs, req.wrongX) }
         }
         loadLevel(requestedLevel)
     }
@@ -231,6 +238,7 @@ class GameViewModel @Inject constructor(
                         SettingToggle.STREAK_REMINDERS -> it.copy(streakReminders = enabled)
                         SettingToggle.DAILY_REMINDERS -> it.copy(dailyReminders = enabled)
                         SettingToggle.SUDOKU_REMINDERS -> it.copy(sudokuReminders = enabled)
+                        SettingToggle.REDUCE_EFFECTS -> it.copy(reduceEffects = enabled)
                     }
                 }
             }
@@ -301,9 +309,14 @@ class GameViewModel @Inject constructor(
                 crash.setCustomKey("daily", isDaily)
                 // Self-heal a stuck save: PLAYING but board already solved -> record the win once.
                 val stuckSolved = gameState.isPlaying && analyseBoard(usedPuzzle, gameState.board).solved
+                // Defensive: a restored red flag only counts while that cell is still a plain X.
+                val restoredWrongX = restored?.saved?.wrongX.orEmpty().filterTo(HashSet()) {
+                    it in gameState.board.marks.indices && gameState.board.marks[it] == CellMark.X
+                }
                 session = Session(
                     usedPuzzle,
                     if (stuckSolved) gameState.copy(status = GameStatus.SOLVED) else gameState,
+                    wrongX = restoredWrongX,
                 )
                 if (resumedSave) {
                     attempt.begin(attemptKey(usedPuzzle), resumed = true)
@@ -376,7 +389,9 @@ class GameViewModel @Inject constructor(
         val s = idle() ?: return
         val step = undo(s.state)
         if (step.state !== s.state) analytics.log(AnalyticsEvent.UndoUsed(levelContext(s.puzzle)))
-        applyStep(s, step, HapticKind.TICK, null, crossSfx = false)
+        // Undo may restore a plain X over a red auto-X (same mark value), so name the touched cells explicitly.
+        val touched = s.state.undoStack.lastOrNull()?.changes?.mapTo(HashSet()) { it.index } ?: emptySet()
+        applyStep(s, step, HapticKind.TICK, null, crossSfx = false, clearWrongX = touched)
     }
 
     // ---------------------------------------------------------------- boosters
@@ -424,7 +439,7 @@ class GameViewModel @Inject constructor(
                 attempt.boosterUsed()
                 analytics.log(AnalyticsEvent.BoosterUsed("cat", levelContext(s.puzzle)))
                 viewModelScope.launch { bestEffort { consumeBooster(Booster.CAT) } }
-                applyStep(s, r.step, HapticKind.PLACE, r.cell)
+                applyStep(s, r.step, HapticKind.PLACE, r.cell, fromBooster = true)
             }
         }
     }
@@ -526,7 +541,7 @@ class GameViewModel @Inject constructor(
     /** Like [playing] but also false while the mouse flight animation runs (board / booster / undo input blocked). */
     private fun idle(): Session? = playing()?.takeIf { it.mouseRun == null }
 
-    private fun applyStep(before: Session, step: StepResult, defaultHaptic: HapticKind, cell: Pos?, crossSfx: Boolean = true, haptic: Boolean = true) {
+    private fun applyStep(before: Session, step: StepResult, defaultHaptic: HapticKind, cell: Pos?, crossSfx: Boolean = true, haptic: Boolean = true, clearWrongX: Set<Int> = emptySet(), fromBooster: Boolean = false) {
         if (step.state === before.state) return // engine no-op
 
         var hapticKind = defaultHaptic
@@ -559,18 +574,56 @@ class GameViewModel @Inject constructor(
         // Engine only detects a win right after a cat placement. Removal / undo can also leave a full valid
         // board (e.g. removing the stray wrong cat), so re-check here; skipped when Solved/Lost already fired.
         var nextState = step.state
+        // Wrong cat never stays: the cell ends as an X (drawn red, see Session.wrongX). Same state emission as the heart
+        // loss, so the cat is never published. The engine already recorded the cell's pre-tap mark as ONE undo entry,
+        // so undo restores the state before the cat tap (hearts not refunded, as always).
+        var autoXIdx = -1
+        if (wrongPlaced && !solved && cell != null) {
+            autoXIdx = cell.index(before.puzzle.size)
+            nextState = nextState.copy(board = nextState.board.withMark(cell.row, cell.col, CellMark.X))
+        }
         if (!solved && !lost && nextState.isPlaying && analyseBoard(before.puzzle, nextState.board).solved) {
             solved = true
             nextState = nextState.copy(status = GameStatus.SOLVED)
         }
         // Clean correct placement: a cat newly placed by the player / cat booster on its solution cell (no
         // WrongPlacement) that is not flagged as a conflict. Never for removal, X marks, undo (cell == null) or load.
-        val correct = catPlaced && !wrongPlaced && cell != null &&
-            cell.index(before.puzzle.size) !in analyseBoard(before.puzzle, nextState.board).conflictCells
+        val afterAnalysis = if (catPlaced && !wrongPlaced && cell != null) analyseBoard(before.puzzle, nextState.board) else null
+        val correct = afterAnalysis != null && cell != null && cell.index(before.puzzle.size) !in afterAnalysis.conflictCells
         if (correct) hapticKind = HapticKind.CORRECT // clear placement buzz (TICK is X-mark only)
+        // Red-X markers: dropped for any cell whose mark changed (tap / drag / cat / booster) or that undo touched; then
+        // the freshly auto-X'd cell is added. UI-only, not persisted.
+        var wrongX = before.wrongX
+        if (wrongX.isNotEmpty()) {
+            val prev = before.state.board.marks
+            val next = nextState.board.marks
+            wrongX = wrongX.filterTo(HashSet()) { it !in clearWrongX && prev[it] == next[it] }
+        }
+        if (autoXIdx >= 0) wrongX = wrongX + autoXIdx
+        // Cosmetic feel (never touches score / state): streak, score delta for the +N popup, newly completed region, praise.
+        // The cat booster places a free correct cat: it plays the effects but neither raises nor resets the streak.
+        val streak = if (fromBooster) before.streak else StreakLogic.next(before.streak, correct, wrongPlaced)
+        var regionCleared = before.regionCleared
+        var points = 0
+        var praise: PraiseKind? = null
+        if (correct && cell != null && afterAnalysis != null) {
+            // Win bonus excluded: compare with the status held, so the popup shows the placement points only.
+            points = (computeScore(before.puzzle, nextState.copy(status = before.state.status), 0).score.total -
+                computeScore(before.puzzle, before.state, 0).score.total).coerceAtLeast(0)
+            val cleared = RegionClear.newlyDone(analyseBoard(before.puzzle, before.state.board).regionDone, afterAnalysis.regionDone)
+            if (cleared.isNotEmpty()) {
+                val own = before.puzzle.regions[cell.index(before.puzzle.size)]
+                regionCleared = RegionClearedUi(if (own in cleared) own else cleared.first(), ++regionSeq, cell.row, cell.col)
+            }
+            if (!solved) {
+                praise = (if (fromBooster) null else StreakLogic.praiseAt(streak))
+                    ?: if (cleared.isNotEmpty()) PraiseKind.CLEAR else null
+            }
+        }
         session = before.copy(
-            state = nextState, hint = null, hintOverlay = false,
-            correctPlacement = if (correct && cell != null) CorrectPlacementUi(cell.row, cell.col, ++placementSeq) else before.correctPlacement,
+            state = nextState, hint = null, hintOverlay = false, wrongX = wrongX,
+            streak = streak, regionCleared = regionCleared,
+            correctPlacement = if (correct && cell != null) CorrectPlacementUi(cell.row, cell.col, ++placementSeq, points, praise, if (fromBooster) 0 else streak) else before.correctPlacement,
         )
         if (solved || lost) {
             finish(won = solved)
@@ -590,12 +643,18 @@ class GameViewModel @Inject constructor(
             )
             wrongPlaced -> sendSfx(SfxKind.WRONG)
             // Soft chime replaces the meow on a clean correct placement (one placement sound, never both).
-            correct -> sendSfx(if (catLayered) SfxKind.CHIME else SfxKind.CHIME_SOLO)
+            // Pitch rises with the combo (cosmetic); booster cats stay at normal pitch.
+            correct -> sendSfx(if (catLayered) SfxKind.CHIME else SfxKind.CHIME_SOLO, if (fromBooster) 1f else StreakLogic.pitch(streak))
             // Boss levels place animals: never a cat sound on placement (the idle meow is separate).
             catPlaced -> sendSfx(if (catLayered) SfxKind.MEOW else SfxKind.CHIME_SOLO)
             // X mark(s) newly placed by tap or drag (not removals / undo). Cat placement keeps its meow above.
             crossSfx && step.state.board.marks.count { it == CellMark.X } > before.state.board.marks.count { it == CellMark.X } ->
                 sendSfx(SfxKind.CROSS)
+        }
+        // Visual-only wrong-move cue. Read-only compare against the solution; touches no state, hearts, undo or save.
+        // Last, so every existing haptic / sfx / outcome event keeps its order.
+        if (wrongPlaced && cell != null) {
+            _events.trySend(GameUiEvent.WrongMove(setOf(cell.index(before.puzzle.size))))
         }
         enqueueSave()
         publish()
@@ -605,7 +664,9 @@ class GameViewModel @Inject constructor(
         val s = session ?: return
         pauseTimer()
         val result = computeScore(s.puzzle, s.state, (elapsedMs() / 1000L).toInt())
-        session = s.copy(outcome = GameUiMapper.outcome(result))
+        session = s.copy(
+            outcome = GameUiMapper.outcome(result),
+        )
         attempt.end() // a finished attempt can never be logged as a quit
         val ctx = levelContext(s.puzzle)
         val stats = attemptStats(s, result.score.total)
@@ -679,13 +740,13 @@ class GameViewModel @Inject constructor(
         if (settings.haptics) _events.trySend(GameUiEvent.Haptic(kind))
     }
 
-    private fun sendSfx(kind: SfxKind) {
-        if (settings.sfx) _events.trySend(GameUiEvent.Sfx(kind))
+    private fun sendSfx(kind: SfxKind, rate: Float = 1f) {
+        if (settings.sfx) _events.trySend(GameUiEvent.Sfx(kind, rate))
     }
 
     private fun enqueueSave() {
         val s = session ?: return
-        saveQueue.trySend(SaveRequest(s.puzzle.levelIndex, s.state, elapsedMs()))
+        saveQueue.trySend(SaveRequest(s.puzzle.levelIndex, s.state, elapsedMs(), s.wrongX))
     }
 
     private fun publish() {
@@ -696,7 +757,11 @@ class GameViewModel @Inject constructor(
             GameUiMapper.content(
                 s.puzzle, s.state, analysis, s.hint, score, settings, s.outcome,
                 daily = isDaily, hintOverlayOpen = s.hintOverlay,
-            ).copy(mouseRun = s.mouseRun, lastCorrectPlacement = s.correctPlacement, restartCount = s.restartCount),
+            ).copy(
+                mouseRun = s.mouseRun, lastCorrectPlacement = s.correctPlacement, restartCount = s.restartCount,
+                regionCleared = s.regionCleared, comboStreak = s.streak,
+            )
+                .withWrongX(s.wrongX),
         )
     }
 

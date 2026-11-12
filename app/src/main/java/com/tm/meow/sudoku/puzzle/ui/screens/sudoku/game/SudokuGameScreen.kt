@@ -39,11 +39,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tm.meow.sudoku.puzzle.R
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState
 import com.tm.meow.sudoku.puzzle.domain.model.Booster
 import com.tm.meow.sudoku.puzzle.domain.model.PieceSkin
-import com.tm.meow.sudoku.puzzle.ui.ads.BannerAdSlot
+import com.tm.meow.sudoku.puzzle.ui.ads.GameNativeAdSlot
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.homePattern
 import com.tm.meow.sudoku.puzzle.ui.screens.game.BoosterAdDialog
@@ -58,8 +58,8 @@ private val ContentMaxWidth = 480.dp
 /** Digits start this long after their cell along the intro wave (see [SudokuBoard]). */
 internal const val SUDOKU_DIGIT_LAG_MS = 150f
 
-/** Gap kept between the number pad and the banner slot (AdMob accidental-click policy). Same as the Levels screen. */
-private val BANNER_CLEARANCE = 48.dp
+/** Gap kept between the number pad and the native ad slot (AdMob accidental-click policy). Same as the Levels screen. */
+private val NATIVE_AD_CLEARANCE = 48.dp
 
 /**
  * Sudoku game screen. Stateless: state + lambdas only ([SudokuGameRoute] owns the ViewModel).
@@ -94,10 +94,10 @@ fun SudokuGameScreen(
     onRetryRewardedLoad: () -> Unit,
     onOpenStore: () -> Unit,
     modifier: Modifier = Modifier,
-    /** Banner slot is allowed (reserve its height + clearance). False = no space reserved. */
-    bannerReserved: Boolean = false,
-    /** Loaded banner to host, or null (loading / hidden under a dialog: the slot stays reserved, the view detaches). */
-    bannerAd: BannerAdHandle? = null,
+    /** Native slot is allowed (reserve its banner-sized height + clearance). False = no space reserved. */
+    nativeReserved: Boolean = false,
+    /** Native slot content: Loading = skeleton, Loaded = ad, Hidden / Failed = blank (also under a dialog: the slot stays reserved, the view detaches). */
+    nativeSlot: NativeAdSlotState = NativeAdSlotState.Hidden,
 ) {
     BackHandler(onBack = onBack)
     val theme = remember(state.tier) { sudokuTierTheme(state.tier) }
@@ -117,15 +117,15 @@ fun SudokuGameScreen(
             .homePattern(),
         contentAlignment = Alignment.TopCenter,
     ) {
-        // Outer column owns the insets: banner slot (full width) sits at the bottom, ABOVE the navigation bar.
+        // Outer column owns the insets: native slot (full width) sits at the bottom, ABOVE the navigation bar.
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
         Column(
             Modifier
                 .fillMaxHeight()
                 .widthIn(max = ContentMaxWidth)
-                // Policy: keep clear space between the number pad (accidental-tap zone) and the banner.
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = if (bannerReserved) BANNER_CLEARANCE else 12.dp),
+                // Policy: keep clear space between the number pad (accidental-tap zone) and the native ad.
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = if (nativeReserved) NATIVE_AD_CLEARANCE else 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             // Leftover height (only exists when the board is width-bound: 4x4/6x6/tall phones) is spread between sections.
             // The board's weight(1f, fill=false) claims its space first, so tight screens (9x9, small phones) get zero slack.
@@ -185,7 +185,7 @@ fun SudokuGameScreen(
             }
         }
         }
-        if (bannerReserved) BannerAdSlot(bannerAd)
+        if (nativeReserved) GameNativeAdSlot(nativeSlot)
         }
 
         SnackbarHost(

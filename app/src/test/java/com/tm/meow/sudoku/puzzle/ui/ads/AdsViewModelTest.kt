@@ -4,10 +4,16 @@ import app.cash.turbine.test
 import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdShowResult
+import com.tm.meow.sudoku.puzzle.domain.ads.GameNativeAdCache
+import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadGameNativeAd
+import com.tm.meow.sudoku.puzzle.domain.usecase.TakeGameNativeAd
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdRepository
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdHandle
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdRepository
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedResult
@@ -20,7 +26,8 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.GatherConsentAndInitAds
 import com.tm.meow.sudoku.puzzle.domain.usecase.GrantBoosterReward
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadInterstitialAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.RetryAdsInit
-import com.tm.meow.sudoku.puzzle.domain.usecase.LoadBannerAd
+import com.tm.meow.sudoku.puzzle.domain.usecase.AdPlacement
+import com.tm.meow.sudoku.puzzle.domain.usecase.LoadNativeAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdSurfaces
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadRewardedAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.RecordLevelWon
@@ -83,20 +90,22 @@ private class AvRewarded(var result: RewardedResult = RewardedResult.EARNED) : R
     }
 }
 
-private class AvBannerHandle : BannerAdHandle {
+private class AvNativeHandle : NativeAdHandle {
     var destroyed = false
     override fun destroy() {
         destroyed = true
     }
 }
 
-private class AvBanner : BannerAdRepository {
+private class AvNative : NativeAdRepository {
     override val isConfigured = true
     var loadCalls = 0
-    var last: AvBannerHandle? = null
-    override suspend fun load(widthDp: Int): BannerAdHandle? {
+    var fail = false
+    var last: AvNativeHandle? = null
+    override suspend fun load(): NativeAdHandle? {
         loadCalls++
-        return AvBannerHandle().also { last = it }
+        if (fail) return null
+        return AvNativeHandle().also { last = it }
     }
 }
 
@@ -112,18 +121,23 @@ class AdsViewModelTest {
         val inventory = FakeInventoryRepository()
         val interstitial = AvInterstitial()
         val rewarded = AvRewarded()
-        val banner = AvBanner()
+        val nativeAds = AvNative()
         val config = AdPolicyConfig()
+        val loadNative = LoadNativeAd(consent, nativeAds, config)
+        val cache = GameNativeAdCache(time, CoroutineScope(SupervisorJob() + Dispatchers.Unconfined))
+        val preloadGame = PreloadGameNativeAd(loadNative, cache, flags)
 
         fun viewModel() = AdsViewModel(
             recordLevelWon = RecordLevelWon(tracker),
             showInterstitial = ShowInterstitialIfAllowed(consent, interstitial, tracker, flags, config),
             preloadInterstitial = PreloadInterstitialAd(consent, interstitial, config),
-            observeAdSurfaces = ObserveAdSurfaces(flags, consent, sdk, rewarded, banner, config),
+            observeAdSurfaces = ObserveAdSurfaces(flags, consent, sdk, rewarded, nativeAds, config),
             preloadRewarded = PreloadRewardedAd(consent, sdk, rewarded, config),
             showRewarded = ShowRewardedAd(consent, sdk, rewarded, tracker, config),
             grantBoosterReward = GrantBoosterReward(inventory),
-            loadBanner = LoadBannerAd(consent, sdk, banner, config),
+            loadNative = loadNative,
+            takeGameNative = TakeGameNativeAd(loadNative, cache),
+            preloadGameNative = preloadGame,
             time = time,
             retryAdsInit = RetryAdsInit(GatherConsentAndInitAds(consent, interstitial, flags, tracker)),
         )
@@ -240,42 +254,89 @@ class AdsViewModelTest {
     // ---------------------------------------------------------------- interstitial boundary
 
     @Test
-    fun afterWinAlwaysContinuesAndIsAdFreeThroughLevelNine() = adsTest { rig, vm ->
+    fun afterWinAlwaysContinuesAndFollowsFrequencyOnly() = adsTest { rig, vm ->
         repeat(2) { vm.onLevelWon(isDaily = false) }
         rig.time.now += 200_000L
         var done = 0
-        vm.afterWin(level = 9, isDaily = false) { done++ }
+        vm.afterWin(level = 4, isDaily = false) { done++ }
         advanceUntilIdle()
         assertEquals(1, done)
-        assertEquals("level 9 is ad-free", 0, rig.interstitial.showCalls)
-        vm.afterWin(level = 10, isDaily = false) { done++ }
+        assertEquals("level 4 is not a multiple of 5", 0, rig.interstitial.showCalls)
+        vm.afterWin(level = 5, isDaily = false) { done++ }
         advanceUntilIdle()
         assertEquals(2, done)
-        assertEquals(1, rig.interstitial.showCalls)
+        assertEquals("level 5 shows (no ad-free gate)", 1, rig.interstitial.showCalls)
     }
 
-    // ---------------------------------------------------------------- banner
+    // ---------------------------------------------------------------- game native slot
 
     @Test
-    fun bannerLoadsOnlyPastTheGateAndIsDestroyedOnRelease() = adsTest { rig, vm ->
-        vm.setScreenLevel(9)
-        vm.requestBanner(360)
+    fun gameNativeLoadsFromLevelOneAndIsDestroyedOnRelease() = adsTest { rig, vm ->
+        vm.setScreenLevel(1)
+        vm.requestGameNative(AdPlacement.LEVELS_GAME)
         advanceUntilIdle()
-        assertEquals(0, rig.banner.loadCalls)
-        assertNull(vm.banner.value)
+        assertEquals(1, rig.nativeAds.loadCalls)
+        assertTrue(vm.gameNative.value is NativeAdSlotState.Loaded)
+        vm.requestGameNative(AdPlacement.LEVELS_GAME) // already held
+        assertEquals(1, rig.nativeAds.loadCalls)
 
-        vm.setScreenLevel(10)
-        rig.time.now += 61_000L // past the retry-after-fail throttle
-        vm.requestBanner(360)
-        advanceUntilIdle()
-        assertEquals(1, rig.banner.loadCalls)
-        assertNotNull(vm.banner.value)
-        vm.requestBanner(360) // already held
-        assertEquals(1, rig.banner.loadCalls)
-
-        val held = rig.banner.last!!
-        vm.releaseBanner()
+        val held = rig.nativeAds.last!!
+        vm.releaseGameNative()
         assertTrue(held.destroyed)
-        assertNull(vm.banner.value)
+        assertEquals(NativeAdSlotState.Hidden, vm.gameNative.value)
+    }
+
+    @Test
+    fun sudokuGameNativeHasNoLevelGateAndPreloadsTheNextOne() = adsTest { rig, vm ->
+        vm.requestGameNative(AdPlacement.SUDOKU_GAME)
+        advanceUntilIdle()
+        assertEquals("live request + preload of the next game", 2, rig.nativeAds.loadCalls)
+        assertTrue(vm.gameNative.value is NativeAdSlotState.Loaded)
+        vm.releaseGameNative()
+    }
+
+    @Test
+    fun failedGameNativeLoadIsThrottled() = adsTest { rig, vm ->
+        rig.nativeAds.fail = true
+        vm.requestGameNative(AdPlacement.SUDOKU_GAME)
+        advanceUntilIdle()
+        assertEquals(NativeAdSlotState.Failed, vm.gameNative.value)
+        assertEquals(1, rig.nativeAds.loadCalls)
+        vm.requestGameNative(AdPlacement.SUDOKU_GAME)
+        advanceUntilIdle()
+        assertEquals("throttled", 1, rig.nativeAds.loadCalls)
+    }
+
+    @Test
+    fun preloadedGameNativeIsBoundWithoutALiveRequestAndTakenOnce() = adsTest { rig, vm ->
+        rig.preloadGame(AdPlacement.SUDOKU_GAME) // what Sudoku entry does
+        assertEquals(1, rig.nativeAds.loadCalls)
+        val preloaded = rig.nativeAds.last!!
+
+        vm.requestGameNative(AdPlacement.SUDOKU_GAME)
+        advanceUntilIdle()
+        val loaded = vm.gameNative.value as NativeAdSlotState.Loaded
+        assertTrue("bound the preloaded ad", loaded.ad === preloaded)
+        assertEquals("only the next-game preload hit the SDK", 2, rig.nativeAds.loadCalls)
+
+        // The preloaded ad left the cache: releasing destroys it, the cache still holds only the NEXT one.
+        vm.releaseGameNative()
+        assertTrue(preloaded.destroyed)
+        assertFalse(rig.nativeAds.last!!.destroyed)
+        assertTrue("next ad available", rig.cache.take(AdPlacement.SUDOKU_GAME) != null)
+        assertNull("take-once", rig.cache.take(AdPlacement.SUDOKU_GAME))
+    }
+
+    @Test
+    fun expiredPreloadIsDestroyedAndReplacedByALiveRequest() = adsTest { rig, vm ->
+        rig.preloadGame(AdPlacement.SUDOKU_GAME)
+        val stale = rig.nativeAds.last!!
+        rig.time.now += 56 * 60 * 1000L
+        vm.requestGameNative(AdPlacement.SUDOKU_GAME)
+        advanceUntilIdle()
+        assertTrue("expired ad destroyed, never bound", stale.destroyed)
+        val loaded = vm.gameNative.value as NativeAdSlotState.Loaded
+        assertFalse(loaded.ad === stale)
+        vm.releaseGameNative()
     }
 }

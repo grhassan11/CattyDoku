@@ -7,6 +7,7 @@ import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.rating.RateAction
 import com.tm.meow.sudoku.puzzle.domain.usecase.DismissRateUs
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveRateUsRated
 import com.tm.meow.sudoku.puzzle.domain.usecase.SubmitRateUs
 import com.tm.meow.sudoku.puzzle.domain.usecase.TryShowRateUs
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,15 +16,19 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** One-shot follow-ups the route performs (needs a Context, so not done here). */
 sealed interface RateUsEvent {
-    /** 1-3 stars: show a "Rating Submitted" toast. */
-    data object ShowSubmitted : RateUsEvent
+    /** 1-3 stars: open the user's email app with the feedback draft. */
+    data object OpenFeedbackEmail : RateUsEvent
 
     /** 4-5 stars: open the Play Store listing. */
     data object OpenStoreListing : RateUsEvent
@@ -38,8 +43,18 @@ class RateUsViewModel @Inject constructor(
     private val tryShowRateUs: TryShowRateUs,
     private val dismissRateUs: DismissRateUs,
     private val submitRateUs: SubmitRateUs,
+    observeRateUsRated: ObserveRateUsRated,
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) : ViewModel() {
+
+    /**
+     * Whether the exit sheet shows the Rate us content: true only once the flag is known to be "not rated yet"
+     * (starts false so an already-rated user never sees a flash). No once-ever / cooldown policy applies to the sheet.
+     */
+    val showRateInExitSheet: StateFlow<Boolean> = observeRateUsRated()
+        .map { rated -> !rated }
+        .catch { emit(false) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _visible = MutableStateFlow(false)
     val visible: StateFlow<Boolean> = _visible.asStateFlow()
@@ -67,19 +82,48 @@ class RateUsViewModel @Inject constructor(
         return due
     }
 
-    /** Not now / back / scrim tap. */
+    /** True while the visible dialog was opened by the user (Settings), not by the auto policy. */
+    private var manual = false
+
+    /**
+     * User-initiated open (Settings "Rate Us"). Skips [TryShowRateUs]: ignores the once-only / rated flags and does NOT
+     * write "shown". Dismissing it does not bump the auto-prompt dismissed counter.
+     */
+    fun showManually() {
+        if (_visible.value) return
+        manual = true
+        _visible.value = true
+        analytics.log(AnalyticsEvent.RatePrompt("shown_manual"))
+    }
+
+    /** Close X / back / scrim tap. Auto-prompt bumps the dismissed counter; manual (Settings) does not. */
     fun onDismiss() {
         if (!_visible.value) return
         _visible.value = false
         analytics.log(AnalyticsEvent.RatePrompt("dismissed"))
+        if (manual) {
+            manual = false
+            return
+        }
         viewModelScope.launch { bestEffort { dismissRateUs() } }
     }
 
-    /** Submit with [stars] (1..5). */
+    /** A star was tapped ([stars] 1..5): closes the dialog and emits the follow-up event (store / feedback email). */
     fun onSubmit(stars: Int) {
         if (!_visible.value) return
-        val s = stars.coerceIn(1, 5)
         _visible.value = false
+        manual = false
+        submit(stars)
+    }
+
+    /**
+     * Star tapped inside the Home exit sheet. Same routing/events as [onSubmit] but there is no dialog to close, the
+     * auto-prompt flags/counters are untouched (only 4-5 stars marks rated, via [SubmitRateUs]).
+     */
+    fun onExitSheetStar(stars: Int) = submit(stars)
+
+    private fun submit(stars: Int) {
+        val s = stars.coerceIn(1, 5)
         viewModelScope.launch {
             val action = try {
                 submitRateUs(s)
@@ -91,7 +135,7 @@ class RateUsViewModel @Inject constructor(
             when (action) {
                 RateAction.SUBMITTED_LOW -> {
                     analytics.log(AnalyticsEvent.RatePrompt("submitted_low"))
-                    _events.trySend(RateUsEvent.ShowSubmitted)
+                    _events.trySend(RateUsEvent.OpenFeedbackEmail)
                 }
                 RateAction.STORE_LISTING -> {
                     analytics.log(AnalyticsEvent.RatePrompt("store_listing"))

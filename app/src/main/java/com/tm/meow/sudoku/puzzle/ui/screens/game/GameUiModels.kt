@@ -24,6 +24,8 @@ data class CellUi(
     val hintRole: HintRole,
     /** Which placed-cat image this cell's region uses (0 until CatVariants.UNIQUE). */
     val catVariant: Int = 0,
+    /** X left by a wrong cat: drawn in the wrong-move red instead of the normal X colour. UI-only. */
+    val wrongX: Boolean = false,
 )
 
 @Immutable
@@ -90,10 +92,11 @@ data class SettingsUi(
     val streakReminders: Boolean = true,
     val dailyReminders: Boolean = true,
     val sudokuReminders: Boolean = true,
+    val reduceEffects: Boolean = false,
 )
 
 /** Which setting a dialog toggle flips. */
-enum class SettingToggle { MUSIC, SFX, VOICE, HAPTICS, PATTERN_MODE, STREAK_REMINDERS, DAILY_REMINDERS, SUDOKU_REMINDERS }
+enum class SettingToggle { MUSIC, SFX, VOICE, HAPTICS, PATTERN_MODE, STREAK_REMINDERS, DAILY_REMINDERS, SUDOKU_REMINDERS, REDUCE_EFFECTS }
 
 @Immutable
 data class GameContentUi(
@@ -123,6 +126,10 @@ data class GameContentUi(
     val pieceSkin: PieceSkin = PieceSkin.cats(),
     /** Bumped on every Retry of the same level so the board intro wave replays. */
     val restartCount: Int = 0,
+    /** Latest region completed by a clean placement (drives clear wave / burst / tab pop). Token-gated like [lastCorrectPlacement]. */
+    val regionCleared: RegionClearedUi? = null,
+    /** Cosmetic in-run streak of consecutive correct placements (combo chip). Not persisted, not in the score. */
+    val comboStreak: Int = 0,
 )
 
 /**
@@ -130,7 +137,32 @@ data class GameContentUi(
  * increasing per placement: the board plays the effect once per new token and never for restored / loaded state.
  */
 @Immutable
-data class CorrectPlacementUi(val row: Int, val col: Int, val token: Int)
+data class CorrectPlacementUi(
+    val row: Int,
+    val col: Int,
+    val token: Int,
+    /** Score gained by this placement (domain delta, before vs after). 0 = no popup. */
+    val points: Int = 0,
+    /** Praise word to flash with this placement (streak milestone, else "Clear!"). Null = none. */
+    val praise: PraiseKind? = null,
+    /** Combo streak after this placement (0 for the cat booster): scales / recolours the "+N" popup. */
+    val streak: Int = 0,
+)
+
+/**
+ * A region just completed by the placement at ([row], [col]). [token] is unique and increasing; the UI plays the clear
+ * effects once per new token and never for restored / loaded state.
+ */
+@Immutable
+data class RegionClearedUi(val region: Int, val token: Int, val row: Int = -1, val col: Int = -1)
+
+/**
+ * Transient wrong-move feedback for the board (animation only, never persisted). [token] is unique and increasing per
+ * move; [cells] are flat board indices. Only a cat placed on a wrong cell fires it (never an X).
+ * [partners]: placed cats touching the wrong cell (a "no-touch" violation): they shake and pulse red too. Empty otherwise.
+ */
+@Immutable
+data class WrongMoveUi(val token: Int, val cells: Set<Int>, val partners: Set<Int> = emptySet())
 
 /** One mouse booster flight: [id] is unique per use, [cells] the target tiles in visit order. */
 @Immutable
@@ -190,11 +222,17 @@ sealed interface GameUiEvent {
     /** Already filtered by the haptics setting: UI just performs it. */
     data class Haptic(val kind: HapticKind) : GameUiEvent
 
-    /** Already filtered by the sfx setting: UI just plays it. */
-    data class Sfx(val kind: SfxKind) : GameUiEvent
+    /** Already filtered by the sfx setting: UI just plays it. [rate] = playback-rate multiplier (streak pitch rise), 1 = normal. */
+    data class Sfx(val kind: SfxKind, val rate: Float = 1f) : GameUiEvent
 
     /** Booster tapped with no charges left. */
     data class NoCharges(val booster: Booster) : GameUiEvent
+
+    /**
+     * Visual-only wrong-move cue (red flash + broken heart on [cells], flat indices). Not filtered by sound / haptic settings;
+     * the UI skips it when system animations are off. Never changes game state.
+     */
+    data class WrongMove(val cells: Set<Int>) : GameUiEvent
 
     data class LevelWon(val level: Int, val score: Int) : GameUiEvent
 
@@ -211,8 +249,15 @@ data class GameAdsUi(
     val rewardedLoad: com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState = com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState.IDLE,
     /** A rewarded request / ad is in flight: CTAs inert. */
     val rewardedBusy: Boolean = false,
-    /** Fixed-height banner slot is reserved at the bottom (layout stays stable even before the ad loads). */
-    val bannerReserved: Boolean = false,
-    /** Loaded banner to host, or null (still loading / failed / hidden behind a dialog). */
-    val bannerAd: com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle? = null,
+    /** Fixed-height (banner-sized) compact native slot is reserved at the bottom (layout stays stable even before the ad loads). */
+    val nativeReserved: Boolean = false,
+    /** Native slot content: Loading = skeleton, Loaded = ad, Hidden / Failed = blank (also while a dialog is open). */
+    val nativeSlot: com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState = com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState.Hidden,
 )
+
+/** Marks the given cell indices as red wrong-cat X's (UI-only flag). Returns this when empty. */
+internal fun GameContentUi.withWrongX(indices: Set<Int>): GameContentUi {
+    if (indices.isEmpty()) return this
+    val cells = board.cells.mapIndexed { i, c -> if (i in indices && c.mark == CellMarkUi.X) c.copy(wrongX = true) else c }
+    return copy(board = board.copy(cells = cells))
+}

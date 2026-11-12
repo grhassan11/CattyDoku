@@ -10,4 +10,6 @@ data class SavedGame(
     val state: GameState,
     val elapsedMs: Long,
     val savedAtMs: Long,
+    /** Flat cell indices drawn as a red X (left by a wrong cat). UI marker only; empty for old saves. */
+    val wrongX: Set<Int> = emptySet(),
 )

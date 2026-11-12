@@ -13,14 +13,19 @@ fun interface LevelGenerator {
 }
 
 /** Production generator: the deterministic engine with a fixed config. */
-class EnginePuzzleGenerator(private val config: GeneratorConfig = GeneratorConfig.DEFAULT) : LevelGenerator {
+class EnginePuzzleGenerator(
+    private val config: GeneratorConfig = GeneratorConfig.DEFAULT,
+    /** Levels 1..N get the single colored block (remote-configurable; read per generation). */
+    private val singleBlockThroughLevel: () -> Int = { DifficultyCurve.SINGLE_BLOCK_THROUGH_LEVEL },
+) : LevelGenerator {
     override fun generate(level: Int, seed: Long): GenerationResult {
-        val primary = PuzzleGenerator.generateForLevel(level, seed, config)
+        val through = singleBlockThroughLevel()
+        val primary = PuzzleGenerator.generateForLevel(level, seed, config, through)
         if (primary is GenerationResult.Success) return primary
         // 8x8/9x9 only (empty list for <= 7x7): same seed mix, smaller board / lower target, so a
         // slow or failing big board can never dead-end the level.
         val levelSeed = SeededRng.mix(seed, level.coerceAtLeast(1).toLong())
-        for (spec in DifficultyCurve.fallbackSpecsFor(level)) {
+        for (spec in DifficultyCurve.fallbackSpecsFor(level, through)) {
             val r = PuzzleGenerator.generate(spec, levelSeed, config)
             if (r is GenerationResult.Success) return r
         }

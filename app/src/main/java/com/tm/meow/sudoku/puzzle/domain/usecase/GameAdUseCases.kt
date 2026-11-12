@@ -8,9 +8,7 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSurfaces
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdRepository
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerPlacement
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedPlacement
@@ -32,8 +30,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
 /*
- * Game-screen ad use cases: rewarded (booster refill + lose revive) and the sticky banner.
- * Every format shares ONE early-level rule: AdFreePolicy / AdPolicyConfig.adFreeThroughLevel.
+ * Game-screen ad use cases: rewarded (booster refill + lose revive) and the compact game-screen native slot (loaded by LoadNativeAd).
+ * Rewarded shares the early-level rule AdFreePolicy / AdPolicyConfig.adFreeThroughLevel; the game native slots do NOT.
  */
 
 /**
@@ -46,7 +44,7 @@ class ObserveAdSurfaces(
     private val consent: ConsentRepository,
     private val sdk: AdsSdkStatus,
     private val rewarded: RewardedAdRepository,
-    private val banner: BannerAdRepository,
+    private val nativeAds: NativeAdRepository,
     private val config: AdPolicyConfig,
     private val adsRemovedRepository: AdsRemovedRepository = NoAdsRemoved,
     private val logger: AdLogger = NoopAdLogger,
@@ -66,7 +64,7 @@ class ObserveAdSurfaces(
             val level = maxOf(flagLevel, screen)
             val base = consentState.canRequestAds && initialized &&
                 AdFreePolicy.adsAllowed(level, config.adFreeThroughLevel)
-            // Sudoku banner: no level gate (no level number there). Remove Ads still suppresses it.
+            // Game native slots (Levels + Sudoku): no level gate, Levels shows from Level 1. Remove Ads still suppresses them.
             val sudokuBase = consentState.canRequestAds && initialized
             val rewardedBase = base && rewarded.isConfigured
             logger.log(
@@ -81,11 +79,11 @@ class ObserveAdSurfaces(
                 sudokuBoosters = rewardedBase && config.sudokuBoostersRewardedShow,
                 sudokuRevive = rewardedBase && config.sudokuReviveRewardedShow,
                 rewardedLoad = if (online) load else RewardedLoadState.OFFLINE,
-                // Remove Ads suppresses the banner; rewarded is never suppressed (AdFreePolicy.isSuppressedByPurchase).
-                banner = base && config.levelsGameBannerShow && banner.isConfigured && online &&
-                    !AdFreePolicy.isSuppressedByPurchase(AdFormat.BANNER, removed),
-                sudokuBanner = sudokuBase && config.sudokuGameBannerShow && banner.isConfigured && online &&
-                    !AdFreePolicy.isSuppressedByPurchase(AdFormat.BANNER, removed),
+                // Remove Ads suppresses the game native slots; rewarded is never suppressed (AdFreePolicy.isSuppressedByPurchase).
+                levelsGameNative = sudokuBase && config.levelsGameNativeShow && nativeAds.isConfigured && online &&
+                    !AdFreePolicy.isSuppressedByPurchase(AdFormat.NATIVE_GAME, removed),
+                sudokuGameNative = sudokuBase && config.sudokuGameNativeShow && nativeAds.isConfigured && online &&
+                    !AdFreePolicy.isSuppressedByPurchase(AdFormat.NATIVE_GAME, removed),
                 adsRemoved = removed,
                 online = online,
             )
@@ -166,40 +164,5 @@ class ReviveGame {
 
     companion object {
         const val REVIVE_HEARTS = 1
-    }
-}
-
-/**
- * Load the game-screen anchored adaptive banner if policy + consent allow. Null = show nothing. Never throws.
- * [BannerPlacement.LEVELS_GAME]: levels switch + ad-free level gate. [BannerPlacement.SUDOKU_GAME]: sudoku switch, no level gate.
- */
-class LoadBannerAd(
-    private val consent: ConsentRepository,
-    private val sdk: AdsSdkStatus,
-    private val repository: BannerAdRepository,
-    private val config: AdPolicyConfig,
-    private val adsRemoved: AdsRemovedRepository = NoAdsRemoved,
-) {
-    suspend operator fun invoke(
-        playerLevel: Int,
-        widthDp: Int,
-        placement: BannerPlacement = BannerPlacement.LEVELS_GAME,
-    ): BannerAdHandle? {
-        val placementOn = when (placement) {
-            BannerPlacement.LEVELS_GAME -> config.levelsGameBannerShow
-            BannerPlacement.SUDOKU_GAME -> config.sudokuGameBannerShow
-        }
-        if (!placementOn || !repository.isConfigured) return null
-        // Remove Ads: never even request the banner.
-        if (AdFreePolicy.isSuppressedByPurchase(AdFormat.BANNER, adsRemoved.adsRemoved.value)) return null
-        if (placement == BannerPlacement.LEVELS_GAME && AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel)) return null
-        if (!consent.state.value.canRequestAds || !sdk.isInitialized.value || widthDp <= 0) return null
-        return try {
-            repository.load(widthDp)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (t: Throwable) {
-            null
-        }
     }
 }

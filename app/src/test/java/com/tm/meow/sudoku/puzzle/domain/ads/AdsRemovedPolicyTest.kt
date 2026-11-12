@@ -5,7 +5,6 @@ import com.tm.meow.sudoku.puzzle.domain.billing.FakeAdsRemovedRepository
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentState
 import com.tm.meow.sudoku.puzzle.domain.model.AppFlags
-import com.tm.meow.sudoku.puzzle.domain.usecase.LoadBannerAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.AdPlacement
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadNativeAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdSurfaces
@@ -21,7 +20,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The ad-suppression matrix for a bought "Remove ads": native / banner / interstitial / app-open off, rewarded untouched. */
+/** The ad-suppression matrix for a bought "Remove ads": native / interstitial / app-open off, rewarded untouched. */
 class AdsRemovedPolicyTest {
 
     // ---------------------------------------------------------------- the one rule
@@ -90,7 +89,7 @@ class AdsRemovedPolicyTest {
         )
     }
 
-    // ---------------------------------------------------------------- game surfaces: banner off, rewarded on
+    // ---------------------------------------------------------------- game surfaces: native off, rewarded on
 
     private class Consent(allow: Boolean = true) : ConsentRepository {
         override val state: StateFlow<ConsentState> = MutableStateFlow(ConsentState(canRequestAds = allow))
@@ -109,19 +108,6 @@ class AdsRemovedPolicyTest {
         override suspend fun show(): RewardedResult = RewardedResult.EARNED
     }
 
-    private class Handle : BannerAdHandle {
-        override fun destroy() = Unit
-    }
-
-    private class Banner : BannerAdRepository {
-        var loads = 0
-        override val isConfigured = true
-        override suspend fun load(widthDp: Int): BannerAdHandle? {
-            loads++
-            return Handle()
-        }
-    }
-
     private class NativeHandle : NativeAdHandle {
         override fun destroy() = Unit
     }
@@ -138,60 +124,60 @@ class AdsRemovedPolicyTest {
         FakeAdsRemovedRepository(if (on) Entitlement(foreverOwned = true, verifiedAtMs = 1L) else Entitlement.NONE) { 1L }
 
     @Test
-    fun surfacesBannerOffRewardedOnWhenAdsRemoved() = runTest {
+    fun surfacesGameNativeOffRewardedOnWhenAdsRemoved() = runTest {
         val surfaces = ObserveAdSurfaces(
-            FakeAppFlagsRepository(AppFlags(lastPlayedLevel = 20)), Consent(), Sdk(), Rewarded(), Banner(), AdPolicyConfig(),
+            FakeAppFlagsRepository(AppFlags(lastPlayedLevel = 20)), Consent(), Sdk(), Rewarded(), Native(), AdPolicyConfig(),
             removed(true),
         )(MutableStateFlow(20)).first()
-        assertFalse("banner suppressed", surfaces.banner)
+        assertFalse("game native suppressed", surfaces.levelsGameNative)
         assertTrue("rewarded unaffected", surfaces.levelsBoosters && surfaces.levelsRevive && surfaces.sudokuBoosters && surfaces.sudokuRevive)
         assertTrue(surfaces.adsRemoved)
     }
 
     @Test
-    fun surfacesBannerOnWithoutPurchase() = runTest {
+    fun surfacesGameNativeOnWithoutPurchase() = runTest {
         val surfaces = ObserveAdSurfaces(
-            FakeAppFlagsRepository(AppFlags(lastPlayedLevel = 20)), Consent(), Sdk(), Rewarded(), Banner(), AdPolicyConfig(),
+            FakeAppFlagsRepository(AppFlags(lastPlayedLevel = 20)), Consent(), Sdk(), Rewarded(), Native(), AdPolicyConfig(),
             removed(false),
         )(MutableStateFlow(20)).first()
-        assertTrue(surfaces.banner)
+        assertTrue(surfaces.levelsGameNative)
         assertTrue(surfaces.levelsBoosters)
         assertFalse(surfaces.adsRemoved)
     }
 
     @Test
-    fun sudokuBannerSuppressedWhenAdsRemoved() = runTest {
+    fun sudokuGameNativeSuppressedWhenAdsRemoved() = runTest {
         fun surfaces(on: Boolean) = ObserveAdSurfaces(
-            FakeAppFlagsRepository(AppFlags(lastPlayedLevel = 0)), Consent(), Sdk(), Rewarded(), Banner(), AdPolicyConfig(),
+            FakeAppFlagsRepository(AppFlags(lastPlayedLevel = 0)), Consent(), Sdk(), Rewarded(), Native(), AdPolicyConfig(),
             removed(on),
         )(MutableStateFlow(0))
-        assertFalse(surfaces(true).first().sudokuBanner)
-        assertTrue(surfaces(false).first().sudokuBanner)
-        val repo = Banner()
-        assertNull(LoadBannerAd(Consent(), Sdk(), repo, AdPolicyConfig(), removed(true))(0, 360, BannerPlacement.SUDOKU_GAME))
+        assertFalse(surfaces(true).first().sudokuGameNative)
+        assertTrue(surfaces(false).first().sudokuGameNative)
+        val repo = Native()
+        assertNull(LoadNativeAd(Consent(), repo, AdPolicyConfig(), removed(true))(AdPlacement.SUDOKU_GAME, 0))
         assertEquals(0, repo.loads)
-        assertNotNull(LoadBannerAd(Consent(), Sdk(), repo, AdPolicyConfig(), removed(false))(0, 360, BannerPlacement.SUDOKU_GAME))
+        assertNotNull(LoadNativeAd(Consent(), repo, AdPolicyConfig(), removed(false))(AdPlacement.SUDOKU_GAME, 0))
     }
 
     @Test
     fun surfacesFlipLiveWhenEntitlementArrives() = runTest {
         val ads = removed(false)
         val flow = ObserveAdSurfaces(
-            FakeAppFlagsRepository(AppFlags(lastPlayedLevel = 20)), Consent(), Sdk(), Rewarded(), Banner(), AdPolicyConfig(), ads,
+            FakeAppFlagsRepository(AppFlags(lastPlayedLevel = 20)), Consent(), Sdk(), Rewarded(), Native(), AdPolicyConfig(), ads,
         )(MutableStateFlow(20))
-        assertTrue(flow.first().banner)
+        assertTrue(flow.first().levelsGameNative)
         ads.apply(Entitlement(foreverOwned = true, verifiedAtMs = 1L))
-        assertFalse(flow.first().banner)
+        assertFalse(flow.first().levelsGameNative)
     }
 
     // ---------------------------------------------------------------- loaders request nothing
 
     @Test
-    fun bannerIsNeverRequestedWhenAdsRemoved() = runTest {
-        val repo = Banner()
-        assertNull(LoadBannerAd(Consent(), Sdk(), repo, AdPolicyConfig(), removed(true))(30, 360))
+    fun gameNativeIsNeverRequestedWhenAdsRemoved() = runTest {
+        val repo = Native()
+        assertNull(LoadNativeAd(Consent(), repo, AdPolicyConfig(), removed(true))(AdPlacement.LEVELS_GAME, 30))
         assertEquals(0, repo.loads)
-        assertNotNull(LoadBannerAd(Consent(), Sdk(), repo, AdPolicyConfig(), removed(false))(30, 360))
+        assertNotNull(LoadNativeAd(Consent(), repo, AdPolicyConfig(), removed(false))(AdPlacement.LEVELS_GAME, 30))
         assertEquals(1, repo.loads)
     }
 

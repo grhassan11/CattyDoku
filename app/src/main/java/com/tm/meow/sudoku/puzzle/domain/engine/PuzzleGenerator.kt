@@ -60,8 +60,9 @@ object PuzzleGenerator {
         level: Int,
         baseSeed: Long,
         config: GeneratorConfig = GeneratorConfig.DEFAULT,
+        singleBlockThroughLevel: Int = DifficultyCurve.SINGLE_BLOCK_THROUGH_LEVEL,
     ): GenerationResult {
-        val spec = DifficultyCurve.specFor(level)
+        val spec = DifficultyCurve.specFor(level, singleBlockThroughLevel)
         return generate(spec, SeededRng.mix(baseSeed, spec.levelIndex.toLong()), config)
     }
 

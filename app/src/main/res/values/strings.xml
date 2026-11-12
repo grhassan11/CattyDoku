@@ -166,9 +166,6 @@
     <!-- Rate us dialog -->
     <string name="rate_title">Enjoying the game?</string>
     <string name="rate_subtitle">Tap a star to rate your experience</string>
-    <string name="rate_submit">Submit</string>
-    <string name="rate_not_now">Not Now</string>
-    <string name="rate_submitted">Rating Submitted</string>
     <plurals name="rate_star_description">
         <item quantity="one">%d star</item>
         <item quantity="other">%d stars</item>
@@ -343,6 +340,8 @@
     <string name="settings_off">Off</string>
     <string name="settings_pattern">Pattern mode</string>
     <string name="settings_pattern_hint">Adds a pattern to every color</string>
+    <string name="settings_reduce_effects">Reduce effects</string>
+    <string name="settings_reduce_effects_hint">Fewer particles and animations. Easier on older phones and battery.</string>
     <string name="settings_group_notifications">Notifications</string>
     <string name="settings_streak_reminders">Streak reminders</string>
     <string name="settings_streak_reminders_hint">An evening nudge before your streak breaks</string>
@@ -351,6 +350,7 @@
     <string name="settings_sudoku_reminders">Sudoku reminder</string>
     <string name="settings_sudoku_reminders_hint">A nudge a few hours after you leave a game unfinished</string>
     <string name="settings_about">About</string>
+    <string name="settings_rate_us">Rate Us</string>
     <string name="about_title">About</string>
     <string name="about_app_icon">%1$s app icon</string>
     <string name="about_version">Version %1$s</string>
@@ -368,16 +368,16 @@
     <string name="tutorial_place_first">**Double-tap** to place the cat on a cell.</string>
     <string name="tutorial_one_per_color">Well done!\nOnly one cat per **color**.</string>
     <string name="tutorial_row_column">Nice!\nCats can\'t be in the **same row or column**.</string>
-    <string name="tutorial_rose_left">Only the last ~~rose cell~~ remains\n**Double-tap** to place a cat</string>
+    <string name="tutorial_rose_left">Only the last ~~pink cell~~ remains\n**Double-tap** to place a cat</string>
     <string name="tutorial_adjacent">No cats can be **adjacent** to each other.</string>
     <string name="tutorial_blue_left">Only the last ~~blue cell~~ remains\n**Double-tap** to place a cat</string>
     <string name="tutorial_row_done">No more cats in this row!</string>
     <string name="tutorial_find_last">Find the **last cat**!</string>
     <string name="tutorial_find_last_sub">Double-tap the empty cell to place it.</string>
     <string name="tutorial_excellent">Excellent! You\'ve mastered the rules!</string>
-    <string name="tutorial_bottom_tap_empty">Tap empty cells to exclude them.</string>
+    <string name="tutorial_bottom_tap_empty">Single tap empty cells to exclude them.</string>
     <string name="tutorial_bottom_swipe">Swipe across these cells to exclude them.</string>
-    <string name="tutorial_hint_pill">Tap here for a hint.</string>
+    <string name="tutorial_hint_pill">Single tap here for a hint.</string>
     <string name="tutorial_got_it">Got It!</string>
     <string name="tutorial_start_game">Start Game</string>
     <string name="tutorial_replay">Replay Tutorial</string>
@@ -585,4 +585,12 @@
     <string name="sudoku_tut_next_tricks">Next: Solving Tricks</string>
     <string name="sudoku_tut_start_playing">Start Playing!</string>
 
+    <!-- Game feel: streak / region praise + combo chip -->
+    <string name="praise_nice">Nice!</string>
+    <string name="praise_purrfect">Purrfect!</string>
+    <string name="praise_meowvelous">Meow-velous!</string>
+    <string name="praise_clawsome">Claw-some!</string>
+    <string name="praise_clear">Clear!</string>
+    <string name="combo_chip">x%1$d</string>
+    <string name="combo_description">Combo x%1$d</string>
 </resources>

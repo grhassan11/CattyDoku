@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="cat_background">#FFF7F1EC</color>
-    <color name="ic_launcher_background">#FFFFF3E6</color>
+    <color name="ic_launcher_background">#FFAF5EFF</color>
 
     <!-- Home native ad (admob_native_hundred.xml). White strip, brand-ink text, deep-orange CTA (white text ~4:1). -->
     <color name="native_ad_background">#FFFFFFFF</color>

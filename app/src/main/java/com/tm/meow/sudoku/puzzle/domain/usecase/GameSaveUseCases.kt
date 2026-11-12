@@ -15,12 +15,12 @@ class SaveGame(
     private val repo: SavedGameRepository,
     private val time: TimeProvider,
 ) {
-    suspend operator fun invoke(levelIndex: Int, state: GameState, elapsedMs: Long) {
+    suspend operator fun invoke(levelIndex: Int, state: GameState, elapsedMs: Long, wrongX: Set<Int> = emptySet()) {
         if (!state.isPlaying) {
             repo.clear(levelIndex)
             return
         }
-        repo.save(SavedGame(levelIndex, state, elapsedMs.coerceAtLeast(0L), time.nowMillis()))
+        repo.save(SavedGame(levelIndex, state, elapsedMs.coerceAtLeast(0L), time.nowMillis(), wrongX))
     }
 }
 

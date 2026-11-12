@@ -155,9 +155,6 @@
 
     <string name="rate_title">Нравится игра?</string>
     <string name="rate_subtitle">Нажми на звезду, чтобы оценить игру</string>
-    <string name="rate_submit">Отправить</string>
-    <string name="rate_not_now">Не сейчас</string>
-    <string name="rate_submitted">Оценка отправлена</string>
     <plurals name="rate_star_description">
         <item quantity="one">%d звезда</item>
         <item quantity="few">%d звезды</item>
@@ -326,6 +323,8 @@
     <string name="settings_off">Выкл.</string>
     <string name="settings_pattern">Режим узоров</string>
     <string name="settings_pattern_hint">Добавляет узор к каждому цвету</string>
+    <string name="settings_reduce_effects">Меньше эффектов</string>
+    <string name="settings_reduce_effects_hint">Меньше частиц и анимаций. Бережнее к старым телефонам и батарее.</string>
     <string name="settings_group_notifications">Уведомления</string>
     <string name="settings_streak_reminders">Напоминания о серии</string>
     <string name="settings_streak_reminders_hint">Вечернее напоминание, пока серия не прервалась</string>
@@ -334,6 +333,7 @@
     <string name="settings_sudoku_reminders">Напоминание о судоку</string>
     <string name="settings_sudoku_reminders_hint">Напоминание через несколько часов после незавершённой игры</string>
     <string name="settings_about">О приложении</string>
+    <string name="settings_rate_us">Оценить приложение</string>
     <string name="about_title">О приложении</string>
     <string name="about_app_icon">Значок приложения %1$s</string>
     <string name="about_version">Версия %1$s</string>
@@ -357,9 +357,9 @@
     <string name="tutorial_find_last">Найди **последнего кота**!</string>
     <string name="tutorial_find_last_sub">Дважды коснись пустой клетки, чтобы поставить его.</string>
     <string name="tutorial_excellent">Превосходно! Ты освоил правила!</string>
-    <string name="tutorial_bottom_tap_empty">Касайся пустых клеток, чтобы исключить их.</string>
+    <string name="tutorial_bottom_tap_empty">Коснись один раз пустых клеток, чтобы исключить их.</string>
     <string name="tutorial_bottom_swipe">Проведи пальцем по этим клеткам, чтобы исключить их.</string>
-    <string name="tutorial_hint_pill">Нажми здесь, чтобы получить подсказку.</string>
+    <string name="tutorial_hint_pill">Нажми здесь один раз, чтобы получить подсказку.</string>
     <string name="tutorial_got_it">Понятно!</string>
     <string name="tutorial_start_game">Начать игру</string>
     <string name="tutorial_replay">Пройти обучение снова</string>
@@ -562,4 +562,12 @@
     <string name="sudoku_tut_next_tricks">Далее: Приёмы решения</string>
     <string name="sudoku_tut_start_playing">Начать игру!</string>
 
+    <!-- Game feel: streak / region praise + combo chip -->
+    <string name="praise_nice">Отлично!</string>
+    <string name="praise_purrfect">Мур-фект!</string>
+    <string name="praise_meowvelous">Мяу-ниально!</string>
+    <string name="praise_clawsome">Когте-вау!</string>
+    <string name="praise_clear">Готово!</string>
+    <string name="combo_chip">x%1$d</string>
+    <string name="combo_description">Комбо x%1$d</string>
 </resources>

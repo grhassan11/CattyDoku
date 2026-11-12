@@ -46,7 +46,7 @@ class TutorialUiMapperTest {
         assertTrue(u.light)
         assertTrue(u.showContinue)
         assertFalse(u.continueIsFinal)
-        assertFalse(u.showSkip)
+        assertTrue(u.showSkip)
         assertNull(u.pointer)
         assertTrue(u.spotlight.isEmpty())
         assertTrue(u.interactive.isEmpty()) // board fully gated
@@ -115,6 +115,7 @@ class TutorialUiMapperTest {
         assertTrue(u.light)
         assertTrue(u.showContinue)
         assertTrue(u.continueIsFinal)
+        assertFalse(u.showSkip)
         assertEquals(TutorialTextKey.EXCELLENT, u.text)
         assertEquals(4, u.board.cells.count { it.mark == CellMarkUi.CAT })
         assertEquals(12, u.board.cells.count { it.mark == CellMarkUi.X })

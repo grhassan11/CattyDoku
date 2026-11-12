@@ -45,6 +45,7 @@ import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.PillButton
 import com.tm.meow.sudoku.puzzle.ui.components.StatusBarIconsEffect
 import com.tm.meow.sudoku.puzzle.ui.components.IconArt
+import com.tm.meow.sudoku.puzzle.ui.components.sprite.CatSprites
 import com.tm.meow.sudoku.puzzle.ui.screens.game.LoseScreenLayout
 import com.tm.meow.sudoku.puzzle.ui.screens.game.StatChip
 import com.tm.meow.sudoku.puzzle.ui.screens.game.WinScreenLayout
@@ -180,6 +181,7 @@ internal fun SudokuWinDialog(
             message = message,
             mascotRes = IconArt.mascotFor(win.score),
             mascotDescription = stringResource(R.string.win_mascot_description),
+            mascotSheet = CatSprites.Cheer,
             score = win.score,
             stats = {
                 StatChip(

@@ -31,6 +31,7 @@ object HomeUiMapper {
             streakReminders = settings.streakReminders,
             dailyReminders = settings.dailyReminders,
             sudokuReminders = settings.sudokuReminders,
+            reduceEffects = settings.reduceEffects,
         ),
         calendar = calendar?.let { calendarUi(it) },
         streakRewardPending = rewardPending,

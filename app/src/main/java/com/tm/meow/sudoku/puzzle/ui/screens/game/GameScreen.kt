@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -41,6 +42,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.ripple
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
@@ -63,6 +65,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,7 +77,7 @@ import com.tm.meow.sudoku.puzzle.domain.model.AnimalSet
 import com.tm.meow.sudoku.puzzle.domain.model.Booster
 import com.tm.meow.sudoku.puzzle.domain.model.PieceSkin
 import com.tm.meow.sudoku.puzzle.domain.model.Pos
-import com.tm.meow.sudoku.puzzle.ui.ads.BannerAdSlot
+import com.tm.meow.sudoku.puzzle.ui.ads.GameNativeAdSlot
 import com.tm.meow.sudoku.puzzle.ui.components.CatIcon
 import com.tm.meow.sudoku.puzzle.ui.components.FishLife
 import com.tm.meow.sudoku.puzzle.ui.components.HintBulb
@@ -87,6 +92,17 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.min
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.sin
 
 /** Everything the game screen can ask for. Stateless: state in, lambdas out, no ViewModel here. */
 @Composable
@@ -130,6 +146,8 @@ fun GameScreen(
     onSettingChanged: (SettingToggle, Boolean) -> Unit = { _, _ -> },
     /** Mouse travel animation finished (run id): the ViewModel unblocks input. */
     onMouseAnimDone: (Int) -> Unit = {},
+    /** Transient wrong-move cue (red flash + broken heart); the board plays each new token once. */
+    wrongMove: WrongMoveUi? = null,
 ) {
     val surfaceLevel = state.surfaceLevel()
     val surface = remember(surfaceLevel) { GameSurfaceColors.forLevel(surfaceLevel) }
@@ -186,6 +204,7 @@ fun GameScreen(
                 onDismissSettings = onDismissSettings,
                 onSettingChanged = onSettingChanged,
                 onMouseAnimDone = onMouseAnimDone,
+                wrongMove = wrongMove,
             )
         }
         SnackbarHost(
@@ -242,6 +261,7 @@ private fun GameContent(
     onDismissSettings: () -> Unit,
     onSettingChanged: (SettingToggle, Boolean) -> Unit,
     onMouseAnimDone: (Int) -> Unit,
+    wrongMove: WrongMoveUi? = null,
 ) {
     // Board bounds in root space for the hint spotlight. Written on layout, read in the overlay's draw phase only.
     val boardGeo = remember { mutableStateOf<BoardGeo?>(null) }
@@ -263,8 +283,23 @@ private fun GameContent(
             )
         }
     }
+    // Region tab icon centres (root space), written on layout, read only in the shooting star's draw phase.
+    val tabCenters = remember { mutableStateMapOf<Int, Offset>() }
+    // Hint bulb bounce clock (0 = idle, 0..1 while playing). Plays when a hint overlay opens (not for one already open on first composition).
+    val animationsOn = rememberAnimationsEnabled(null)
+    val hintBounce = remember { Animatable(0f) }
+    val overlayOpen = content.hintOverlay != null
+    var overlaySeen by remember { mutableStateOf(overlayOpen) }
+    LaunchedEffect(overlayOpen) {
+        if (overlayOpen && !overlaySeen && animationsOn) {
+            hintBounce.snapTo(0f)
+            hintBounce.animateTo(1f, tween(HINT_BOUNCE_MS, easing = LinearEasing))
+            hintBounce.snapTo(0f)
+        }
+        overlaySeen = overlayOpen
+    }
     Box(Modifier.fillMaxSize()) {
-        // Outer column owns the insets: banner slot (full width) sits at the bottom, ABOVE the navigation bar.
+        // Outer column owns the insets: native slot (full width) sits at the bottom, ABOVE the navigation bar.
         Column(
             Modifier
                 .fillMaxSize()
@@ -282,7 +317,7 @@ private fun GameContent(
             Spacer(Modifier.height(8.dp))
             TopBar(content, onBack, onOpenSettings)
             Spacer(Modifier.height(8.dp))
-            LivesRow(content, onUndo)
+            LivesRow(content, onUndo, animationsOn)
             Spacer(Modifier.height(12.dp))
             RulesStrip(content.pieceSkin)
             // Fixed gap so the colour tab never touches the rules row on tight screens; the board box below shrinks to fit.
@@ -298,6 +333,8 @@ private fun GameContent(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     RegionTab(
                         content.regions,
+                        regionCleared = content.regionCleared,
+                        tabCenters = tabCenters,
                         pieceSkin = content.pieceSkin,
                         cardWidthDp = if (content.board.size >= 9) metrics.cardSideDp(content.board.size) else null,
                     )
@@ -311,12 +348,20 @@ private fun GameContent(
                         onDrag = onDrag,
                         onDragCross = onDragCross,
                         lastCorrectPlacement = content.lastCorrectPlacement,
+                        wrongMove = wrongMove,
+                        regionCleared = content.regionCleared,
                         pieceSkin = content.pieceSkin,
                         introKey = (if (content.isDaily) content.dailyEpochDay?.let { 1_000_000L + it } else content.levelNumber.toLong())
                             ?.let { it + content.restartCount * 10_000_000_000L },
                         modifier = Modifier.onGloballyPositioned { boardGeo.value = BoardGeo(it.boundsInRoot(), metrics) },
                     )
                 }
+                // Praise word at the top of the board area (clear of the native ad bar at the bottom). Plays once per new token.
+                PraiseOverlay(
+                    praise = content.lastCorrectPlacement?.praise,
+                    token = content.lastCorrectPlacement?.token ?: 0,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
             }
 
             // No hint bar here any more: it resized the board. The explanation lives in the hint overlay's rule card.
@@ -326,12 +371,20 @@ private fun GameContent(
                 nudgeActive = nudgeActive,
                 mouseAway = mouseRun != null,
                 onMouseBounds = { mouseBtn.value = it },
+                hintBounce = { hintBounce.value },
             )
-            // Policy: keep clear space between the booster buttons (accidental-tap zone) and the banner.
-            Spacer(Modifier.height(if (ads.bannerReserved) BANNER_CLEARANCE else 16.dp))
+            // Policy: keep clear space between the booster buttons (accidental-tap zone) and the native ad.
+            Spacer(Modifier.height(if (ads.nativeReserved) NATIVE_AD_CLEARANCE else 16.dp))
         }
-        if (ads.bannerReserved) BannerAdSlot(ads.bannerAd)
+        if (ads.nativeReserved) GameNativeAdSlot(ads.nativeSlot)
         }
+
+        // Shooting star (region clear): above board + strip, below hint overlay / dialogs; never reaches the native ad bar.
+        ShootingStarOverlay(
+            regionCleared = content.regionCleared,
+            boardGeo = boardGeo,
+            tabCenters = tabCenters,
+        )
 
         if (mouseRun != null) {
             MouseTravelOverlay(
@@ -359,6 +412,9 @@ private fun GameContent(
                     boardSize = content.board.size,
                     onDismiss = onHintOverlayDismiss,
                     pieceSkin = content.pieceSkin,
+                    targets = remember(content.board) {
+                        content.board.cells.indices.filterTo(HashSet()) { content.board.cells[it].hintRole == HintRole.TARGET }
+                    },
                 )
             }
         }
@@ -461,7 +517,17 @@ private fun TopBar(content: GameContentUi, onBack: () -> Unit, onOpenSettings: (
             } else {
                 LabeledValue(stringResource(R.string.game_level), content.levelNumber.toString())
             }
-            LabeledValue(stringResource(R.string.game_score), content.score.toString())
+            // Score counts up + pulses (draw phase); cosmetic combo chip floats off its top-right corner without affecting layout.
+            Box {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val onSurface = LocalGameSurface.current.onSurface
+                    Text(stringResource(R.string.game_score), color = onSurface, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    CountUpScoreText(content.score, onSurface)
+                }
+                if (StreakLogic.comboVisible(content.comboStreak)) {
+                    ComboChip(content.comboStreak, Modifier.align(Alignment.TopEnd).offset(x = 30.dp, y = (-2).dp))
+                }
+            }
         }
         CircleButton(
             description = stringResource(R.string.game_settings),
@@ -483,19 +549,52 @@ private fun LabeledValue(label: String, value: String) {
 }
 
 @Composable
-private fun LivesRow(content: GameContentUi, onUndo: () -> Unit) {
+private fun LivesRow(content: GameContentUi, onUndo: () -> Unit, animationsOn: Boolean) {
     val livesText = stringResource(R.string.game_lives, content.hearts, content.maxHearts)
+    // Heart lost: a drawn paw swipes the lost fish (still shown alive until the paw crosses it), then it swaps to the bone + crumbs.
+    // Triggered by the hearts count dropping (every heart loss is a wrong move), so a restored / rotated screen never replays it.
+    val pawFx = remember { PawSwipeFx() }
+    var prevHearts by remember { mutableIntStateOf(content.hearts) }
+    var pawIdx by remember { mutableIntStateOf(-1) }
+    var fishAlive by remember { mutableStateOf(false) }
+    LaunchedEffect(content.hearts) {
+        val prev = prevHearts
+        prevHearts = content.hearts
+        if (!animationsOn || content.hearts >= prev || content.hearts < 0) return@LaunchedEffect
+        pawIdx = content.hearts
+        fishAlive = true
+        try {
+            coroutineScope {
+                launch {
+                    delay((PawSwipeFx.DURATION_MS * PawSwipeFx.SWAP_AT).toLong())
+                    fishAlive = false
+                }
+                pawFx.run()
+            }
+        } finally {
+            pawIdx = -1
+            fishAlive = false
+        }
+    }
     Box(Modifier.fillMaxWidth()) {
         Row(
             Modifier
                 .align(Alignment.Center)
                 .background(LocalGameSurface.current.buttonContainer, CircleShape)
                 .padding(horizontal = 14.dp, vertical = 6.dp)
+                .drawWithContent {
+                    drawContent()
+                    val i = pawIdx
+                    if (i >= 0) {
+                        val slot = LIFE_FISH_DP.dp.toPx()
+                        translate(left = i * (slot + LIFE_GAP_DP.dp.toPx())) { drawPawSwipe(pawFx.t.value, slot) }
+                    }
+                }
                 .semantics { contentDescription = livesText },
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(LIFE_GAP_DP.dp),
         ) {
             for (i in 0 until content.maxHearts) {
-                FishLife(active = i < content.hearts, size = 28.dp)
+                FishLife(active = i < content.hearts || (i == pawIdx && fishAlive), size = LIFE_FISH_DP.dp)
             }
         }
         // Undo UI position is not in the reference screenshots: placeholder spot, user decides.
@@ -535,6 +634,12 @@ private fun LivesRow(content: GameContentUi, onUndo: () -> Unit) {
         }
     }
 }
+
+private const val BOUNCE_SCALE = 0.22f
+private val BounceGlow = Color(0xFFFFD54F)
+private const val LIFE_FISH_DP = 28f
+private const val LIFE_GAP_DP = 6f
+private const val HINT_BOUNCE_MS = 600
 
 // ------------------------------------------------------------------ rules strip
 
@@ -596,7 +701,21 @@ private fun RuleDiagram(kind: RuleKind, pieceSkin: PieceSkin) {
                 cornerRadius = CornerRadius(3f),
             )
             when (marks[r][c]) {
-                'X' -> drawXMark(tl, cell - 2 * gap, GameColors.XMark)
+                'X' -> {
+                    // Highlighted cross cell: soft red tint + bold deep-red X.
+                    val side = cell - 2 * gap
+                    drawRoundRect(
+                        color = GameColors.Conflict.copy(alpha = 0.32f),
+                        topLeft = tl,
+                        size = Size(side, side),
+                        cornerRadius = CornerRadius(3f),
+                    )
+                    val inset = side * 0.28f
+                    val sw = side * 0.17f
+                    val red = Color(0xFFB3261E)
+                    drawLine(red, Offset(tl.x + inset, tl.y + inset), Offset(tl.x + side - inset, tl.y + side - inset), sw, StrokeCap.Round)
+                    drawLine(red, Offset(tl.x + side - inset, tl.y + inset), Offset(tl.x + inset, tl.y + side - inset), sw, StrokeCap.Round)
+                }
                 'C' -> {
                     val side = cell - 2 * gap
                     val pad = side * 0.06f
@@ -613,7 +732,29 @@ private fun RuleDiagram(kind: RuleKind, pieceSkin: PieceSkin) {
 // ------------------------------------------------------------------ board tab
 
 @Composable
-private fun RegionTab(regions: List<RegionStatusUi>, pieceSkin: PieceSkin = PieceSkin.cats(), cardWidthDp: Float? = null) {
+private fun RegionTab(
+    regions: List<RegionStatusUi>,
+    pieceSkin: PieceSkin = PieceSkin.cats(),
+    cardWidthDp: Float? = null,
+    regionCleared: RegionClearedUi? = null,
+    /** Receives each region icon's centre in root space (the shooting star's landing spot). */
+    tabCenters: SnapshotStateMap<Int, Offset>? = null,
+) {
+    // Cleared region: icon springs in + colour dot flashes. Same token pattern as the board (rotation / re-entry never replays).
+    val animationsOn = rememberAnimationsEnabled(null)
+    val tabFx = remember { TabClearFx() }
+    var tabDone by remember { mutableIntStateOf(regionCleared?.token ?: 0) }
+    LaunchedEffect(regionCleared?.token) {
+        val rc = regionCleared ?: return@LaunchedEffect
+        if (rc.token == tabDone) return@LaunchedEffect
+        if (animationsOn) {
+            // The shooting star lands on the icon: spring in on arrival (no star when the placement point is unknown).
+            if (rc.row >= 0) delay(STAR_ARRIVE_DELAY_MS)
+            tabFx.run(rc.token)
+        }
+        tabDone = rc.token
+    }
+    val tabToken = if (animationsOn && regionCleared != null && regionCleared.token != tabDone) regionCleared.token else 0
     val solved = regions.count { it.solved }
     val text = stringResource(R.string.region_row_description, solved, regions.size)
     // Fixed width (9x9): exactly the board card width; icons shrink to fit, spread evenly.
@@ -630,7 +771,18 @@ private fun RegionTab(regions: List<RegionStatusUi>, pieceSkin: PieceSkin = Piec
         horizontalArrangement = if (fixed) Arrangement.SpaceEvenly else Arrangement.spacedBy(4.dp),
     ) {
         for (region in regions) {
-            Box(Modifier.size(iconDp.dp)) {
+            val clearing = tabToken != 0 && regionCleared != null && region.region == regionCleared.region
+            Box(
+                Modifier
+                    .size(iconDp.dp)
+                    .onGloballyPositioned { coords ->
+                        if (tabCenters != null) {
+                            val c = coords.boundsInRoot().center
+                            if (tabCenters[region.region] != c) tabCenters[region.region] = c
+                        }
+                    }
+                    .clearIconPop(tabFx, tabToken, clearing),
+            ) {
                 val set = pieceSkin.set
                 if (set != null) {
                     // Boss level. Solved = the region's animal. Unsolved: Dogs = flat dog (like the cat), else a colour dot.
@@ -655,6 +807,7 @@ private fun RegionTab(regions: List<RegionStatusUi>, pieceSkin: PieceSkin = Piec
                         Modifier
                             .align(Alignment.BottomEnd)
                             .size(11.dp)
+                            .clearDotFlash(tabFx, tabToken, clearing)
                             .background(GameColors.region(region.region), CircleShape),
                     )
                 }
@@ -678,6 +831,8 @@ private fun BoostersRow(
     /** Mouse sprite is travelling: the button's own icon is hidden (the overlay sprite is the same icon). */
     mouseAway: Boolean = false,
     onMouseBounds: (Rect) -> Unit = {},
+    /** Hint bulb bounce clock (0 = idle, 0..1 while playing). Read in the button's layer / draw phase only. */
+    hintBounce: () -> Float = { 0f },
 ) {
     // Empty booster + rewarded allowed (ad-free levels / consent / kill switch already folded in): badge shows a play
     // icon and the tap opens the "Need one?" dialog instead of the no-charge snackbar.
@@ -715,6 +870,8 @@ private fun BoostersRow(
             onClick = if (hintWatch) ({ onEmptyBoosterTap(Booster.HINT) }) else onHint,
             showPlay = hintWatch,
             nudge = { nudgeActive() && IdleNudgePolicy.boosterEligible(boosters.hintCharges) },
+            softNudge = true,
+            bounce = hintBounce,
         ) { HintBulb(size = BOOSTER_ICON_DP.dp) }
         // Third slot: mouse booster. Locked (below Lv.11, and in the daily) keeps the locked look.
         if (boosters.thirdLocked) {
@@ -745,8 +902,8 @@ internal const val BOOSTER_SHADOW_ROOM_DP = 8f
 /** Shared drop shadow for every booster circle (cat, hint, mouse, locked slot). Apply before clip/background. */
 private fun Modifier.boosterCircleShadow(): Modifier = shadow(3.dp, CircleShape)
 
-/** Gap kept between the booster buttons and the banner slot (AdMob accidental-click policy). */
-private val BANNER_CLEARANCE = 48.dp
+/** Gap kept between the booster buttons and the native ad slot (AdMob accidental-click policy). */
+private val NATIVE_AD_CLEARANCE = 48.dp
 
 private class LastBooster {
     var value: Booster? = null
@@ -770,6 +927,10 @@ internal fun BoosterButton(
     nudge: (() -> Boolean)? = null,
     /** Circle bounds in root space, reported on layout (mouse travel animation anchor). */
     onCircleBounds: ((Rect) -> Unit)? = null,
+    /** Idle nudge is a gentle pulse only (hint bulb) instead of wiggle + pulse. */
+    softNudge: Boolean = false,
+    /** Use bounce 0..1 (0 = idle): short bounce + gold halo. Read in draw / layer phase only. Null = none. */
+    bounce: (() -> Float)? = null,
     icon: @Composable () -> Unit,
 ) {
     val source = remember { MutableInteractionSource() }
@@ -780,8 +941,28 @@ internal fun BoosterButton(
             Modifier
                 .align(Alignment.TopStart)
                 .padding(top = (BOOSTER_SLOT_DP - BOOSTER_BUTTON_DP).dp)
-                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .graphicsLayer {
+                    val b = bounce?.invoke() ?: 0f
+                    val k = if (b > 0f && b < 1f) 1f + BOUNCE_SCALE * sin(PI.toFloat() * b) else 1f
+                    scaleX = scale * k
+                    scaleY = scale * k
+                }
                 .size(BOOSTER_BUTTON_DP.dp)
+                .then(
+                    if (bounce != null) {
+                        Modifier.drawBehind {
+                            val b = bounce()
+                            if (b > 0f && b < 1f) {
+                                drawCircle(
+                                    BounceGlow.copy(alpha = 0.6f * (1f - b)),
+                                    radius = size.minDimension / 2f * (1f + 0.55f * b),
+                                )
+                            }
+                        }
+                    } else {
+                        Modifier
+                    },
+                )
                 .then(
                     if (onCircleBounds != null) Modifier.onGloballyPositioned { onCircleBounds(it.boundsInRoot()) } else Modifier,
                 )
@@ -792,7 +973,7 @@ internal fun BoosterButton(
                 .clickable(interactionSource = source, indication = ripple(), role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            if (nudge != null) NudgeIcon(nudge, icon) else icon()
+            if (nudge != null) NudgeIcon(nudge, softNudge, icon) else icon()
         }
         // Empty and no rewarded surface: no badge at all (never a grey 0). Tap still routes to the no-charges snackbar.
         if (count > 0 || showPlay) CountBadge(count, Modifier.align(Alignment.TopEnd), showPlay = showPlay)

@@ -8,6 +8,7 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.AdPlacement
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadNativeAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkStartFlowComplete
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsRemoved
+import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadGameNativeAd
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -34,6 +35,8 @@ abstract class HomeAdsViewModel(
     private val markStartFlowComplete: MarkStartFlowComplete,
     private val time: TimeProvider,
     observeAdsRemoved: ObserveAdsRemoved,
+    private val preloadGameNative: PreloadGameNativeAd,
+    private val gamePlacement: AdPlacement,
 ) : ViewModel() {
 
     // Loading from the start when ads are allowed, so the slot is reserved on the very first frame (no shift).
@@ -68,17 +71,22 @@ abstract class HomeAdsViewModel(
         markStartFlowComplete()
         val now = time.monotonicMillis()
         if (_slot.value is NativeAdSlotState.Loaded) {
-            if (now - loadedAtMs < MAX_AD_AGE_MS) return
+            if (now - loadedAtMs < MAX_AD_AGE_MS) {
+                preloadGameNative(gamePlacement)
+                return
+            }
             release()
         }
         if (!loadNativeAd.isAllowed(placement)) {
             _slot.value = NativeAdSlotState.Hidden
+            preloadGameNative(gamePlacement) // the game slot has its own switch
             return
         }
-        if (loadJob?.isActive == true) return
+        if (loadJob?.isActive == true) return // its completion kicks the game preload
         val failedAt = lastFailAtMs
         if (failedAt != null && now - failedAt < RETRY_AFTER_FAIL_MS) {
             _slot.value = NativeAdSlotState.Failed
+            preloadGameNative(gamePlacement)
             return
         }
         _slot.value = NativeAdSlotState.Loading
@@ -103,6 +111,8 @@ abstract class HomeAdsViewModel(
                 loadedAtMs = time.monotonicMillis()
                 _slot.value = NativeAdSlotState.Loaded(handle)
             }
+            // Home native settled: only now preload the game ad of this mode (never two native loads at once on the shared unit).
+            preloadGameNative(gamePlacement)
         }
     }
 
@@ -148,7 +158,11 @@ class LevelsHomeAdsViewModel @Inject constructor(
     markStartFlowComplete: MarkStartFlowComplete,
     time: TimeProvider,
     observeAdsRemoved: ObserveAdsRemoved,
-) : HomeAdsViewModel(AdPlacement.LEVELS_HOME, loadNativeAd, markStartFlowComplete, time, observeAdsRemoved)
+    preloadGameNative: PreloadGameNativeAd,
+) : HomeAdsViewModel(
+    AdPlacement.LEVELS_HOME, loadNativeAd, markStartFlowComplete, time, observeAdsRemoved,
+    preloadGameNative, AdPlacement.LEVELS_GAME,
+)
 
 /** Sudoku entry bottom native ad (`sudoku_home_native_ad_show`). */
 @HiltViewModel
@@ -157,4 +171,8 @@ class SudokuHomeAdsViewModel @Inject constructor(
     markStartFlowComplete: MarkStartFlowComplete,
     time: TimeProvider,
     observeAdsRemoved: ObserveAdsRemoved,
-) : HomeAdsViewModel(AdPlacement.SUDOKU_HOME, loadNativeAd, markStartFlowComplete, time, observeAdsRemoved)
+    preloadGameNative: PreloadGameNativeAd,
+) : HomeAdsViewModel(
+    AdPlacement.SUDOKU_HOME, loadNativeAd, markStartFlowComplete, time, observeAdsRemoved,
+    preloadGameNative, AdPlacement.SUDOKU_GAME,
+)

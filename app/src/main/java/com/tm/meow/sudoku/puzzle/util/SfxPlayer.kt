@@ -66,7 +66,8 @@ class SfxPlayer(context: Context) {
     /** Recent SoundPool stream ids so [stopAll] can silence in-flight cues (cues are short; 8 is plenty). */
     private val streams = ArrayDeque<Int>()
 
-    fun play(kind: SfxKind) {
+    /** [rate] = pitch/speed multiplier on top of the cue's own rate (streak rise); clamped so the final rate stays inside SoundPool's 0.5..2. */
+    fun play(kind: SfxKind, rate: Float = 1f) {
         if (kind == SfxKind.AWARD) {
             playAward()
             return
@@ -76,9 +77,10 @@ class SfxPlayer(context: Context) {
         if (!synchronized(loaded) { id in loaded }) return
         val soft = kind == SfxKind.CHIME || kind == SfxKind.CHIME_SOLO
         val vol = if (soft) CHIME_VOLUME else 1f
-        val rate = if (soft) CHIME_RATE else 1f
-        track(runCatching { p.play(id, vol, vol, 1, 0, rate) }.getOrDefault(0))
-        if (kind == SfxKind.CHIME) playRandomCat(p)
+        val mult = rate.coerceIn(MIN_MULT, MAX_MULT)
+        val playRate = ((if (soft) CHIME_RATE else 1f) * mult).coerceIn(0.5f, 2f)
+        track(runCatching { p.play(id, vol, vol, 1, 0, playRate) }.getOrDefault(0))
+        if (kind == SfxKind.CHIME) playRandomCat(p, mult)
     }
 
     private fun track(streamId: Int) {
@@ -89,13 +91,13 @@ class SfxPlayer(context: Context) {
     }
 
     /** One random cat meow (never the same twice in a row). Silent if none loaded. */
-    private fun playRandomCat(p: SoundPool) {
+    private fun playRandomCat(p: SoundPool, mult: Float = 1f) {
         if (catIds.isEmpty()) return
         val i = AudioPolicy.nextCatSfx(lastCat, catIds.size, kotlin.random.Random.nextInt())
         val id = catIds[i]
         if (!synchronized(loaded) { id in loaded }) return
         lastCat = i
-        track(runCatching { p.play(id, 1f, 1f, 1, 0, 1f) }.getOrDefault(0))
+        track(runCatching { p.play(id, 1f, 1f, 1, 0, mult) }.getOrDefault(0))
     }
 
     /** Silence everything in flight (SoundPool streams + award cue). Used while a full-screen ad is showing. */
@@ -158,6 +160,8 @@ class SfxPlayer(context: Context) {
     private companion object {
         const val CHIME_VOLUME = 0.55f
         const val CHIME_RATE = 1.35f
+        const val MIN_MULT = 1.0f
+        const val MAX_MULT = 1.35f
     }
 
     fun release() {

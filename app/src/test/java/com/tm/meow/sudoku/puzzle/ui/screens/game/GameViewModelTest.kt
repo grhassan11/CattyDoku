@@ -166,7 +166,8 @@ class GameViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
         assertEquals(2, vm.ready().hearts)
-        assertEquals(CellMarkUi.CAT, vm.ready().markAt(0, 0))
+        assertEquals(CellMarkUi.X, vm.ready().markAt(0, 0)) // wrong cat is replaced by an X, never shown
+        assertTrue(vm.ready().cats().isEmpty())
     }
 
     @Test
@@ -183,9 +184,177 @@ class GameViewModelTest {
         vm.events.test {
             vm.onCellTap(Pos(0, 0))
             vm.onCellDoubleTap(Pos(3, 3))
-            expectNoEvents()
-            cancelAndIgnoreRemainingEvents()
+            // Visual-only WrongMove is not gated by haptics / sfx; no haptic or sfx event may leak through.
+            val items = cancelAndConsumeRemainingEvents()
+                .mapNotNull { (it as? app.cash.turbine.Event.Item<*>)?.value }
+            assertTrue(items.none { it is GameUiEvent.Haptic || it is GameUiEvent.Sfx })
         }
+    }
+
+    // ---- wrong-move visual cue ----
+
+    private suspend fun ReceiveTurbine<GameUiEvent>.wrongMoves(): List<GameUiEvent.WrongMove> =
+        cancelAndConsumeRemainingEvents()
+            .mapNotNull { (it as? app.cash.turbine.Event.Item<*>)?.value as? GameUiEvent.WrongMove }
+
+    @Test
+    fun wrongCatFiresWrongMoveCatEvent() = vmTest { _, vm ->
+        vm.events.test {
+            vm.onCellDoubleTap(Pos(0, 0)) // solution is (0,1)
+            assertEquals(listOf(GameUiEvent.WrongMove(setOf(0))), wrongMoves())
+        }
+    }
+
+    @Test
+    fun crossOnSolutionCellFiresNothing() = vmTest { _, vm ->
+        vm.events.test {
+            vm.onCellTap(Pos(0, 1)) // solution cell: X is never a wrong move (would leak the solution)
+            assertTrue(wrongMoves().isEmpty())
+        }
+        assertFalse(vm.ready().wrongXAt(0, 1))
+    }
+
+    @Test
+    fun dragCrossOverSolutionCellFiresNothing() = vmTest { _, vm ->
+        vm.events.test {
+            vm.onDrag(listOf(Pos(0, 0), Pos(0, 1), Pos(0, 2)))
+            assertTrue(wrongMoves().isEmpty())
+        }
+    }
+
+    @Test
+    fun correctCatViaRealDoubleTapSequenceHasNoWrongMoveNoRed() = vmTest { _, vm ->
+        vm.events.test {
+            // BoardGestures: first tap toggles X, second tap on the same cell becomes DoubleTap -> cat.
+            vm.onCellTap(Pos(0, 1))
+            vm.onCellDoubleTap(Pos(0, 1))
+            assertTrue(wrongMoves().isEmpty())
+        }
+        val c = vm.ready()
+        assertEquals(CellMarkUi.CAT, c.markAt(0, 1))
+        assertFalse(c.wrongXAt(0, 1))
+        assertEquals(3, c.hearts)
+    }
+
+    @Test
+    fun correctMovesDoNotFireWrongMove() = vmTest { _, vm ->
+        vm.events.test {
+            vm.onCellTap(Pos(0, 0)) // X on a non-solution cell
+            vm.onCellTap(Pos(2, 2))
+            vm.onCellDoubleTap(Pos(0, 1)) // correct cat
+            vm.onCatBooster() // booster cat is always a solution cell
+            vm.onCellTap(Pos(0, 0)) // X removed
+            assertTrue(wrongMoves().isEmpty())
+        }
+    }
+
+    @Test
+    fun wrongMoveDoesNotChangeGameState() = vmTest { _, vm ->
+        vm.onCellTap(Pos(0, 1)) // plain X on a solution cell
+        val c = vm.ready()
+        assertEquals(CellMarkUi.X, c.markAt(0, 1)) // cross stays, exactly as without the cue
+        assertEquals(3, c.hearts) // no life lost
+        assertTrue(c.canUndo)
+        vm.onCellDoubleTap(Pos(0, 0)) // wrong cat: only the existing single heart loss
+        assertEquals(2, vm.ready().hearts)
+        assertEquals(CellMarkUi.X, vm.ready().markAt(0, 0)) // auto-X, no cat
+    }
+
+    // ---- wrong cat -> auto red X ----
+
+    private fun GameContentUi.wrongXAt(r: Int, c: Int) = board.cell(r, c).wrongX
+
+    @Test
+    fun wrongCatBecomesRedXWithNoCatAndNoConflict() = vmTest { _, vm ->
+        vm.onCellDoubleTap(Pos(0, 1)) // correct
+        vm.onCellDoubleTap(Pos(1, 2)) // wrong + touches (0,1) diagonally
+        val c = vm.ready()
+        assertEquals(CellMarkUi.X, c.markAt(1, 2))
+        assertTrue(c.wrongXAt(1, 2))
+        assertEquals(1, c.cats().size)
+        assertTrue(c.board.cells.none { it.conflict }) // no outline: conflict derives from cats only
+        assertEquals(2, c.hearts)
+    }
+
+    @Test
+    fun normalUserXIsNotRed() = vmTest { _, vm ->
+        vm.onCellTap(Pos(0, 0))
+        assertFalse(vm.ready().wrongXAt(0, 0))
+    }
+
+    @Test
+    fun correctCatUnaffectedByAutoX() = vmTest { _, vm ->
+        vm.onCellDoubleTap(Pos(0, 1))
+        assertEquals(CellMarkUi.CAT, vm.ready().markAt(0, 1))
+        assertEquals(3, vm.ready().hearts)
+    }
+
+    @Test
+    fun undoOfWrongCatRestoresPriorMarkAndClearsRed() = vmTest { _, vm ->
+        vm.onCellDoubleTap(Pos(0, 0)) // was EMPTY
+        vm.onUndo()
+        var c = vm.ready()
+        assertEquals(CellMarkUi.EMPTY, c.markAt(0, 0))
+        assertFalse(c.wrongXAt(0, 0))
+        assertEquals(2, c.hearts) // no refund
+        vm.onCellTap(Pos(1, 1)) // plain X, then wrong cat over it
+        vm.onCellDoubleTap(Pos(1, 1))
+        assertTrue(vm.ready().wrongXAt(1, 1))
+        vm.onUndo()
+        c = vm.ready()
+        assertEquals(CellMarkUi.X, c.markAt(1, 1))
+        assertFalse(c.wrongXAt(1, 1)) // back to a normal X
+    }
+
+    @Test
+    fun changingRedXClearsRedMarker() = vmTest { _, vm ->
+        vm.onCellDoubleTap(Pos(0, 0))
+        vm.onCellTap(Pos(0, 0)) // X -> EMPTY
+        assertFalse(vm.ready().wrongXAt(0, 0))
+        vm.onCellTap(Pos(0, 0)) // fresh user X
+        assertFalse(vm.ready().wrongXAt(0, 0))
+    }
+
+    @Test
+    fun wrongCatSavesAsXNotCat() = vmTest { rig, vm ->
+        vm.onCellDoubleTap(Pos(0, 0))
+        advanceUntilIdle()
+        assertEquals(CellMark.X, rig.saved.rows[1]!!.state.board[0, 0])
+    }
+
+    @Test
+    fun wrongCatSavesRedXIndexAndClearingItUpdatesSave() = vmTest { rig, vm ->
+        vm.onCellDoubleTap(Pos(0, 0))
+        advanceUntilIdle()
+        assertEquals(setOf(0), rig.saved.rows[1]!!.wrongX)
+        vm.onCellTap(Pos(0, 0)) // X -> EMPTY clears the marker
+        advanceUntilIdle()
+        assertEquals(emptySet<Int>(), rig.saved.rows[1]!!.wrongX)
+    }
+
+    @Test
+    fun restoresRedXFromAutosaveAndDropsStaleIndices() = vmTest(
+        GameRig().also { rig ->
+            val board = BoardState.empty(4).withMark(0, 0, CellMark.X)
+            val state = GameState.initial(4).copy(board = board, hearts = 2)
+            // 0 = real X -> kept; 5 = EMPTY cell, 99 = out of range -> dropped
+            rig.saved.rows[1] = SavedGame(1, state, elapsedMs = 5_000L, savedAtMs = 1L, wrongX = setOf(0, 5, 99))
+        },
+    ) { _, vm ->
+        val c = vm.ready()
+        assertTrue(c.wrongXAt(0, 0))
+        assertFalse(c.wrongXAt(1, 1))
+    }
+
+    @Test
+    fun oldSaveWithoutWrongXResumesWithNoRed() = vmTest(
+        GameRig().also { rig ->
+            val board = BoardState.empty(4).withMark(0, 0, CellMark.X)
+            rig.saved.rows[1] = SavedGame(1, GameState.initial(4).copy(board = board), elapsedMs = 1_000L, savedAtMs = 1L)
+        },
+    ) { _, vm ->
+        assertFalse(vm.ready().wrongXAt(0, 0))
+        assertEquals(CellMarkUi.X, vm.ready().markAt(0, 0))
     }
 
     // ---- sfx ----
@@ -353,10 +522,45 @@ class GameViewModelTest {
             for (p in solution) vm.onCellDoubleTap(p)
             val rest = cancelAndConsumeRemainingEvents()
                 .mapNotNull { (it as? app.cash.turbine.Event.Item<*>)?.value }
-            assertEquals(3, rest.count { it == meow }) // 3 non-winning placements; the 4th has none
+            assertEquals(3, rest.count { it is GameUiEvent.Sfx && it.kind == SfxKind.CHIME }) // 3 non-winning placements (pitch rises with the combo); the 4th has none
             assertEquals(1, rest.count { it == GameUiEvent.Sfx(SfxKind.AWARD) }) // level 1 = milestone
             assertTrue(rest.none { it == GameUiEvent.Sfx(SfxKind.WIN) })
         }
+    }
+
+    // ---- cosmetic feel: combo streak, +N points, region clear (never touches the score) ----
+
+    @Test
+    fun comboStreakCountsCorrectCatsAndWrongCatResetsIt() = vmTest { _, vm ->
+        assertEquals(0, vm.ready().comboStreak)
+        vm.onCellDoubleTap(Pos(0, 1)) // correct
+        assertEquals(1, vm.ready().comboStreak)
+        vm.onCellTap(Pos(2, 2)) // X: keeps the streak
+        assertEquals(1, vm.ready().comboStreak)
+        vm.onCellDoubleTap(Pos(1, 3)) // correct
+        assertEquals(2, vm.ready().comboStreak)
+        vm.onCellDoubleTap(Pos(3, 3)) // wrong
+        assertEquals(0, vm.ready().comboStreak)
+    }
+
+    @Test
+    fun correctPlacementCarriesDomainPointsAndRegionClear() = vmTest { _, vm ->
+        vm.onCellDoubleTap(Pos(0, 1))
+        val c = vm.ready()
+        val placed = c.lastCorrectPlacement!!
+        assertEquals(com.tm.meow.sudoku.puzzle.domain.engine.ScoreConfig.DEFAULT.pointsPerCorrectPlacement, placed.points)
+        assertEquals(PraiseKind.CLEAR, placed.praise)
+        val cleared = c.regionCleared!!
+        assertEquals(c.board.cell(0, 1).region, cleared.region)
+        assertEquals(0, cleared.row)
+        assertEquals(1, cleared.col)
+    }
+
+    @Test
+    fun catBoosterDoesNotRaiseTheStreak() = vmTest { _, vm ->
+        vm.onCatBooster()
+        assertEquals(0, vm.ready().comboStreak)
+        assertEquals(CellMarkUi.CAT, vm.ready().board.cells.first { it.locked }.mark)
     }
 
     @Test
@@ -542,14 +746,13 @@ class GameViewModelTest {
     }
 
     @Test
-    fun removingStrayWrongCatLeavingSolvedBoardWins() = vmTest { rig, vm ->
+    fun wrongCatAutoXDoesNotBlockLaterWin() = vmTest { rig, vm ->
         vm.onCellDoubleTap(Pos(0, 1))
         vm.onCellDoubleTap(Pos(1, 3))
-        vm.onCellDoubleTap(Pos(3, 3)) // wrong: heart lost
-        vm.onCellDoubleTap(Pos(2, 0))
-        vm.onCellDoubleTap(Pos(3, 2)) // 5 cats incl. the stray: engine does not report Solved
+        vm.onCellDoubleTap(Pos(3, 3)) // wrong: heart lost, cat auto-replaced by X (never a stray cat)
         assertNull(vm.ready().outcome)
-        vm.onCellDoubleTap(Pos(3, 3)) // remove stray -> board is a valid full solution
+        vm.onCellDoubleTap(Pos(2, 0))
+        vm.onCellDoubleTap(Pos(3, 2)) // 4 correct cats: valid full solution, X on (3,3) irrelevant
         advanceUntilIdle()
         val outcome = vm.ready().outcome
         assertTrue(outcome is OutcomeUi.Won)

@@ -103,7 +103,8 @@ object UseCaseModule {
     // ---- puzzle source ----
 
     @Provides @Singleton
-    fun provideLevelGenerator(): LevelGenerator = EnginePuzzleGenerator()
+    fun provideLevelGenerator(config: RemoteConfigRepository): LevelGenerator =
+        EnginePuzzleGenerator(singleBlockThroughLevel = { config.current().levelsSingleColoredBlock })
 
     /** Bundled fallback puzzles are a pending decision: NONE until then. */
     @Provides @Singleton

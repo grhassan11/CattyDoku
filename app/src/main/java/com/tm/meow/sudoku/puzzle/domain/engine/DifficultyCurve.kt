@@ -18,6 +18,9 @@ object DifficultyCurve {
     const val LAST_LEVEL_5X5 = 12
     const val LAST_LEVEL_6X6 = 24
 
+    /** In-app default for the remote `levels_single_colored_block`: levels 1..N force one 1-cell region. */
+    const val SINGLE_BLOCK_THROUGH_LEVEL = 50
+
     private val TARGETS_4X4 = intArrayOf(1, 1, 2, 2)
     private val TARGETS_5X5 = intArrayOf(2, 2, 2, 3, 3, 3, 4, 4)
     private val TARGETS_6X6 = intArrayOf(3, 3, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4)
@@ -74,10 +77,14 @@ object DifficultyCurve {
         else -> MAX_BOARD_SIZE
     }
 
-    /** Levels 1..10 (starter-cat range) get one forced 1-cell region as a visible first deduction. */
-    fun specFor(level: Int): LevelSpec {
+    /**
+     * Levels 1..[singleBlockThroughLevel] get one forced 1-cell region (the "single colored block") as a
+     * visible first deduction. 0 = off. Independent of the starter cat ([StarterCatPolicy]).
+     * L1-2 (4x4, target 1) always carry a 1-cell region via minRegionSize, regardless of this value.
+     */
+    fun specFor(level: Int, singleBlockThroughLevel: Int = SINGLE_BLOCK_THROUGH_LEVEL): LevelSpec {
         val base = baseSpecFor(level)
-        return if (StarterCatPolicy.appliesTo(base.levelIndex)) base.copy(singletonRegion = true) else base
+        return if (base.levelIndex in 1..singleBlockThroughLevel) base.copy(singletonRegion = true) else base
     }
 
     private fun baseSpecFor(level: Int): LevelSpec {
@@ -108,8 +115,8 @@ object DifficultyCurve {
      * 8x8/9x9 levels: next smaller size(s) down to [MIN_CYCLE_SIZE] at the same target, then
      * [MIN_CYCLE_SIZE] with target - 1. Empty for sizes <= 7 (their behavior is unchanged).
      */
-    fun fallbackSpecsFor(level: Int): List<LevelSpec> {
-        val base = specFor(level)
+    fun fallbackSpecsFor(level: Int, singleBlockThroughLevel: Int = SINGLE_BLOCK_THROUGH_LEVEL): List<LevelSpec> {
+        val base = specFor(level, singleBlockThroughLevel)
         if (base.size <= MIN_CYCLE_SIZE) return emptyList()
         val out = ArrayList<LevelSpec>()
         for (s in base.size - 1 downTo MIN_CYCLE_SIZE) {

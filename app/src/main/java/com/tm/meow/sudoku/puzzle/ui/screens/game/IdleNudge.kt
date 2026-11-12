@@ -27,6 +27,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import com.tm.meow.sudoku.puzzle.domain.engine.IdleMeowPolicy
+import com.tm.meow.sudoku.puzzle.ui.components.LocalReduceEffects
 import com.tm.meow.sudoku.puzzle.domain.engine.IdleNudgePolicy
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -110,29 +111,34 @@ internal fun RememberIdleMeow(eligible: Boolean, clock: InteractionClock, onMeow
     }
 }
 
-/** False when the system animator duration scale is 0 (user disabled animations). Re-read when [key] changes. */
+/**
+ * False when the system animator duration scale is 0 (user disabled animations) OR the in-app "Reduce effects" setting is on.
+ * System scale is re-read when [key] changes; the setting is live (CompositionLocal).
+ */
 @Composable
 internal fun rememberAnimationsEnabled(key: Any?): Boolean {
     val context = LocalContext.current
-    return remember(context, key) {
+    val systemOn = remember(context, key) {
         runCatching {
             Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
         }.getOrDefault(true)
     }
+    return systemOn && !LocalReduceEffects.current
 }
 
 private const val NUDGE_PERIOD_MS = 1_600
 private const val WIGGLE_PORTION = 0.5f
 private const val WIGGLE_DEGREES = 12f
 private const val PULSE_SCALE = 0.14f
+private const val SOFT_PULSE_SCALE = 0.09f
 
 /**
- * Wraps a booster icon. While [active] it wiggles + pulses in a loop; the transform runs in graphicsLayer (draw phase),
+ * Wraps a booster icon. While [active] it wiggles + pulses in a loop ([soft]: gentle pulse only); the transform runs in graphicsLayer (draw phase),
  * so it neither recomposes nor relayouts, and the button's circle / drop shadow stay untouched. When [active] flips off
  * the icon snaps back to rest. Frame-by-frame the infinite transition only exists while nudging.
  */
 @Composable
-internal fun NudgeIcon(active: () -> Boolean, content: @Composable () -> Unit) {
+internal fun NudgeIcon(active: () -> Boolean, soft: Boolean = false, content: @Composable () -> Unit) {
     val phase: State<Float>? = if (active()) {
         rememberInfiniteTransition(label = "boosterNudge").animateFloat(
             initialValue = 0f,
@@ -148,8 +154,9 @@ internal fun NudgeIcon(active: () -> Boolean, content: @Composable () -> Unit) {
             val p = phase?.value ?: 0f
             if (p > 0f && p < WIGGLE_PORTION) {
                 val u = p / WIGGLE_PORTION
-                rotationZ = WIGGLE_DEGREES * sin(u * 4f * PI.toFloat()) * (1f - u)
-                val s = 1f + PULSE_SCALE * sin(u * PI.toFloat())
+                // Soft (hint bulb): no wiggle, a gentle glow-like pulse only.
+                if (!soft) rotationZ = WIGGLE_DEGREES * sin(u * 4f * PI.toFloat()) * (1f - u)
+                val s = 1f + (if (soft) SOFT_PULSE_SCALE else PULSE_SCALE) * sin(u * PI.toFloat())
                 scaleX = s
                 scaleY = s
             }

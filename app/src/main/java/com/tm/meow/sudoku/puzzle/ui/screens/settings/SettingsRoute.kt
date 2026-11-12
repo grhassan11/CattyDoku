@@ -32,6 +32,8 @@ import com.tm.meow.sudoku.puzzle.R
 import com.tm.meow.sudoku.puzzle.domain.language.AppLanguages
 import com.tm.meow.sudoku.puzzle.ui.consent.PrivacyOptionsViewModel
 import com.tm.meow.sudoku.puzzle.ui.screens.game.SettingToggle
+import com.tm.meow.sudoku.puzzle.ui.screens.rate.RateUsHost
+import com.tm.meow.sudoku.puzzle.ui.screens.rate.RateUsViewModel
 import com.tm.meow.sudoku.puzzle.util.FeedbackEmail
 import com.tm.meow.sudoku.puzzle.util.LegalLinks
 import kotlinx.coroutines.launch
@@ -54,6 +56,7 @@ fun SettingsRoute(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
     privacyViewModel: PrivacyOptionsViewModel = hiltViewModel(),
+    rateUsViewModel: RateUsViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.state.collectAsStateWithLifecycle()
     val privacyRequired by privacyViewModel.required.collectAsStateWithLifecycle()
@@ -139,10 +142,12 @@ fun SettingsRoute(
             onPrivacyPolicy = { if (!LegalLinks.open(context, LegalLinks.PRIVACY_URL)) toast(linkFailed) },
             onHowToPlay = onHowToPlay,
             onAbout = onAbout,
+            onRateUs = rateUsViewModel::showManually,
             languageName = language.nativeName,
             onLanguage = { showLanguage = true },
             onPrivacyOptions = if (privacyRequired) privacyViewModel::open else null,
         )
+        RateUsHost(rateUsViewModel, snackbarHostState)
         if (showLanguage) {
             LanguageDialog(
                 languages = AppLanguages.ALL,

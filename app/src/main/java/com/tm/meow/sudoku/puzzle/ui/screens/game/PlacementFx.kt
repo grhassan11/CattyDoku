@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.unit.dp
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 import kotlin.math.PI
@@ -107,7 +109,17 @@ private val STAR_SIN = FloatArray(8) { sin(it * PI / 4 - PI / 2).toFloat() }
  * Region flash + glow ring + sparkle burst for the cell [idx]. [gapPx] = gap between cells.
  * Sizes derive from the cell size, so 9x9 (small cells) scales down with a readable floor.
  */
-internal fun DrawScope.drawPlacementFx(fx: PlacementFx, token: Int, idx: Int, board: BoardUi, gapPx: Float) {
+internal fun DrawScope.drawPlacementFx(
+    fx: PlacementFx,
+    token: Int,
+    idx: Int,
+    board: BoardUi,
+    gapPx: Float,
+    /** Pre-measured "+N" text (cached by the caller); null = no popup. Rises and fades on the same timeline. */
+    plus: TextLayoutResult? = null,
+    /** Low-RAM device: draw 4 of the 8 sparkles. */
+    halfSparkles: Boolean = false,
+) {
     val n = board.size
     if (idx !in 0 until n * n) return
     val cell = (size.width - gapPx * (n - 1)) / n
@@ -148,10 +160,40 @@ internal fun DrawScope.drawPlacementFx(fx: PlacementFx, token: Int, idx: Int, bo
     val alpha = if (t < 0.35f) 1f else inv / 0.65f
     val baseR = max(cell * 0.15f, 3.5.dp.toPx()) * (1f - 0.4f * t)
     val tint = lerp(GameColors.region(region), Color.White, 0.6f)
-    for (i in 0 until SPARKLES) {
-        val even = i % 2 == 0
+    val sparkleStep = if (halfSparkles) 2 else 1
+    for (i in 0 until SPARKLES step sparkleStep) {
+        val even = (i / sparkleStep) % 2 == 0
         val dist = cell * (0.2f + 0.8f * ease2) * (if (even) 1f else 0.8f)
         val path = fx.starPath(cx + RAY_COS[i] * dist, cy + RAY_SIN[i] * dist, if (even) baseR else baseR * 0.7f)
         drawPath(path, (if (even) GOLD else tint).copy(alpha = alpha))
     }
+
+    // "+N" score popup: floats up from the cat and fades (fade-in 0..12 %, hold to 50 %, fade-out after).
+    if (plus != null) {
+        val a = when {
+            t < 0.12f -> t / 0.12f
+            t < 0.5f -> 1f
+            else -> 1f - (t - 0.5f) / 0.5f
+        }
+        val rise = cell * 0.9f * ease
+        drawText(
+            plus,
+            topLeft = Offset(cx - plus.size.width / 2f, cy - cell * 0.35f - plus.size.height / 2f - rise),
+            alpha = a.coerceIn(0f, 1f),
+        )
+    }
+}
+
+private const val WAVE_START = 0.04f
+private const val WAVE_STEP = 0.045f // per cell of distance
+private const val WAVE_POP = 0.32f
+private const val WAVE_SWELL = 0.3f
+
+/**
+ * Scale of an X mark at ring distance [dist] (>= 1, along the placed cat's row / column or one of its 8 neighbours) at placement
+ * effect time [t] (0..1): a staggered pop radiating outward. 1 outside its window. Pure, allocation-free.
+ */
+internal fun xWaveScale(t: Float, dist: Int): Float {
+    val local = (t - WAVE_START - dist * WAVE_STEP) / WAVE_POP
+    return if (local <= 0f || local >= 1f) 1f else 1f + WAVE_SWELL * sin(PI * local).toFloat()
 }

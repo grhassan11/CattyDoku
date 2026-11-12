@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Game-screen compact native ad bar (Levels + Sudoku). Host (GameNativeAdSlot) fixes the height to 88dp; this layout fills it
+    (match_parent). Two rows: app icon (56dp) at start spanning both rows, vertically centered; right column row 1 =
+    ["Ad" badge][ONE-line headline], row 2 = full-width CTA pill (40dp). No MediaView, no body, no advertiser/store/price/stars.
+    Asset ids match admob_native_hundred.xml so NativeAdBar.bind() is reused: ad_app_icon, ad_headline, ad_attribute_txtv
+    (Ad badge, static, always visible), ad_call_to_action. ad_body absent (bind() is null-safe).
+    The SDK draws AdChoices TOP_RIGHT: headline row end margin 12dp + 12dp padding keeps it clear; nothing overlaps an asset.
+-->
+<com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="ltr">
+
+    <LinearLayout
+        android:id="@+id/ad_parent_rl"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/native_ad_background"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="6dp">
+
+        <ImageView
+            android:id="@+id/ad_app_icon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:gravity="center_vertical|start"
+                android:minHeight="24dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/ad_attribute_txtv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="20dp"
+                    android:minHeight="20dp"
+                    android:background="@drawable/bg_native_ad_badge"
+                    android:contentDescription="@string/ad_badge_description"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:text="@string/ad_badge"
+                    android:textColor="@color/native_ad_badge_text"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/ad_headline"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center_vertical|start"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:singleLine="true"
+                    android:textColor="@color/native_ad_headline"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/ad_call_to_action"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/ripple_bg_native_ad_button_twenty"
+                android:ellipsize="end"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:textColor="@color/native_ad_cta_text"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Subtle 1dp top stroke (drawn above the content; sits in the 6dp top padding, overlaps no asset). -->
+    <View
+        android:id="@+id/ad_top_stroke"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_gravity="top"
+        android:background="@color/native_ad_top_stroke" />
+</com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdView>

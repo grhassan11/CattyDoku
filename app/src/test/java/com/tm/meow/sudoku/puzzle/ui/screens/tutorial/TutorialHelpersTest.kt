@@ -34,12 +34,12 @@ class TutorialHelpersTest {
         assertEquals(
             listOf(
                 AccentText.Segment("Only the last ", false),
-                AccentText.Segment("rose cell", false, tint = true),
+                AccentText.Segment("pink cell", false, tint = true),
                 AccentText.Segment(" remains\n", false),
                 AccentText.Segment("Double-tap", true),
                 AccentText.Segment(" to place a cat", false),
             ),
-            AccentText.split("Only the last ~~rose cell~~ remains\n**Double-tap** to place a cat"),
+            AccentText.split("Only the last ~~pink cell~~ remains\n**Double-tap** to place a cat"),
         )
         assertEquals(
             listOf(AccentText.Segment("a ", false), AccentText.Segment("dangling", false)),

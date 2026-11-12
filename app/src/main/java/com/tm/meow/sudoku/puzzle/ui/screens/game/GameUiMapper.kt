@@ -56,6 +56,7 @@ object GameUiMapper {
             streakReminders = settings.streakReminders,
             dailyReminders = settings.dailyReminders,
             sudokuReminders = settings.sudokuReminders,
+            reduceEffects = settings.reduceEffects,
         ),
         outcome = outcome,
         isDaily = daily,

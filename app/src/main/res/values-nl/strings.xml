@@ -149,9 +149,6 @@
 
     <string name="rate_title">Vind je het spel leuk?</string>
     <string name="rate_subtitle">Tik op een ster om je ervaring te beoordelen</string>
-    <string name="rate_submit">Verzenden</string>
-    <string name="rate_not_now">Niet nu</string>
-    <string name="rate_submitted">Beoordeling verzonden</string>
     <plurals name="rate_star_description">
         <item quantity="one">%d ster</item>
         <item quantity="other">%d sterren</item>
@@ -318,6 +315,8 @@
     <string name="settings_off">Uit</string>
     <string name="settings_pattern">Patroonmodus</string>
     <string name="settings_pattern_hint">Voegt een patroon toe aan elke kleur</string>
+    <string name="settings_reduce_effects">Effecten verminderen</string>
+    <string name="settings_reduce_effects_hint">Minder deeltjes en animaties. Zachter voor oudere telefoons en de batterij.</string>
     <string name="settings_group_notifications">Meldingen</string>
     <string name="settings_streak_reminders">Reeksherinneringen</string>
     <string name="settings_streak_reminders_hint">Een avondduwtje voordat je reeks breekt</string>
@@ -326,6 +325,7 @@
     <string name="settings_sudoku_reminders">Sudoku-herinnering</string>
     <string name="settings_sudoku_reminders_hint">Een duwtje een paar uur nadat je een spel onafgemaakt hebt gelaten</string>
     <string name="settings_about">Over</string>
+    <string name="settings_rate_us">Beoordeel ons</string>
     <string name="about_title">Over</string>
     <string name="about_app_icon">App-pictogram van %1$s</string>
     <string name="about_version">Versie %1$s</string>
@@ -349,9 +349,9 @@
     <string name="tutorial_find_last">Vind de **laatste kat**!</string>
     <string name="tutorial_find_last_sub">Dubbeltik op het lege vakje om hem te plaatsen.</string>
     <string name="tutorial_excellent">Uitstekend! Je beheerst de regels!</string>
-    <string name="tutorial_bottom_tap_empty">Tik op lege vakjes om ze uit te sluiten.</string>
+    <string name="tutorial_bottom_tap_empty">Tik één keer op lege vakjes om ze uit te sluiten.</string>
     <string name="tutorial_bottom_swipe">Veeg over deze vakjes om ze uit te sluiten.</string>
-    <string name="tutorial_hint_pill">Tik hier voor een hint.</string>
+    <string name="tutorial_hint_pill">Tik hier één keer voor een hint.</string>
     <string name="tutorial_got_it">Begrepen!</string>
     <string name="tutorial_start_game">Spel starten</string>
     <string name="tutorial_replay">Tutorial opnieuw bekijken</string>
@@ -552,4 +552,12 @@
     <string name="sudoku_tut_next_tricks">Volgende: Oplostrucs</string>
     <string name="sudoku_tut_start_playing">Begin met spelen!</string>
 
+    <!-- Game feel: streak / region praise + combo chip -->
+    <string name="praise_nice">Mooi!</string>
+    <string name="praise_purrfect">Spinnend goed!</string>
+    <string name="praise_meowvelous">Mauw-erlijk!</string>
+    <string name="praise_clawsome">Klauw-some!</string>
+    <string name="praise_clear">Klaar!</string>
+    <string name="combo_chip">x%1$d</string>
+    <string name="combo_description">Combo x%1$d</string>
 </resources>

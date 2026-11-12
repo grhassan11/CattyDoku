@@ -92,27 +92,22 @@ private fun NativeAdSkeleton(modifier: Modifier = Modifier) {
                 ShimmerBlock(progress, Modifier.size(45.dp), 8.dp)
                 ShimmerBlock(
                     progress,
-                    Modifier.padding(start = 61.dp, top = 6.dp).fillMaxWidth(0.55f).height(14.dp),
-                    7.dp,
+                    Modifier.padding(start = 61.dp, top = 6.dp).fillMaxWidth(0.55f).height(16.dp),
+                    8.dp,
                 )
                 ShimmerBlock(
                     progress,
-                    Modifier.padding(start = 61.dp, top = 33.dp).fillMaxWidth(0.8f).height(10.dp),
+                    Modifier.padding(start = 61.dp, top = 35.dp).fillMaxWidth(0.8f).height(10.dp),
                     5.dp,
                 )
-                ShimmerBlock(
-                    progress,
-                    Modifier.padding(start = 61.dp, top = 49.dp).fillMaxWidth(0.6f).height(10.dp),
-                    5.dp,
-                )
-                ShimmerBlock(progress, Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(35.dp), 18.dp)
+                ShimmerBlock(progress, Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(44.dp), 22.dp)
             }
         }
     }
 }
 
 @Composable
-private fun ShimmerBlock(progress: State<Float>, modifier: Modifier, corner: Dp) {
+internal fun ShimmerBlock(progress: State<Float>, modifier: Modifier, corner: Dp) {
     Box(
         modifier.drawBehind {
             val w = size.width
@@ -130,8 +125,8 @@ private fun ShimmerBlock(progress: State<Float>, modifier: Modifier, corner: Dp)
 }
 
 private val SKELETON_HEIGHT = 112.dp
-private val SkeletonBase = Color(0xFFE9E9EB)
-private val SkeletonHighlight = Color(0xFFF6F6F7)
+internal val SkeletonBase = Color(0xFFE9E9EB)
+internal val SkeletonHighlight = Color(0xFFF6F6F7)
 
 @Composable
 fun NativeAdBar(ad: NativeAdHandle, modifier: Modifier = Modifier) {
@@ -154,7 +149,8 @@ fun NativeAdBar(ad: NativeAdHandle, modifier: Modifier = Modifier) {
     }
 }
 
-private fun bind(view: NativeAdView, ad: NativeAd) {
+/** Binds [ad] to the inflated layout (shared by Home [NativeAdBar] and the game-screen [GameNativeAdSlot]; missing asset views are skipped). */
+internal fun bind(view: NativeAdView, ad: NativeAd) {
     // update{} can run again (recomposition); register once per ad.
     if (view.tag === ad) return
 

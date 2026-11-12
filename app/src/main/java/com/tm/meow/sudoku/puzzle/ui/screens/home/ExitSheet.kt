@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.tm.meow.sudoku.puzzle.ui.screens.rate.RateUsContent
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -38,6 +41,8 @@ import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 fun ExitSheet(
     onDismiss: () -> Unit,
     onExit: () -> Unit,
+    showRateUs: Boolean,
+    onRateStar: (stars: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -51,12 +56,17 @@ fun ExitSheet(
         Column(
             Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 16.dp)
                 .semantics { paneTitle = message },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            if (showRateUs) {
+                RateUsContent(onStarSelected = onRateStar, catSize = 64.dp)
+                Spacer(Modifier.height(24.dp))
+            }
             Text(
                 message,
                 color = GameColors.Title,

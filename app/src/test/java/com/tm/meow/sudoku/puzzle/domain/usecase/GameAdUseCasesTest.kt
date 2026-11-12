@@ -3,9 +3,8 @@ package com.tm.meow.sudoku.puzzle.domain.usecase
 import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdRepository
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerPlacement
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdHandle
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedPlacement
@@ -77,20 +76,18 @@ private class GaRewarded(
     }
 }
 
-private class GaBannerHandle : BannerAdHandle {
+private class GaNativeHandle : NativeAdHandle {
     override fun destroy() = Unit
 }
 
-private class GaBanner(
+private class GaNative(
     override val isConfigured: Boolean = true,
-    private val result: BannerAdHandle? = GaBannerHandle(),
-) : BannerAdRepository {
+    private val result: NativeAdHandle? = GaNativeHandle(),
+) : NativeAdRepository {
     var loadCalls = 0
-    var lastWidth = -1
 
-    override suspend fun load(widthDp: Int): BannerAdHandle? {
+    override suspend fun load(): NativeAdHandle? {
         loadCalls++
-        lastWidth = widthDp
         return result
     }
 }
@@ -104,10 +101,10 @@ class GameAdUseCasesTest {
         consent: GaConsent = GaConsent(),
         sdk: GaSdk = GaSdk(),
         rewarded: GaRewarded = GaRewarded(),
-        banner: GaBanner = GaBanner(),
+        nativeAds: GaNative = GaNative(),
         config: AdPolicyConfig = AdPolicyConfig(),
     ) = ObserveAdSurfaces(
-        FakeAppFlagsRepository(AppFlags(lastPlayedLevel = flagLevel)), consent, sdk, rewarded, banner, config,
+        FakeAppFlagsRepository(AppFlags(lastPlayedLevel = flagLevel)), consent, sdk, rewarded, nativeAds, config,
     )
 
     @Test
@@ -115,33 +112,33 @@ class GameAdUseCasesTest {
         for (l in 0..9) {
             val s = surfaces(flagLevel = l)(MutableStateFlow(l)).first()
             assertFalse("rewarded L$l", s.levelsBoosters || s.levelsRevive || s.sudokuBoosters || s.sudokuRevive)
-            assertFalse("banner L$l", s.banner)
+            assertTrue("levels native L$l (no level gate)", s.levelsGameNative)
         }
         val s = surfaces(flagLevel = 10)(MutableStateFlow(10)).first()
         assertTrue(s.levelsBoosters && s.levelsRevive && s.sudokuBoosters && s.sudokuRevive)
-        assertTrue(s.banner)
+        assertTrue(s.levelsGameNative)
         assertEquals(10, s.playerLevel)
     }
 
     @Test
     fun surfaceLevelIsMaxOfScreenAndProgress() = runTest {
         // Daily: screen level 0, progress says 12 -> ads allowed.
-        assertTrue(surfaces(flagLevel = 12)(MutableStateFlow(0)).first().banner)
+        assertTrue(surfaces(flagLevel = 12)(MutableStateFlow(0)).first().levelsGameNative)
         // Progress flag not yet written for the new level but screen knows it.
-        assertTrue(surfaces(flagLevel = 9)(MutableStateFlow(10)).first().banner)
-        assertFalse(surfaces(flagLevel = 4)(MutableStateFlow(8)).first().banner)
+        assertTrue(surfaces(flagLevel = 9)(MutableStateFlow(10)).first().levelsGameNative)
+        assertTrue(surfaces(flagLevel = 4)(MutableStateFlow(8)).first().levelsGameNative)
     }
 
     @Test
     fun surfacesNeedConsentSdkConfigAndSwitches() = runTest {
         val level = MutableStateFlow(20)
         assertFalse(surfaces(20, consent = GaConsent(false))(level).first().levelsBoosters)
-        assertFalse(surfaces(20, sdk = GaSdk(false))(level).first().banner)
+        assertFalse(surfaces(20, sdk = GaSdk(false))(level).first().levelsGameNative)
         assertFalse(surfaces(20, rewarded = GaRewarded(isConfigured = false))(level).first().levelsBoosters)
-        assertTrue(surfaces(20, rewarded = GaRewarded(isConfigured = false))(level).first().banner)
-        assertFalse(surfaces(20, banner = GaBanner(isConfigured = false))(level).first().banner)
-        assertFalse(surfaces(20, config = AdPolicyConfig(levelsGameBannerShow = false))(level).first().banner)
-        assertTrue(surfaces(20, config = AdPolicyConfig(levelsGameBannerShow = false))(level).first().levelsBoosters)
+        assertTrue(surfaces(20, rewarded = GaRewarded(isConfigured = false))(level).first().levelsGameNative)
+        assertFalse(surfaces(20, nativeAds = GaNative(isConfigured = false))(level).first().levelsGameNative)
+        assertFalse(surfaces(20, config = AdPolicyConfig(levelsGameNativeShow = false))(level).first().levelsGameNative)
+        assertTrue(surfaces(20, config = AdPolicyConfig(levelsGameNativeShow = false))(level).first().levelsBoosters)
         assertFalse(surfaces(20, config = AdPolicyConfig(levelsBoostersRewardedShow = false))(level).first().levelsBoosters)
     }
 
@@ -159,7 +156,7 @@ class GameAdUseCasesTest {
     }
 
     @Test
-    fun otherUnitSwitchesDoNotAffectRewardedOrBanner() = runTest {
+    fun otherUnitSwitchesDoNotAffectRewardedOrGameNative() = runTest {
         val level = MutableStateFlow(20)
         val unrelated = surfaces(
             20,
@@ -169,7 +166,7 @@ class GameAdUseCasesTest {
             ),
         )(level).first()
         assertTrue(unrelated.levelsBoosters && unrelated.sudokuBoosters)
-        assertTrue(unrelated.banner)
+        assertTrue(unrelated.levelsGameNative)
     }
 
     @Test
@@ -330,68 +327,78 @@ class GameAdUseCasesTest {
         assertNull(ReviveGame()(GameState.initial(4).copy(status = GameStatus.SOLVED)))
     }
 
-    // ---------------------------------------------------------------- LoadBannerAd
+    // ---------------------------------------------------------------- LoadNativeAd (game placements)
 
     @Test
-    fun bannerLoadsOnlyPastTheGateWithConsent() = runTest {
-        val repo = GaBanner()
-        val uc = LoadBannerAd(GaConsent(), GaSdk(), repo, AdPolicyConfig())
-        assertNull(uc(playerLevel = 9, widthDp = 360))
-        assertEquals(0, repo.loadCalls)
-        assertNotNull(uc(playerLevel = 10, widthDp = 360))
-        assertEquals(360, repo.lastWidth)
-        assertNull(LoadBannerAd(GaConsent(false), GaSdk(), repo, AdPolicyConfig())(30, 360))
-        assertNull(LoadBannerAd(GaConsent(), GaSdk(false), repo, AdPolicyConfig())(30, 360))
-        assertNull(LoadBannerAd(GaConsent(), GaSdk(), repo, AdPolicyConfig(levelsGameBannerShow = false))(30, 360))
-        assertNull(uc(30, 0))
+    fun levelsGameNativeLoadsFromLevelOneWithConsent() = runTest {
+        val repo = GaNative()
+        val uc = LoadNativeAd(GaConsent(), repo, AdPolicyConfig())
+        assertNotNull(uc(AdPlacement.LEVELS_GAME, playerLevel = 1))
+        assertNotNull(uc(AdPlacement.LEVELS_GAME, playerLevel = 9))
+        assertNotNull(uc(AdPlacement.LEVELS_GAME, playerLevel = 10))
+        assertEquals(3, repo.loadCalls)
+        repo.loadCalls = 0
+        assertNull(LoadNativeAd(GaConsent(false), repo, AdPolicyConfig())(AdPlacement.LEVELS_GAME, 30))
+        assertNull(LoadNativeAd(GaConsent(), repo, AdPolicyConfig(levelsGameNativeShow = false))(AdPlacement.LEVELS_GAME, 30))
+        assertNull(LoadNativeAd(GaConsent(), GaNative(isConfigured = false), AdPolicyConfig())(AdPlacement.LEVELS_GAME, 30))
         assertEquals(1, repo.loadCalls)
     }
 
-    // ---------------------------------------------------------------- Sudoku banner placement
+    // ---------------------------------------------------------------- Sudoku game native placement
 
     @Test
-    fun sudokuBannerHasNoLevelGate() = runTest {
+    fun gameNativesHaveNoLevelGate() = runTest {
         for (l in listOf(0, 1, 9)) {
             val s = surfaces(flagLevel = l)(MutableStateFlow(l)).first()
-            assertFalse("levels banner L$l", s.banner)
-            assertTrue("sudoku banner L$l", s.sudokuBanner)
+            assertTrue("levels native L$l", s.levelsGameNative)
+            assertTrue("sudoku native L$l", s.sudokuGameNative)
         }
-        val repo = GaBanner()
-        assertNotNull(LoadBannerAd(GaConsent(), GaSdk(), repo, AdPolicyConfig())(0, 360, BannerPlacement.SUDOKU_GAME))
-        assertNull(LoadBannerAd(GaConsent(), GaSdk(), repo, AdPolicyConfig())(0, 360, BannerPlacement.LEVELS_GAME))
+        val repo = GaNative()
+        assertNotNull(LoadNativeAd(GaConsent(), repo, AdPolicyConfig())(AdPlacement.SUDOKU_GAME, 0))
+        assertNotNull(LoadNativeAd(GaConsent(), repo, AdPolicyConfig())(AdPlacement.LEVELS_GAME, 0))
     }
 
     @Test
     fun placementSwitchesAreIndependent() = runTest {
         val level = MutableStateFlow(20)
-        val levelsOff = AdPolicyConfig(levelsGameBannerShow = false)
-        val sudokuOff = AdPolicyConfig(sudokuGameBannerShow = false)
-        surfaces(20, config = levelsOff)(level).first().let { assertFalse(it.banner); assertTrue(it.sudokuBanner) }
-        surfaces(20, config = sudokuOff)(level).first().let { assertTrue(it.banner); assertFalse(it.sudokuBanner) }
-        val repo = GaBanner()
-        assertNotNull(LoadBannerAd(GaConsent(), GaSdk(), repo, levelsOff)(20, 360, BannerPlacement.SUDOKU_GAME))
-        assertNull(LoadBannerAd(GaConsent(), GaSdk(), repo, levelsOff)(20, 360, BannerPlacement.LEVELS_GAME))
-        assertNotNull(LoadBannerAd(GaConsent(), GaSdk(), repo, sudokuOff)(20, 360, BannerPlacement.LEVELS_GAME))
-        assertNull(LoadBannerAd(GaConsent(), GaSdk(), repo, sudokuOff)(20, 360, BannerPlacement.SUDOKU_GAME))
+        val levelsOff = AdPolicyConfig(levelsGameNativeShow = false)
+        val sudokuOff = AdPolicyConfig(sudokuGameNativeShow = false)
+        surfaces(20, config = levelsOff)(level).first().let { assertFalse(it.levelsGameNative); assertTrue(it.sudokuGameNative) }
+        surfaces(20, config = sudokuOff)(level).first().let { assertTrue(it.levelsGameNative); assertFalse(it.sudokuGameNative) }
+        val repo = GaNative()
+        assertNotNull(LoadNativeAd(GaConsent(), repo, levelsOff)(AdPlacement.SUDOKU_GAME, 20))
+        assertNull(LoadNativeAd(GaConsent(), repo, levelsOff)(AdPlacement.LEVELS_GAME, 20))
+        assertNotNull(LoadNativeAd(GaConsent(), repo, sudokuOff)(AdPlacement.LEVELS_GAME, 20))
+        assertNull(LoadNativeAd(GaConsent(), repo, sudokuOff)(AdPlacement.SUDOKU_GAME, 20))
     }
 
     @Test
-    fun bothBannerSwitchesOffBlockBothBanners() = runTest {
-        val off = AdPolicyConfig(levelsGameBannerShow = false, sudokuGameBannerShow = false)
+    fun gameNativeSwitchesDoNotAffectHomeNative() = runTest {
+        val off = AdPolicyConfig(levelsGameNativeShow = false, sudokuGameNativeShow = false)
+        val uc = LoadNativeAd(GaConsent(), GaNative(), off)
+        assertTrue(uc.isAllowed(AdPlacement.LEVELS_HOME))
+        assertTrue(uc.isAllowed(AdPlacement.SUDOKU_HOME))
+        assertFalse(uc.isAllowed(AdPlacement.LEVELS_GAME))
+        assertFalse(uc.isAllowed(AdPlacement.SUDOKU_GAME))
+    }
+
+    @Test
+    fun bothGameNativeSwitchesOffBlockBothSlots() = runTest {
+        val off = AdPolicyConfig(levelsGameNativeShow = false, sudokuGameNativeShow = false)
         val s = surfaces(20, config = off)(MutableStateFlow(20)).first()
-        assertFalse(s.banner)
-        assertFalse(s.sudokuBanner)
-        val repo = GaBanner()
-        assertNull(LoadBannerAd(GaConsent(), GaSdk(), repo, off)(20, 360, BannerPlacement.SUDOKU_GAME))
-        assertNull(LoadBannerAd(GaConsent(), GaSdk(), repo, off)(20, 360, BannerPlacement.LEVELS_GAME))
+        assertFalse(s.levelsGameNative)
+        assertFalse(s.sudokuGameNative)
+        val repo = GaNative()
+        assertNull(LoadNativeAd(GaConsent(), repo, off)(AdPlacement.SUDOKU_GAME, 20))
+        assertNull(LoadNativeAd(GaConsent(), repo, off)(AdPlacement.LEVELS_GAME, 20))
     }
 
     @Test
-    fun sudokuBannerNeedsConsentSdkAndConfiguredUnit() = runTest {
+    fun sudokuGameNativeNeedsConsentSdkAndConfiguredUnit() = runTest {
         val level = MutableStateFlow(0)
-        assertFalse(surfaces(consent = GaConsent(false))(level).first().sudokuBanner)
-        assertFalse(surfaces(sdk = GaSdk(false))(level).first().sudokuBanner)
-        assertFalse(surfaces(banner = GaBanner(isConfigured = false))(level).first().sudokuBanner)
+        assertFalse(surfaces(consent = GaConsent(false))(level).first().sudokuGameNative)
+        assertFalse(surfaces(sdk = GaSdk(false))(level).first().sudokuGameNative)
+        assertFalse(surfaces(nativeAds = GaNative(isConfigured = false))(level).first().sudokuGameNative)
     }
 
     // ---------------------------------------------------------------- starter pack stays cat + hint only

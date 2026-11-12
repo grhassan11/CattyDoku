@@ -337,15 +337,22 @@ class AdsUseCasesTest {
     }
 
     @Test
-    fun adFreeLevelsNeverReachTheSdkEvenWhenEverythingElseAllows() = runTest {
-        for (level in 1..9) {
+    fun loseRetryIgnoresAdFreeLevels() = runTest {
+        for (level in 1..10) {
             val r = rig()
-            assertFalse("L$level", r.show(AdTrigger.LEVEL_WON_CONTINUE, level = level))
-            assertEquals("L$level", 0, r.ads.showCalls)
+            assertTrue("L$level", r.show(AdTrigger.LOSE_RETRY, level = level))
+            assertEquals("L$level", 1, r.ads.showCalls)
         }
-        val r = rig()
-        assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 10))
-        assertEquals(1, r.ads.showCalls)
+    }
+
+    @Test
+    fun levelsWinIgnoresAdFreeLevelsAndFollowsFrequencyOnly() = runTest {
+        val r5 = rig()
+        assertTrue(r5.show(AdTrigger.LEVEL_WON_CONTINUE, level = 5))
+        assertEquals(1, r5.ads.showCalls)
+        val r3 = rig()
+        assertFalse(r3.show(AdTrigger.LEVEL_WON_CONTINUE, level = 3))
+        assertEquals(0, r3.ads.showCalls)
     }
 
     @Test
@@ -358,7 +365,9 @@ class AdsUseCasesTest {
         }
         assertEquals("sudoku no level gate", 1, preloads(null))
         assertEquals("levels past ad-free", 1, preloads(10))
-        assertEquals("levels ad-free", 0, preloads(9))
+        assertEquals("levels ad-free, win interstitial on", 1, preloads(9))
+        assertEquals("levels ad-free, only retry on", 1, preloads(9, config = AdPolicyConfig(levelsWinInterstitialShow = false)))
+        assertEquals("levels ad-free, only sudoku on", 0, preloads(9, config = AdPolicyConfig(levelsWinInterstitialShow = false, levelsRestartInterstitialShow = false)))
         assertEquals("no consent", 0, preloads(10, ConsentState(canRequestAds = false)))
         assertEquals("all switches off", 0, preloads(10, config = AdPolicyConfig(
             levelsWinInterstitialShow = false, sudokuWinInterstitialShow = false,

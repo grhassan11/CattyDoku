@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -241,7 +242,8 @@ private fun InstructionCard(state: TutorialUiState) {
     val raw = stringResource(state.text.res())
     val isFinal = state.text == TutorialTextKey.EXCELLENT
     val accent = GameColors.Coral
-    val tint = state.tintRegion?.let { GameColors.region(it) } ?: accent
+    // Region pastels (pink = 0xFFFBB4D1) are too faint as text on the cream card: darken 35% toward black.
+    val tint = state.tintRegion?.let { lerp(GameColors.region(it), Color.Black, 0.35f) } ?: accent
     val bodyColor = if (isFinal) GameColors.Title else GameColors.Body
     val annotated = remember(raw, tint) {
         buildAnnotatedString {
@@ -328,7 +330,12 @@ private fun BottomBlock(
                 TextLink(stringResource(R.string.tutorial_replay), GameColors.Body.copy(alpha = 0.85f), onReplay)
             }
         }
-        if (state.showSkip) TextLink(stringResource(R.string.tutorial_skip), SkipColor, onSkip)
+        if (state.showSkip) TextLink(
+            stringResource(R.string.tutorial_skip),
+            // Pale grey reads on the dim scrim only; light steps need the body colour.
+            if (state.light) GameColors.Body.copy(alpha = 0.85f) else SkipColor,
+            onSkip,
+        )
     }
 }
 

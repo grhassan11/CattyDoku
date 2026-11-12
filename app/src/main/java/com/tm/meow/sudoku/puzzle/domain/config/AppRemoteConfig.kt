@@ -2,14 +2,15 @@ package com.tm.meow.sudoku.puzzle.domain.config
 
 import com.tm.meow.sudoku.puzzle.domain.ads.AdFreePolicy
 import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
+import com.tm.meow.sudoku.puzzle.domain.engine.DifficultyCurve
 
 /** Remote Config key names. STABLE: they are the contract with the Firebase console. */
 object RemoteConfigKeys {
     const val AD_FREE_THROUGH_LEVEL = "ad_free_through_level"
     const val LEVEL_HOME_NATIVE_AD_SHOW = "level_home_native_ad_show"
     const val SUDOKU_HOME_NATIVE_AD_SHOW = "sudoku_home_native_ad_show"
-    const val LEVELS_GAME_BANNER_AD_SHOW = "levels_game_banner_ad_show"
-    const val SUDOKU_GAME_BANNER_AD_SHOW = "sudoku_game_banner_ad_show"
+    const val LEVELS_GAME_NATIVE_AD_SHOW = "levels_game_native_ad_show"
+    const val SUDOKU_GAME_NATIVE_AD_SHOW = "sudoku_game_native_ad_show"
     const val SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW = "sudoku_game_completed_interstitial_ad_show"
     const val LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW = "levels_game_completed_interstitial_ad_show"
     const val LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY = "levels_game_completed_interstitial_ad_frequency"
@@ -29,24 +30,28 @@ object RemoteConfigKeys {
 
     /** Kill switch for the daily 20:00 notification. */
     const val DAILY_REMINDER_ENABLED = "daily_reminder_enabled"
+
+    /** Levels 1..N get one forced 1-cell region (single colored block). 0 = off. Applies to levels not yet generated. */
+    const val LEVELS_SINGLE_COLORED_BLOCK = "levels_single_colored_block"
 }
 
 /**
  * Typed Remote Config snapshot. Defaults here ARE the in-app defaults (they equal the shipped ad policy), so a missing
- * or failing config changes nothing. Difficulty curve is deliberately NOT remote (puzzle determinism, generatorVersion).
+ * or failing config changes nothing. Difficulty curve is deliberately NOT remote (puzzle determinism, generatorVersion);
+ * the one exception is [levelsSingleColoredBlock] (only affects levels not yet in the puzzle cache).
  * No master ads switch: each surface has its own key. Interstitial min interval is a hardcoded constant.
  */
 data class AppRemoteConfig(
     val adFreeThroughLevel: Int = AdFreePolicy.AD_FREE_THROUGH_LEVEL,
     val levelHomeNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val sudokuHomeNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
-    val levelsGameBannerAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
-    val sudokuGameBannerAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    val levelsGameNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    val sudokuGameNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val sudokuGameCompletedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val levelsGameCompletedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     /** Levels win ad on every Nth completed level (level % N == 0), 1..50. */
     val levelsGameCompletedInterstitialAdFrequency: Int = AdPolicyConfig.DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY,
-    /** Sudoku win ad (non-Easy tiers) on every Nth tier win past the ad-free wins (N % freq == 0), 1..50. */
+    /** Sudoku win ad on every Nth tier win (N % freq == 0), 1..50, all tiers from win 1 (no ad-free gate). */
     val sudokuGameCompletedInterstitialAdFrequency: Int = AdPolicyConfig.DEFAULT_SUDOKU_INTERSTITIAL_FREQUENCY,
     val sudokuGameRestartedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val levelsGameRestartedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
@@ -60,6 +65,8 @@ data class AppRemoteConfig(
     val streakReminderEnabled: Boolean = true,
     /** Daily 20:00 notification on/off. false = nothing scheduled, nothing shown. */
     val dailyReminderEnabled: Boolean = true,
+    /** Levels 1..N get the single colored block (forced 1-cell region), 0..500, 0 = off. Cached levels never change. */
+    val levelsSingleColoredBlock: Int = DifficultyCurve.SINGLE_BLOCK_THROUGH_LEVEL,
 ) {
     fun toAdPolicyConfig(): AdPolicyConfig = AdPolicyConfig(
         adFreeThroughLevel = adFreeThroughLevel,
@@ -67,8 +74,8 @@ data class AppRemoteConfig(
         sudokuWinInterstitialFrequency = sudokuGameCompletedInterstitialAdFrequency,
         levelsHomeNativeShow = levelHomeNativeAdShow,
         sudokuHomeNativeShow = sudokuHomeNativeAdShow,
-        levelsGameBannerShow = levelsGameBannerAdShow,
-        sudokuGameBannerShow = sudokuGameBannerAdShow,
+        levelsGameNativeShow = levelsGameNativeAdShow,
+        sudokuGameNativeShow = sudokuGameNativeAdShow,
         levelsWinInterstitialShow = levelsGameCompletedInterstitialAdShow,
         sudokuWinInterstitialShow = sudokuGameCompletedInterstitialAdShow,
         levelsRestartInterstitialShow = levelsGameRestartedInterstitialAdShow,
@@ -82,6 +89,7 @@ data class AppRemoteConfig(
     companion object {
         val AD_FREE_LEVEL_RANGE = 0..50
         val INTERSTITIAL_FREQUENCY_RANGE = 1..50
+        val SINGLE_COLORED_BLOCK_RANGE = 0..500
     }
 }
 
@@ -96,8 +104,8 @@ object RemoteConfigParser {
             ),
             levelHomeNativeAdShow = bool(read(RemoteConfigKeys.LEVEL_HOME_NATIVE_AD_SHOW), d.levelHomeNativeAdShow),
             sudokuHomeNativeAdShow = bool(read(RemoteConfigKeys.SUDOKU_HOME_NATIVE_AD_SHOW), d.sudokuHomeNativeAdShow),
-            levelsGameBannerAdShow = bool(read(RemoteConfigKeys.LEVELS_GAME_BANNER_AD_SHOW), d.levelsGameBannerAdShow),
-            sudokuGameBannerAdShow = bool(read(RemoteConfigKeys.SUDOKU_GAME_BANNER_AD_SHOW), d.sudokuGameBannerAdShow),
+            levelsGameNativeAdShow = bool(read(RemoteConfigKeys.LEVELS_GAME_NATIVE_AD_SHOW), d.levelsGameNativeAdShow),
+            sudokuGameNativeAdShow = bool(read(RemoteConfigKeys.SUDOKU_GAME_NATIVE_AD_SHOW), d.sudokuGameNativeAdShow),
             sudokuGameCompletedInterstitialAdShow = bool(
                 read(RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW), d.sudokuGameCompletedInterstitialAdShow,
             ),
@@ -135,6 +143,10 @@ object RemoteConfigParser {
             streakRewardsEnabled = bool(read(RemoteConfigKeys.STREAK_REWARDS_ENABLED), d.streakRewardsEnabled),
             streakReminderEnabled = bool(read(RemoteConfigKeys.STREAK_REMINDER_ENABLED), d.streakReminderEnabled),
             dailyReminderEnabled = bool(read(RemoteConfigKeys.DAILY_REMINDER_ENABLED), d.dailyReminderEnabled),
+            levelsSingleColoredBlock = int(
+                read(RemoteConfigKeys.LEVELS_SINGLE_COLORED_BLOCK), d.levelsSingleColoredBlock,
+                AppRemoteConfig.SINGLE_COLORED_BLOCK_RANGE,
+            ),
         )
     }
 
@@ -145,8 +157,8 @@ object RemoteConfigParser {
             RemoteConfigKeys.AD_FREE_THROUGH_LEVEL to d.adFreeThroughLevel.toString(),
             RemoteConfigKeys.LEVEL_HOME_NATIVE_AD_SHOW to d.levelHomeNativeAdShow.toString(),
             RemoteConfigKeys.SUDOKU_HOME_NATIVE_AD_SHOW to d.sudokuHomeNativeAdShow.toString(),
-            RemoteConfigKeys.LEVELS_GAME_BANNER_AD_SHOW to d.levelsGameBannerAdShow.toString(),
-            RemoteConfigKeys.SUDOKU_GAME_BANNER_AD_SHOW to d.sudokuGameBannerAdShow.toString(),
+            RemoteConfigKeys.LEVELS_GAME_NATIVE_AD_SHOW to d.levelsGameNativeAdShow.toString(),
+            RemoteConfigKeys.SUDOKU_GAME_NATIVE_AD_SHOW to d.sudokuGameNativeAdShow.toString(),
             RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to d.sudokuGameCompletedInterstitialAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to d.levelsGameCompletedInterstitialAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY to d.levelsGameCompletedInterstitialAdFrequency.toString(),
@@ -160,6 +172,7 @@ object RemoteConfigParser {
             RemoteConfigKeys.STREAK_REWARDS_ENABLED to d.streakRewardsEnabled.toString(),
             RemoteConfigKeys.STREAK_REMINDER_ENABLED to d.streakReminderEnabled.toString(),
             RemoteConfigKeys.DAILY_REMINDER_ENABLED to d.dailyReminderEnabled.toString(),
+            RemoteConfigKeys.LEVELS_SINGLE_COLORED_BLOCK to d.levelsSingleColoredBlock.toString(),
         )
     }
 

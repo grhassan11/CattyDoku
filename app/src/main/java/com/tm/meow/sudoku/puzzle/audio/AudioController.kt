@@ -34,7 +34,7 @@ import kotlinx.coroutines.withContext
  *   ([AdSessionTracker.fullScreenAdShowingState]); resumes in place afterwards.
  * - SFX: one shared [SfxPlayer]. Requests are ignored while a full-screen ad is showing; in-flight cues are cut when
  *   an ad starts. In-game cues arrive already filtered by the Sound setting (ViewModels); [playUiTap] gates itself.
- * Banner / native ads do not touch [AdSessionTracker.fullScreenAdShowing], so they never silence anything.
+ * Native ads do not touch [AdSessionTracker.fullScreenAdShowing], so they never silence anything.
  * Everything runs on the main thread.
  */
 @Singleton
@@ -115,9 +115,9 @@ class AudioController @Inject constructor(
     }
 
     /** In-game / tutorial cue. Caller has already applied the Sound setting. Ignored while a full-screen ad shows. */
-    fun playSfx(kind: SfxKind) {
+    fun playSfx(kind: SfxKind, rate: Float = 1f) {
         if (tracker.fullScreenAdShowing) return
-        runCatching { sfxLazy.value.play(kind) }
+        runCatching { sfxLazy.value.play(kind, rate) }
     }
 
     /** Cut every in-flight SFX (win jingle, 7.6 s award cue, ...). Music untouched. No-op if SFX never initialised. */

@@ -11,8 +11,6 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AppOpenContext
 import com.tm.meow.sudoku.puzzle.domain.ads.AppOpenDecision
 import com.tm.meow.sudoku.puzzle.domain.ads.AppOpenPolicy
 import com.tm.meow.sudoku.puzzle.domain.ads.AppOpenSkipReason
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdHandle
-import com.tm.meow.sudoku.puzzle.domain.ads.BannerAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.InterstitialContext
 import com.tm.meow.sudoku.puzzle.domain.ads.InterstitialPolicy
 import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdHandle
@@ -66,11 +64,6 @@ class OfflineAdsTest {
             shows++
             return RewardedResult.EARNED
         }
-    }
-
-    private class OffBanner : BannerAdRepository {
-        override val isConfigured = true
-        override suspend fun load(widthDp: Int): BannerAdHandle? = null
     }
 
     private class OffNative : NativeAdRepository {
@@ -131,21 +124,21 @@ class OfflineAdsTest {
     }
 
     @Test
-    fun surfacesOfflineKeepRewardedVisibleButMarkOfflineAndDropBanner() = runTest {
+    fun surfacesOfflineKeepRewardedVisibleButMarkOfflineAndDropGameNative() = runTest {
         val net = Net(true)
         val surfaces = ObserveAdSurfaces(
-            FakeAppFlagsRepository(AppFlags(lastPlayedLevel = 20)), OffConsent(), OffSdk(), OffRewarded(), OffBanner(),
+            FakeAppFlagsRepository(AppFlags(lastPlayedLevel = 20)), OffConsent(), OffSdk(), OffRewarded(), OffNative(),
             AdPolicyConfig(), connectivity = net,
         )
         val on = surfaces(MutableStateFlow(20)).first()
-        assertTrue(on.online && on.banner && on.levelsRevive && on.levelsBoosters)
+        assertTrue(on.online && on.levelsGameNative && on.levelsRevive && on.levelsBoosters)
         assertEquals(RewardedLoadState.READY, on.rewardedLoad)
 
         net.flow.value = false
         val off = surfaces(MutableStateFlow(20)).first()
         assertFalse(off.online)
-        assertFalse(off.banner)
-        assertFalse(off.sudokuBanner)
+        assertFalse(off.levelsGameNative)
+        assertFalse(off.sudokuGameNative)
         // CTAs stay visible (surface flags unchanged); load state OFFLINE = UI shows the helper text and ignores the click.
         assertTrue(off.levelsRevive && off.levelsBoosters && off.sudokuRevive && off.sudokuBoosters)
         assertEquals(RewardedLoadState.OFFLINE, off.rewardedLoad)

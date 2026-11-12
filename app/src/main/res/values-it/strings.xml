@@ -152,9 +152,6 @@
 
     <string name="rate_title">Ti piace il gioco?</string>
     <string name="rate_subtitle">Tocca una stella per valutare la tua esperienza</string>
-    <string name="rate_submit">Invia</string>
-    <string name="rate_not_now">Non ora</string>
-    <string name="rate_submitted">Valutazione inviata</string>
     <plurals name="rate_star_description">
         <item quantity="one">%d stella</item>
         <item quantity="many">%d di stelle</item>
@@ -322,6 +319,8 @@
     <string name="settings_off">No</string>
     <string name="settings_pattern">Modalità motivi</string>
     <string name="settings_pattern_hint">Aggiunge un motivo a ogni colore</string>
+    <string name="settings_reduce_effects">Riduci effetti</string>
+    <string name="settings_reduce_effects_hint">Meno particelle e animazioni. Più leggero per telefoni datati e batteria.</string>
     <string name="settings_group_notifications">Notifiche</string>
     <string name="settings_streak_reminders">Promemoria serie</string>
     <string name="settings_streak_reminders_hint">Un promemoria serale prima che la serie si interrompa</string>
@@ -330,6 +329,7 @@
     <string name="settings_sudoku_reminders">Promemoria Sudoku</string>
     <string name="settings_sudoku_reminders_hint">Un promemoria qualche ora dopo aver lasciato una partita incompiuta</string>
     <string name="settings_about">Info</string>
+    <string name="settings_rate_us">Valutaci</string>
     <string name="about_title">Info</string>
     <string name="about_app_icon">Icona dell\'app %1$s</string>
     <string name="about_version">Versione %1$s</string>
@@ -353,9 +353,9 @@
     <string name="tutorial_find_last">Trova l\'**ultimo gatto**!</string>
     <string name="tutorial_find_last_sub">Tocca due volte la casella vuota per piazzarlo.</string>
     <string name="tutorial_excellent">Eccellente! Hai imparato le regole!</string>
-    <string name="tutorial_bottom_tap_empty">Tocca le caselle vuote per escluderle.</string>
+    <string name="tutorial_bottom_tap_empty">Tocca una volta le caselle vuote per escluderle.</string>
     <string name="tutorial_bottom_swipe">Scorri su queste caselle per escluderle.</string>
-    <string name="tutorial_hint_pill">Tocca qui per un suggerimento.</string>
+    <string name="tutorial_hint_pill">Tocca qui una volta per un suggerimento.</string>
     <string name="tutorial_got_it">Capito!</string>
     <string name="tutorial_start_game">Inizia a giocare</string>
     <string name="tutorial_replay">Rivedi il tutorial</string>
@@ -557,4 +557,12 @@
     <string name="sudoku_tut_next_tricks">Avanti: Trucchi di risoluzione</string>
     <string name="sudoku_tut_start_playing">Inizia a giocare!</string>
 
+    <!-- Game feel: streak / region praise + combo chip -->
+    <string name="praise_nice">Bene!</string>
+    <string name="praise_purrfect">Purrfetto!</string>
+    <string name="praise_meowvelous">Miao-lendido!</string>
+    <string name="praise_clawsome">Artigli-osissimo!</string>
+    <string name="praise_clear">Fatto!</string>
+    <string name="combo_chip">x%1$d</string>
+    <string name="combo_description">Combo x%1$d</string>
 </resources>

@@ -14,7 +14,7 @@ enum class AdTrigger {
     /** User confirmed a Sudoku restart (or game-over Retry). Same gating as [SUDOKU_WON_CONTINUE]; tier rule in [SudokuAdRules]. */
     SUDOKU_RESTART,
 
-    /** User tapped Retry on the lose dialog (remote `levels_game_restarted_interstitial_ad_show`, default on). */
+    /** User tapped Retry on the lose dialog (remote `levels_game_restarted_interstitial_ad_show`, default on). Shows from Level 1 (no ad-free gate). */
     LOSE_RETRY,
 
     // Never boundaries: listed so callers state intent and tests pin the rule.
@@ -84,12 +84,14 @@ object InterstitialPolicy {
         if (!ctx.canRequestAds) return skip(AdSkipReason.NO_CONSENT)
         // Sudoku: product rule (tier + win count, see SudokuAdRules) decides upstream; no Queens pacing applies.
         if (sudoku) return AdDecision.Show
-        if (AdFreePolicy.isAdFree(ctx.level, config.adFreeThroughLevel)) return skip(AdSkipReason.AD_FREE_LEVEL)
+        // Ad-free levels no longer gate any Levels interstitial: the win ad starts at Level 1 (frequency rule below) and
+        // the Out of Lives Restart (LOSE_RETRY) also shows from Level 1 (user decision). Only its switch applies.
 
         if (ctx.trigger == AdTrigger.LEVEL_WON_CONTINUE) {
             if (ctx.level <= ctx.lastInterstitialLevel) return skip(AdSkipReason.LEVEL_ALREADY_HAD_AD)
             // Level-number cadence: ctx.level is the JUST-COMPLETED level (the win dialog "Level N+1" button passes the
-            // level just won). Past the ad-free levels, show only when it is a multiple of the frequency. No exemptions.
+            // level just won). Ad-free levels do NOT apply here: show only when it is a multiple of the frequency
+            // (default 5: Lv 5, 10, 15...). No exemptions.
             if (ctx.level % config.levelsInterstitialFrequency.coerceAtLeast(1) != 0) return skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY)
         }
         return AdDecision.Show

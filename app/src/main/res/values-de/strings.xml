@@ -149,9 +149,6 @@
 
     <string name="rate_title">Gefällt dir das Spiel?</string>
     <string name="rate_subtitle">Tippe auf einen Stern, um deine Erfahrung zu bewerten</string>
-    <string name="rate_submit">Senden</string>
-    <string name="rate_not_now">Nicht jetzt</string>
-    <string name="rate_submitted">Bewertung gesendet</string>
     <plurals name="rate_star_description">
         <item quantity="one">%d Stern</item>
         <item quantity="other">%d Sterne</item>
@@ -318,6 +315,8 @@
     <string name="settings_off">Aus</string>
     <string name="settings_pattern">Mustermodus</string>
     <string name="settings_pattern_hint">Fügt jeder Farbe ein Muster hinzu</string>
+    <string name="settings_reduce_effects">Effekte reduzieren</string>
+    <string name="settings_reduce_effects_hint">Weniger Partikel und Animationen. Schont ältere Handys und den Akku.</string>
     <string name="settings_group_notifications">Benachrichtigungen</string>
     <string name="settings_streak_reminders">Serien-Erinnerungen</string>
     <string name="settings_streak_reminders_hint">Ein Abendanstupser, bevor deine Serie abreißt</string>
@@ -326,6 +325,7 @@
     <string name="settings_sudoku_reminders">Sudoku-Erinnerung</string>
     <string name="settings_sudoku_reminders_hint">Ein Anstupser einige Stunden nach einem abgebrochenen Spiel</string>
     <string name="settings_about">Über</string>
+    <string name="settings_rate_us">Bewerte uns</string>
     <string name="about_title">Über</string>
     <string name="about_app_icon">App-Symbol von %1$s</string>
     <string name="about_version">Version %1$s</string>
@@ -349,9 +349,9 @@
     <string name="tutorial_find_last">Finde die **letzte Katze**!</string>
     <string name="tutorial_find_last_sub">Doppeltippe auf das leere Feld, um sie zu setzen.</string>
     <string name="tutorial_excellent">Ausgezeichnet! Du beherrschst die Regeln!</string>
-    <string name="tutorial_bottom_tap_empty">Tippe auf leere Felder, um sie auszuschließen.</string>
+    <string name="tutorial_bottom_tap_empty">Tippe einmal auf leere Felder, um sie auszuschließen.</string>
     <string name="tutorial_bottom_swipe">Wische über diese Felder, um sie auszuschließen.</string>
-    <string name="tutorial_hint_pill">Tippe hier für einen Tipp.</string>
+    <string name="tutorial_hint_pill">Tippe hier einmal für einen Tipp.</string>
     <string name="tutorial_got_it">Verstanden!</string>
     <string name="tutorial_start_game">Spiel starten</string>
     <string name="tutorial_replay">Tutorial wiederholen</string>
@@ -552,4 +552,12 @@
     <string name="sudoku_tut_next_tricks">Weiter: Lösungstricks</string>
     <string name="sudoku_tut_start_playing">Los geht\'s!</string>
 
+    <!-- Game feel: streak / region praise + combo chip -->
+    <string name="praise_nice">Schön!</string>
+    <string name="praise_purrfect">Schnurrfekt!</string>
+    <string name="praise_meowvelous">Miau-nderbar!</string>
+    <string name="praise_clawsome">Krallen-stark!</string>
+    <string name="praise_clear">Geschafft!</string>
+    <string name="combo_chip">x%1$d</string>
+    <string name="combo_description">Kombo x%1$d</string>
 </resources>

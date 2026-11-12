@@ -70,6 +70,7 @@ fun SettingsScreen(
     onPrivacyPolicy: () -> Unit,
     onHowToPlay: () -> Unit,
     onAbout: () -> Unit,
+    onRateUs: () -> Unit,
     languageName: String,
     onLanguage: () -> Unit,
     modifier: Modifier = Modifier,
@@ -124,6 +125,8 @@ fun SettingsScreen(
                 }
 
                 Group(stringResource(R.string.settings_group_support)) {
+                    LinkRow(stringResource(R.string.settings_rate_us), onRateUs, R.drawable.ic_rate, showChevron = true)
+                    RowDivider()
                     LinkRow(stringResource(R.string.settings_feedback), onFeedback, R.drawable.ic_feedback, showChevron = true)
                     if (onPrivacyOptions != null) {
                         RowDivider()
@@ -188,6 +191,13 @@ internal fun SoundAndGameplayGroups(
                     checked = settings.patternMode,
                     onCheckedChange = { onSettingChanged(SettingToggle.PATTERN_MODE, it) },
                 ) { IconImage(R.drawable.ic_pattern_mode, size = SETTINGS_ICON_SIZE, tint = GameColors.Body) }
+                RowDivider()
+                ToggleRow(
+                    label = stringResource(R.string.settings_reduce_effects),
+                    hint = stringResource(R.string.settings_reduce_effects_hint),
+                    checked = settings.reduceEffects,
+                    onCheckedChange = { onSettingChanged(SettingToggle.REDUCE_EFFECTS, it) },
+                ) { IconImage(R.drawable.ic_star_island, size = SETTINGS_ICON_SIZE, tint = GameColors.Body) }
                 if (gameplayExtra != null) {
                     RowDivider()
                     gameplayExtra()

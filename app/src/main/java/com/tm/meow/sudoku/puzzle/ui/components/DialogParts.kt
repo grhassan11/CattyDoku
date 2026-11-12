@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tm.meow.sudoku.puzzle.ui.screens.game.rememberAnimationsEnabled
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 import kotlin.math.PI
 import kotlin.math.cos
@@ -118,14 +120,20 @@ fun DialogScrim(
 /** Slowly rotating light rays behind the mascot. Pure Canvas, no assets. */
 @Composable
 fun Sunburst(modifier: Modifier = Modifier, color: Color = GameColors.Sunburst) {
-    val transition = rememberInfiniteTransition(label = "sunburst")
-    val angle by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(30_000, easing = LinearEasing)),
-        label = "sunburstAngle",
-    )
+    // Reduce effects / animations off: static rays, no infinite transition at all.
+    val animate = rememberAnimationsEnabled(null)
+    val spin: State<Float>? = if (animate) {
+        rememberInfiniteTransition(label = "sunburst").animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(tween(30_000, easing = LinearEasing)),
+            label = "sunburstAngle",
+        )
+    } else {
+        null
+    }
     Canvas(modifier) {
+        val angle = spin?.value ?: 0f
         val c = Offset(size.width / 2f, size.height / 2f)
         val radius = size.minDimension / 2f
         val rays = 14
@@ -171,9 +179,12 @@ private val ConfettiColors = listOf(
 /** Light confetti rain: [count] deterministic pieces looping top to bottom. */
 @Composable
 fun Confetti(modifier: Modifier = Modifier, count: Int = 30) {
-    val pieces = remember(count) {
+    // Reduce effects / animations off: nothing is drawn and no infinite transition runs. Low-RAM devices get half the pieces.
+    if (!rememberAnimationsEnabled(null)) return
+    val shown = scaledParticleCount(count, rememberLowRamDevice())
+    val pieces = remember(shown) {
         val rnd = Random(7)
-        List(count) {
+        List(shown) {
             ConfettiPiece(
                 x = rnd.nextFloat(),
                 phase = rnd.nextFloat(),

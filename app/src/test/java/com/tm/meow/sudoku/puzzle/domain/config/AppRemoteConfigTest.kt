@@ -16,8 +16,8 @@ class AppRemoteConfigTest {
     private val boolAdKeys = mapOf(
         RemoteConfigKeys.LEVEL_HOME_NATIVE_AD_SHOW to "level_home_native_ad_show",
         RemoteConfigKeys.SUDOKU_HOME_NATIVE_AD_SHOW to "sudoku_home_native_ad_show",
-        RemoteConfigKeys.LEVELS_GAME_BANNER_AD_SHOW to "levels_game_banner_ad_show",
-        RemoteConfigKeys.SUDOKU_GAME_BANNER_AD_SHOW to "sudoku_game_banner_ad_show",
+        RemoteConfigKeys.LEVELS_GAME_NATIVE_AD_SHOW to "levels_game_native_ad_show",
+        RemoteConfigKeys.SUDOKU_GAME_NATIVE_AD_SHOW to "sudoku_game_native_ad_show",
         RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to "sudoku_game_completed_interstitial_ad_show",
         RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to "levels_game_completed_interstitial_ad_show",
         RemoteConfigKeys.SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW to "sudoku_game_restarted_interstitial_ad_show",
@@ -93,8 +93,8 @@ class AppRemoteConfigTest {
         boolAdKeys.keys.forEach { key ->
             val c = parse(key to "false")
             val offCount = listOf(
-                c.levelHomeNativeAdShow, c.sudokuHomeNativeAdShow, c.levelsGameBannerAdShow,
-                c.sudokuGameBannerAdShow, c.sudokuGameCompletedInterstitialAdShow, c.levelsGameCompletedInterstitialAdShow,
+                c.levelHomeNativeAdShow, c.sudokuHomeNativeAdShow, c.levelsGameNativeAdShow,
+                c.sudokuGameNativeAdShow, c.sudokuGameCompletedInterstitialAdShow, c.levelsGameCompletedInterstitialAdShow,
                 c.sudokuGameRestartedInterstitialAdShow, c.levelsGameRestartedInterstitialAdShow,
                 c.sudokuGameBoostersRewardedAdShow, c.levelsGameBoostersRewardedAdShow,
                 c.levelsGameReviveRewardedAdShow, c.sudokuGameReviveRewardedAdShow,
@@ -109,13 +109,13 @@ class AppRemoteConfigTest {
             RemoteConfigKeys.AD_FREE_THROUGH_LEVEL to "15",
             RemoteConfigKeys.LEVEL_HOME_NATIVE_AD_SHOW to "FALSE",
             RemoteConfigKeys.SUDOKU_HOME_NATIVE_AD_SHOW to "off",
-            RemoteConfigKeys.LEVELS_GAME_BANNER_AD_SHOW to "0",
+            RemoteConfigKeys.LEVELS_GAME_NATIVE_AD_SHOW to "0",
             RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY to "10",
         )
         assertEquals(15, c.adFreeThroughLevel)
         assertFalse(c.levelHomeNativeAdShow)
         assertFalse(c.sudokuHomeNativeAdShow)
-        assertFalse(c.levelsGameBannerAdShow)
+        assertFalse(c.levelsGameNativeAdShow)
         assertEquals(10, c.levelsGameCompletedInterstitialAdFrequency)
     }
 
@@ -146,13 +146,27 @@ class AppRemoteConfigTest {
     }
 
     @Test
+    fun singleColoredBlockKeyDefaultAndBounds() {
+        val k = RemoteConfigKeys.LEVELS_SINGLE_COLORED_BLOCK
+        assertEquals("levels_single_colored_block", k)
+        assertEquals("50", RemoteConfigParser.defaults()[k])
+        assertEquals(50, AppRemoteConfig().levelsSingleColoredBlock)
+        assertEquals(0, parse(k to "0").levelsSingleColoredBlock)
+        assertEquals(30, parse(k to "30").levelsSingleColoredBlock)
+        assertEquals(500, parse(k to "500").levelsSingleColoredBlock)
+        for (bad in listOf("-1", "501", "abc", "2.5", "")) {
+            assertEquals(bad, 50, parse(k to bad).levelsSingleColoredBlock)
+        }
+    }
+
+    @Test
     fun eachUnitSwitchBlocksOnlyItsUnit() {
         fun p(key: String) = parse(key to "false").toAdPolicyConfig()
         val d = AdPolicyConfig()
         assertEquals(d.copy(levelsHomeNativeShow = false), p(RemoteConfigKeys.LEVEL_HOME_NATIVE_AD_SHOW))
         assertEquals(d.copy(sudokuHomeNativeShow = false), p(RemoteConfigKeys.SUDOKU_HOME_NATIVE_AD_SHOW))
-        assertEquals(d.copy(levelsGameBannerShow = false), p(RemoteConfigKeys.LEVELS_GAME_BANNER_AD_SHOW))
-        assertEquals(d.copy(sudokuGameBannerShow = false), p(RemoteConfigKeys.SUDOKU_GAME_BANNER_AD_SHOW))
+        assertEquals(d.copy(levelsGameNativeShow = false), p(RemoteConfigKeys.LEVELS_GAME_NATIVE_AD_SHOW))
+        assertEquals(d.copy(sudokuGameNativeShow = false), p(RemoteConfigKeys.SUDOKU_GAME_NATIVE_AD_SHOW))
         assertEquals(d.copy(sudokuWinInterstitialShow = false), p(RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW))
         assertEquals(d.copy(levelsWinInterstitialShow = false), p(RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW))
         assertEquals(d.copy(sudokuRestartInterstitialShow = false), p(RemoteConfigKeys.SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW))
