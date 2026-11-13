@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.tm.meow.sudoku.puzzle.ui.components.RegionBurst
+import com.tm.meow.sudoku.puzzle.ui.components.outlinedTextStyles
 import com.tm.meow.sudoku.puzzle.ui.components.rememberLowRamDevice
 import androidx.compose.ui.graphics.drawscope.translate
 import kotlin.math.abs
@@ -141,17 +142,21 @@ fun BoardView(
     val textMeasurer = rememberTextMeasurer()
     // Popup grows (1.0 -> 1.4) and shifts colour (gold -> amber -> orange -> pink) with the combo level.
     val plusStreak = lastCorrectPlacement?.streak ?: 0
-    val plusStyle = remember(density, metrics.cellDp, plusStreak) {
-        TextStyle(
+    // Outline layer (white stroke + drop shadow, drawn first) and fill layer (combo colour) for the "+N" popup; Fredoka.
+    val plusStyles = remember(density, metrics.cellDp, plusStreak) {
+        val base = TextStyle(
             color = Color(ComboStyle.colorArgb(plusStreak)),
             fontSize = with(density) { (metrics.cellDp.dp * 0.42f * ComboStyle.scale(plusStreak)).toSp() },
-            fontWeight = FontWeight.Black,
-            shadow = Shadow(Color(0xCC000000), Offset(2f, 2f), 4f),
+            fontWeight = FontWeight.Bold,
         )
+        outlinedTextStyles(base, with(density) { 2.5.dp.toPx() })
     }
     val plusPoints = lastCorrectPlacement?.points ?: 0
-    val plusLayout = remember(plusPoints, plusStyle, textMeasurer) {
-        if (plusPoints > 0) textMeasurer.measure("+$plusPoints", plusStyle) else null
+    val plusLayout = remember(plusPoints, plusStyles, textMeasurer) {
+        if (plusPoints > 0) textMeasurer.measure("+$plusPoints", plusStyles.second) else null
+    }
+    val plusOutline = remember(plusPoints, plusStyles, textMeasurer) {
+        if (plusPoints > 0) textMeasurer.measure("+$plusPoints", plusStyles.first) else null
     }
 
     // New-level intro wave: corner-diagonal sweep, per-cell scale + alpha read in the layer phase (no per-frame recomposition).
@@ -234,7 +239,7 @@ fun BoardView(
                 .drawWithContent {
                     drawContent()
                     // Above all cells, not clipped by neighbours. Draw-phase reads only.
-                    if (fxToken != 0) drawPlacementFx(fx, fxToken, fxIdx, board, metrics.gapDp.dp.toPx(), plusLayout, halfSparkles = lowRam)
+                    if (fxToken != 0) drawPlacementFx(fx, fxToken, fxIdx, board, metrics.gapDp.dp.toPx(), plusLayout, plusOutline, halfSparkles = lowRam)
                     if (clearToken != 0 && regionCleared != null) {
                         drawRegionWave(clearFx.time(clearToken), regionCleared, board, metrics.gapDp.dp.toPx())
                     }

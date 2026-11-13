@@ -117,6 +117,8 @@ internal fun DrawScope.drawPlacementFx(
     gapPx: Float,
     /** Pre-measured "+N" text (cached by the caller); null = no popup. Rises and fades on the same timeline. */
     plus: TextLayoutResult? = null,
+    /** Pre-measured white-stroke + shadow layer of [plus], drawn behind it. */
+    plusOutline: TextLayoutResult? = null,
     /** Low-RAM device: draw 4 of the 8 sparkles. */
     halfSparkles: Boolean = false,
 ) {
@@ -176,11 +178,9 @@ internal fun DrawScope.drawPlacementFx(
             else -> 1f - (t - 0.5f) / 0.5f
         }
         val rise = cell * 0.9f * ease
-        drawText(
-            plus,
-            topLeft = Offset(cx - plus.size.width / 2f, cy - cell * 0.35f - plus.size.height / 2f - rise),
-            alpha = a.coerceIn(0f, 1f),
-        )
+        val topLeft = Offset(cx - plus.size.width / 2f, cy - cell * 0.35f - plus.size.height / 2f - rise)
+        if (plusOutline != null) drawText(plusOutline, topLeft = topLeft, alpha = a.coerceIn(0f, 1f))
+        drawText(plus, topLeft = topLeft, alpha = a.coerceIn(0f, 1f))
     }
 }
 

@@ -198,14 +198,14 @@ class AdsViewModelTest {
     }
 
     @Test
-    fun adFreeLevelNeverShowsARewardedAd() = adsTest { rig, vm ->
-        vm.setScreenLevel(9)
+    fun earlyLevelNoLongerGatesRewardedAd() = adsTest { rig, vm ->
+        vm.setScreenLevel(2)
         var granted = 0
         vm.watchBoosterAd(Booster.CAT) { granted++ }
         advanceUntilIdle()
-        assertEquals(0, rig.rewarded.showCalls)
-        assertEquals(0, granted)
-        assertEquals(0, rig.inventory.get(Booster.CAT))
+        assertEquals(1, rig.rewarded.showCalls)
+        assertEquals(1, granted)
+        assertEquals(1, rig.inventory.get(Booster.CAT))
     }
 
     @Test
@@ -254,18 +254,22 @@ class AdsViewModelTest {
     // ---------------------------------------------------------------- interstitial boundary
 
     @Test
-    fun afterWinAlwaysContinuesAndFollowsFrequencyOnly() = adsTest { rig, vm ->
+    fun afterWinAlwaysContinuesAndShowsEveryLevelIncludingDaily() = adsTest { rig, vm ->
         repeat(2) { vm.onLevelWon(isDaily = false) }
         rig.time.now += 200_000L
         var done = 0
         vm.afterWin(level = 4, isDaily = false) { done++ }
         advanceUntilIdle()
         assertEquals(1, done)
-        assertEquals("level 4 is not a multiple of 5", 0, rig.interstitial.showCalls)
+        assertEquals("default frequency 1: every level shows", 1, rig.interstitial.showCalls)
         vm.afterWin(level = 5, isDaily = false) { done++ }
         advanceUntilIdle()
         assertEquals(2, done)
-        assertEquals("level 5 shows (no ad-free gate)", 1, rig.interstitial.showCalls)
+        assertEquals(2, rig.interstitial.showCalls)
+        vm.afterWin(level = 0, isDaily = true) { done++ }
+        advanceUntilIdle()
+        assertEquals(3, done)
+        assertEquals("daily win shows too", 3, rig.interstitial.showCalls)
     }
 
     // ---------------------------------------------------------------- game native slot

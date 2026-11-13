@@ -38,7 +38,9 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.IsConsentFormShowing
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadNativeAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkStartFlowComplete
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadAppOpenAd
+import com.tm.meow.sudoku.puzzle.domain.startup.SplashTiming
 import com.tm.meow.sudoku.puzzle.domain.usecase.ShowAppOpenIfAllowed
+import com.tm.meow.sudoku.puzzle.domain.usecase.ShowAppOpenOnSplash
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveConsentState
 import com.tm.meow.sudoku.puzzle.domain.usecase.RecordLevelWon
 import com.tm.meow.sudoku.puzzle.domain.usecase.RefreshRemoteConfig
@@ -193,7 +195,8 @@ object AdsModule {
         repository: AppOpenAdRepository,
         adsRemoved: AdsRemovedRepository,
         connectivity: ConnectivityObserver,
-    ): PreloadAppOpenAd = PreloadAppOpenAd(consent, sdk, repository, adsRemoved, connectivity)
+        logger: AdLogger,
+    ): PreloadAppOpenAd = PreloadAppOpenAd(consent, sdk, repository, adsRemoved, connectivity, logger)
 
     @Provides
     fun provideShowAppOpenIfAllowed(
@@ -205,7 +208,17 @@ object AdsModule {
         preload: PreloadAppOpenAd,
         adsRemoved: AdsRemovedRepository,
         connectivity: ConnectivityObserver,
-    ): ShowAppOpenIfAllowed = ShowAppOpenIfAllowed(consent, sdk, repository, tracker, config, preload, adsRemoved, connectivity)
+        logger: AdLogger,
+    ): ShowAppOpenIfAllowed = ShowAppOpenIfAllowed(consent, sdk, repository, tracker, config, preload, adsRemoved, connectivity, logger)
+
+    @Provides
+    fun provideShowAppOpenOnSplash(
+        repository: AppOpenAdRepository,
+        preload: PreloadAppOpenAd,
+        show: ShowAppOpenIfAllowed,
+        logger: AdLogger,
+        remoteConfig: RemoteConfigRepository,
+    ): ShowAppOpenOnSplash = ShowAppOpenOnSplash(repository, preload, show, SplashTiming.APP_OPEN_WAIT_MS, logger, remoteConfig)
 
     // ---- Game screen: rewarded + compact native slot (shared ad-free early-level rule in AdPolicyConfig / AdFreePolicy) ----
 

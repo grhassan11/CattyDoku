@@ -25,8 +25,7 @@ class ShopUiMapperTest {
         balances: Map<Booster, Int> = emptyMap(),
         busy: Boolean = false,
         restoring: Boolean = false,
-        adsExposed: Boolean = true,
-    ) = ShopUiMapper.map(catalog, entitlement, balances, busy, restoring, adsExposed)
+    ) = ShopUiMapper.map(catalog, entitlement, balances, busy, restoring)
 
     @Test
     fun pricesAreExactlyThePlayStrings() {
@@ -119,28 +118,15 @@ class ShopUiMapperTest {
     }
 
     @Test
-    fun removeAdsCardHiddenBeforeAdsAppear() {
-        val s = map(adsExposed = false)
-        assertFalse(s.showRemoveAds)
-        // packs are unaffected by the gate
-        assertEquals(3, s.sections.size)
-        assertTrue(s.sections.flatMap { it.packs }.all { it.buyEnabled })
+    fun removeAdsCardAlwaysShown() {
+        assertTrue(map().showRemoveAds)
+        assertTrue(map(entitlement = Entitlement(foreverOwned = true, verifiedAtMs = 1L)).showRemoveAds)
+        assertTrue(map(entitlement = Entitlement(monthlyActive = true, verifiedAtMs = 1L)).showRemoveAds)
     }
 
     @Test
-    fun removeAdsCardShownOncePastAdFreeLevels() {
-        assertTrue(map(adsExposed = true).showRemoveAds)
-    }
-
-    @Test
-    fun existingBuyersKeepTheCardBelowTheGate() {
-        assertTrue(map(adsExposed = false, entitlement = Entitlement(foreverOwned = true, verifiedAtMs = 1L)).showRemoveAds)
-        assertTrue(map(adsExposed = false, entitlement = Entitlement(monthlyActive = true, verifiedAtMs = 1L)).showRemoveAds)
-    }
-
-    @Test
-    fun initialStateHidesTheCard() {
-        assertFalse(ShopUiMapper.initial().showRemoveAds)
+    fun initialStateShowsTheCard() {
+        assertTrue(ShopUiMapper.initial().showRemoveAds)
     }
 
     @Test

@@ -8,7 +8,7 @@ class InterstitialPolicyTest {
 
     private val cfg = AdPolicyConfig()
 
-    /** A context that satisfies EVERY rule (level 20 is a multiple of the default frequency 5); each test breaks exactly one. */
+    /** A context that satisfies EVERY rule (default frequency is 1: every level); each test breaks exactly one. */
     private fun ok(
         trigger: AdTrigger = AdTrigger.LEVEL_WON_CONTINUE,
         canRequestAds: Boolean = true,
@@ -39,7 +39,7 @@ class InterstitialPolicyTest {
     fun defaultsAreTheDocumentedValues() {
         assertEquals(9, cfg.adFreeThroughLevel)
         assertEquals(10, AdFreePolicy.FIRST_AD_LEVEL)
-        assertEquals(5, cfg.levelsInterstitialFrequency)
+        assertEquals(1, cfg.levelsInterstitialFrequency)
         assertEquals(3_000L, cfg.loadWaitTimeoutMs)
         assertTrue(cfg.levelsWinInterstitialShow && cfg.sudokuWinInterstitialShow)
         assertTrue(cfg.levelsRestartInterstitialShow && cfg.sudokuRestartInterstitialShow)
@@ -127,18 +127,24 @@ class InterstitialPolicyTest {
     }
 
     @Test
-    fun levelsWinDefaultFrequencyShowsFiveTenFifteenAndSkipsThree() {
-        assertEquals(AdDecision.Show, winAt(5, cfg))
-        assertEquals(AdDecision.Show, winAt(10, cfg))
-        assertEquals(skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY), winAt(3, cfg))
-        for (l in listOf(1, 2, 4, 6, 9)) assertEquals("L$l", skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY), winAt(l, cfg))
+    fun levelsWinDefaultShowsEveryLevel() {
+        for (l in 1..30) assertEquals("L$l", AdDecision.Show, winAt(l, cfg))
+    }
+
+    @Test
+    fun levelsWinFrequencyFiveShowsFiveTenFifteenAndSkipsThree() {
+        val c5 = cfg.copy(levelsInterstitialFrequency = 5)
+        assertEquals(AdDecision.Show, winAt(5, c5))
+        assertEquals(AdDecision.Show, winAt(10, c5))
+        assertEquals(skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY), winAt(3, c5))
+        for (l in listOf(1, 2, 4, 6, 9)) assertEquals("L$l", skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY), winAt(l, c5))
     }
 
     @Test
     fun levelsWinEarlyLevelKeepsOtherGates() {
-        assertEquals(skip(AdSkipReason.LEVEL_ALREADY_HAD_AD), winAt(5, cfg, lastLevel = 5))
+        assertEquals(AdDecision.Show, winAt(5, cfg, lastLevel = 5)) // replay of a level that already had an ad still shows
         assertEquals(skip(AdSkipReason.NO_CONSENT), InterstitialPolicy.decide(ok(level = 5, canRequestAds = false), cfg))
-        assertEquals(skip(AdSkipReason.DAILY), InterstitialPolicy.decide(ok(level = 5, isDaily = true), cfg))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(level = 5, isDaily = true), cfg))
         assertEquals(skip(AdSkipReason.TUTORIAL), InterstitialPolicy.decide(ok(level = 5, inTutorial = true), cfg))
         assertEquals(skip(AdSkipReason.DISABLED), InterstitialPolicy.decide(ok(level = 5), cfg.copy(levelsWinInterstitialShow = false)))
     }
@@ -188,13 +194,13 @@ class InterstitialPolicyTest {
     @Test
     fun frequencyKeepsOtherGates() {
         assertEquals(skip(AdSkipReason.NO_CONSENT), InterstitialPolicy.decide(ok(level = 10, canRequestAds = false), cfg))
-        assertEquals(skip(AdSkipReason.DAILY), InterstitialPolicy.decide(ok(level = 10, isDaily = true), cfg))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(level = 10, isDaily = true), cfg))
     }
 
     @Test
-    fun levelThatAlreadyHadAnAdDoesNotRepeat() {
-        assertEquals(skip(AdSkipReason.LEVEL_ALREADY_HAD_AD), InterstitialPolicy.decide(ok(level = 20, lastLevel = 20), cfg))
-        assertEquals(skip(AdSkipReason.LEVEL_ALREADY_HAD_AD), InterstitialPolicy.decide(ok(level = 20, lastLevel = 25), cfg))
+    fun levelThatAlreadyHadAnAdShowsAgainOnReplay() {
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(level = 20, lastLevel = 20), cfg))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(level = 20, lastLevel = 25), cfg))
         assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(level = 25, lastLevel = 20), cfg))
     }
 
@@ -205,8 +211,9 @@ class InterstitialPolicyTest {
     }
 
     @Test
-    fun dailyNeverShows() {
-        assertEquals(skip(AdSkipReason.DAILY), InterstitialPolicy.decide(ok(isDaily = true), cfg))
+    fun dailyWinAndRetryShow() {
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(isDaily = true), cfg))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, isDaily = true), cfg))
     }
 
     @Test
@@ -218,9 +225,10 @@ class InterstitialPolicyTest {
 
     @Test
     fun loseRetryIsOnByDefaultAndIgnoresFrequency() {
-        // level 11 is not a multiple of 5: a win would be skipped, Retry still shows.
-        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, level = 11), cfg))
-        assertEquals(skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY), winAt(11, cfg))
+        // frequency 5, level 11: a win would be skipped, Retry still shows.
+        val c5 = cfg.copy(levelsInterstitialFrequency = 5)
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY, level = 11), c5))
+        assertEquals(skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY), winAt(11, c5))
     }
 
     @Test
@@ -243,7 +251,7 @@ class InterstitialPolicyTest {
                 val d = InterstitialPolicy.decide(
                     ok(canRequestAds = consent, inTutorial = tutorial, isDaily = daily, level = level, lastLevel = 1), cfg,
                 )
-                val expected = consent && !tutorial && !daily && level % 5 == 0
+                val expected = consent && !tutorial
                 assertEquals("c=$consent t=$tutorial d=$daily l=$level", expected, d == AdDecision.Show)
                 if (d == AdDecision.Show) shows++
             }

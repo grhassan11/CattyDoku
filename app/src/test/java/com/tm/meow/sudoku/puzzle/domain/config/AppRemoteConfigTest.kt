@@ -45,7 +45,7 @@ class AppRemoteConfigTest {
         val c = AppRemoteConfig()
         assertEquals(AdPolicyConfig(), c.toAdPolicyConfig())
         assertEquals(9, c.adFreeThroughLevel)
-        assertEquals(5, c.levelsGameCompletedInterstitialAdFrequency)
+        assertEquals(1, c.levelsGameCompletedInterstitialAdFrequency)
     }
 
     @Test
@@ -64,7 +64,7 @@ class AppRemoteConfigTest {
         assertEquals("ad_free_through_level", RemoteConfigKeys.AD_FREE_THROUGH_LEVEL)
         assertEquals("9", defaults[RemoteConfigKeys.AD_FREE_THROUGH_LEVEL])
         assertEquals("levels_game_completed_interstitial_ad_frequency", RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY)
-        assertEquals("5", defaults[RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY])
+        assertEquals("1", defaults[RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY])
         assertEquals("sudoku_game_completed_interstitial_ad_frequency", RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY)
         assertEquals("1", defaults[RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY])
     }
@@ -125,7 +125,7 @@ class AppRemoteConfigTest {
         assertEquals(1, parse(k to "1").levelsGameCompletedInterstitialAdFrequency)
         assertEquals(50, parse(k to "50").levelsGameCompletedInterstitialAdFrequency)
         for (bad in listOf("0", "-3", "51", "9999", "abc", "2.5", "")) {
-            assertEquals(bad, 5, parse(k to bad).levelsGameCompletedInterstitialAdFrequency)
+            assertEquals(bad, 1, parse(k to bad).levelsGameCompletedInterstitialAdFrequency)
         }
     }
 
@@ -210,6 +210,17 @@ class AppRemoteConfigTest {
         assertFalse(parse(RemoteConfigKeys.DAILY_REMINDER_ENABLED to "false").dailyReminderEnabled)
         assertEquals("daily_reminder_enabled", RemoteConfigKeys.DAILY_REMINDER_ENABLED)
         assertEquals("true", RemoteConfigParser.defaults()[RemoteConfigKeys.DAILY_REMINDER_ENABLED])
+    }
+
+    @Test
+    fun splashAppOpenDefaultOnAndKeyIsStable() {
+        assertTrue(AppRemoteConfig().splashAppOpenAdShow)
+        assertTrue(parse().splashAppOpenAdShow)
+        assertFalse(parse(RemoteConfigKeys.SPLASH_APP_OPEN_AD_SHOW to "false").splashAppOpenAdShow)
+        assertTrue(parse(RemoteConfigKeys.SPLASH_APP_OPEN_AD_SHOW to "garbage").splashAppOpenAdShow)
+        assertEquals("splash_app_open_ad_show", RemoteConfigKeys.SPLASH_APP_OPEN_AD_SHOW)
+        assertEquals("true", RemoteConfigParser.defaults()[RemoteConfigKeys.SPLASH_APP_OPEN_AD_SHOW])
+        assertEquals(AdPolicyConfig(), parse(RemoteConfigKeys.SPLASH_APP_OPEN_AD_SHOW to "false").toAdPolicyConfig())
     }
 
     @Test

@@ -1,7 +1,7 @@
 package com.tm.meow.sudoku.puzzle.domain.ads
 
 /**
- * App-open (resume-only) config. Cold start NEVER shows one: only a return from background does.
+ * App-open config. Lifecycle path: cold start never shows, only a return from background. Splash path ([AppOpenContext.fromSplash]) is the single cold-start show.
  * No discretionary gates (level, interval, background time, session cap): only technical / legal necessities.
  */
 data class AppOpenConfig(
@@ -43,6 +43,8 @@ sealed interface AppOpenDecision {
 /** Everything the policy needs; no Android, no clock reads. */
 data class AppOpenContext(
     val coldStart: Boolean,
+    /** Splash-driven show (the one cold-start app-open moment): lifts the [coldStart] skip only. All other gates apply. */
+    val fromSplash: Boolean = false,
     val canRequestAds: Boolean,
     val sdkInitialized: Boolean,
     val fullScreenAdShowing: Boolean,
@@ -62,7 +64,7 @@ object AppOpenPolicy {
         fun skip(r: AppOpenSkipReason) = AppOpenDecision.Skip(r)
 
         if (AdFreePolicy.isSuppressedByPurchase(AdFormat.APP_OPEN, ctx.adsRemoved)) return skip(AppOpenSkipReason.ADS_REMOVED)
-        if (ctx.coldStart) return skip(AppOpenSkipReason.COLD_START)
+        if (ctx.coldStart && !ctx.fromSplash) return skip(AppOpenSkipReason.COLD_START)
         if (!ctx.online) return skip(AppOpenSkipReason.OFFLINE)
         if (!ctx.canRequestAds) return skip(AppOpenSkipReason.NO_CONSENT)
         if (!ctx.sdkInitialized) return skip(AppOpenSkipReason.SDK_NOT_READY)

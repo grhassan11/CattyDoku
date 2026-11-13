@@ -49,9 +49,16 @@ class AppOpenAdRepositoryImpl @Inject constructor(
     private val idUsable: Boolean get() = !BuildConfig.ADMOB_APP_OPEN_ID.contains(PLACEHOLDER_MARK)
 
     override fun preload() {
-        if (!status.isInitialized.value || !idUsable) return
-        if (loading || ad != null) return
+        if (!status.isInitialized.value || !idUsable) {
+            dbg("preload skip: sdkInit=${status.isInitialized.value} idUsable=$idUsable")
+            return
+        }
+        if (loading || ad != null) {
+            dbg("preload skip: loading=$loading held=${ad != null}")
+            return
+        }
         loading = true
+        dbg("preload: AppOpenAd.load start")
         try {
             AppOpenAd.load(
                 AdRequest.Builder(BuildConfig.ADMOB_APP_OPEN_ID).build(),
@@ -61,19 +68,23 @@ class AppOpenAdRepositoryImpl @Inject constructor(
                         this@AppOpenAdRepositoryImpl.ad = ad
                         loadedAtMs = tracker.now()
                         loading = false
+                        dbg("preload: loaded")
                     }
 
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         loading = false
-                        if (BuildConfig.DEBUG) Log.d(TAG, "preload failed: ${adError.code} ${adError.message}")
+                        dbg("preload failed: ${adError.code} ${adError.message}")
                     }
                 },
             )
         } catch (t: Throwable) {
+            dbg("preload threw: $t")
             crash.recordNonFatal(t, "appopen.preload")
             loading = false
         }
     }
+
+    override fun isLoading(): Boolean = loading
 
     override fun readyAdAgeMs(): Long? = if (ad == null) null else tracker.now() - loadedAtMs
 
@@ -83,12 +94,16 @@ class AppOpenAdRepositoryImpl @Inject constructor(
     }
 
     override suspend fun show(): AdShowResult {
-        val taken = ad ?: return AdShowResult.NOT_READY
+        val taken = ad ?: run {
+            dbg("show NOT_READY: no held ad")
+            return AdShowResult.NOT_READY
+        }
         ad = null // single-use: consumed even if the show fails
         return try {
             withContext(Dispatchers.Main.immediate) {
                 val activity = awaitResumedActivity()
                 if (activity == null) {
+                    dbg("show FAILED: no RESUMED activity within ${RESUME_WAIT_MS}ms")
                     taken.destroy()
                     return@withContext AdShowResult.FAILED
                 }
@@ -107,6 +122,7 @@ class AppOpenAdRepositoryImpl @Inject constructor(
                     }
 
                     override fun onAdFailedToShowFullScreenContent(fullScreenContentError: FullScreenContentError) {
+                        dbg("show failed: ${fullScreenContentError.message}")
                         result.complete(AdShowResult.FAILED)
                     }
                 }
@@ -147,8 +163,12 @@ class AppOpenAdRepositoryImpl @Inject constructor(
         return null
     }
 
+    private fun dbg(msg: String) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "app-open repo: $msg")
+    }
+
     private companion object {
-        const val TAG = "AppOpenAd"
+        const val TAG = "MeowAds"
         const val POLL_MS = 50L
         const val RESUME_WAIT_MS = 1_500L
         const val SHOW_START_TIMEOUT_MS = 8_000L

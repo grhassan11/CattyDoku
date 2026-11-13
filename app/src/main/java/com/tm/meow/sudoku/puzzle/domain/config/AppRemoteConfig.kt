@@ -31,6 +31,9 @@ object RemoteConfigKeys {
     /** Kill switch for the daily 20:00 notification. */
     const val DAILY_REMINDER_ENABLED = "daily_reminder_enabled"
 
+    /** Kill switch for the splash app-open ad (preload + show). Lifecycle app-open is unaffected. */
+    const val SPLASH_APP_OPEN_AD_SHOW = "splash_app_open_ad_show"
+
     /** Levels 1..N get one forced 1-cell region (single colored block). 0 = off. Applies to levels not yet generated. */
     const val LEVELS_SINGLE_COLORED_BLOCK = "levels_single_colored_block"
 }
@@ -65,6 +68,8 @@ data class AppRemoteConfig(
     val streakReminderEnabled: Boolean = true,
     /** Daily 20:00 notification on/off. false = nothing scheduled, nothing shown. */
     val dailyReminderEnabled: Boolean = true,
+    /** Splash app-open ad on/off. false = no splash preload, no splash show (lifecycle app-open unchanged). */
+    val splashAppOpenAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     /** Levels 1..N get the single colored block (forced 1-cell region), 0..500, 0 = off. Cached levels never change. */
     val levelsSingleColoredBlock: Int = DifficultyCurve.SINGLE_BLOCK_THROUGH_LEVEL,
 ) {
@@ -143,6 +148,7 @@ object RemoteConfigParser {
             streakRewardsEnabled = bool(read(RemoteConfigKeys.STREAK_REWARDS_ENABLED), d.streakRewardsEnabled),
             streakReminderEnabled = bool(read(RemoteConfigKeys.STREAK_REMINDER_ENABLED), d.streakReminderEnabled),
             dailyReminderEnabled = bool(read(RemoteConfigKeys.DAILY_REMINDER_ENABLED), d.dailyReminderEnabled),
+            splashAppOpenAdShow = bool(read(RemoteConfigKeys.SPLASH_APP_OPEN_AD_SHOW), d.splashAppOpenAdShow),
             levelsSingleColoredBlock = int(
                 read(RemoteConfigKeys.LEVELS_SINGLE_COLORED_BLOCK), d.levelsSingleColoredBlock,
                 AppRemoteConfig.SINGLE_COLORED_BLOCK_RANGE,
@@ -172,6 +178,7 @@ object RemoteConfigParser {
             RemoteConfigKeys.STREAK_REWARDS_ENABLED to d.streakRewardsEnabled.toString(),
             RemoteConfigKeys.STREAK_REMINDER_ENABLED to d.streakReminderEnabled.toString(),
             RemoteConfigKeys.DAILY_REMINDER_ENABLED to d.dailyReminderEnabled.toString(),
+            RemoteConfigKeys.SPLASH_APP_OPEN_AD_SHOW to d.splashAppOpenAdShow.toString(),
             RemoteConfigKeys.LEVELS_SINGLE_COLORED_BLOCK to d.levelsSingleColoredBlock.toString(),
         )
     }

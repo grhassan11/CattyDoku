@@ -5,7 +5,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -15,16 +14,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tm.meow.sudoku.puzzle.R
+import com.tm.meow.sudoku.puzzle.ui.components.OutlinedShadowText
 
 @StringRes
 internal fun PraiseKind.stringRes(): Int = when (this) {
@@ -54,12 +51,7 @@ internal class PraiseFx {
     }
 }
 
-private val PraiseStyle = TextStyle(
-    color = Color(0xFFFFB300),
-    fontSize = 30.sp,
-    fontWeight = FontWeight.ExtraBold,
-    shadow = Shadow(Color(0xAA3E2723), Offset(0f, 4f), 8f),
-)
+private val PraiseColor = Color(0xFFFFB300)
 
 /**
  * Short praise word near the top of the board. [token] is the placement token the [praise] belongs to: each NEW token plays once
@@ -82,9 +74,12 @@ internal fun PraiseOverlay(praise: PraiseKind?, token: Int, modifier: Modifier =
     }
     val kind = shown ?: return
     Box(modifier) {
-        Text(
+        OutlinedShadowText(
             text = stringResource(kind.stringRes()),
-            style = PraiseStyle,
+            color = PraiseColor,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold,
+            outlineWidth = 3.dp,
             modifier = Modifier.graphicsLayer {
                 val p = fx.time(token)
                 if (p <= 0f || p >= 1f) {

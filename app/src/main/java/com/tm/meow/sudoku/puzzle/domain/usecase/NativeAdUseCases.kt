@@ -84,9 +84,9 @@ class LoadNativeAd(
 }
 
 /**
- * Preload the game-screen native ad for the mode the player is about to enter, into [GameNativeAdCache]. Same gates as
- * [LoadNativeAd] run BEFORE any request (consent, Remove Ads, remote switch, offline, SDK; no level gate);
- * gated = nothing requested. Non-game placements are ignored. Idempotent, never throws.
+ * Preload the native ad for any [AdPlacement] (Home placements from Splash, game placements from Home) into
+ * [GameNativeAdCache]. Same gates as [LoadNativeAd] run BEFORE any request (consent, Remove Ads, remote switch, offline,
+ * SDK; no level gate); gated = nothing requested. Idempotent, never throws.
  */
 class PreloadGameNativeAd(
     private val loadNative: LoadNativeAd,
@@ -94,7 +94,6 @@ class PreloadGameNativeAd(
     private val flags: AppFlagsRepository,
 ) {
     operator fun invoke(placement: AdPlacement) {
-        if (placement != AdPlacement.LEVELS_GAME && placement != AdPlacement.SUDOKU_GAME) return
         if (!loadNative.isAllowed(placement)) return // cheap gate: no coroutine, no flags read
         cache.preload(placement) {
             loadNative(placement) // re-checks every gate right before the request
@@ -103,7 +102,7 @@ class PreloadGameNativeAd(
 }
 
 /**
- * Game-screen entry: hand over the cached native ad if the gates still allow it (waits briefly for a preload that is
+ * Home / game-screen entry: hand over the cached native ad if the gates still allow it (waits briefly for a preload that is
  * still in flight instead of racing it with a second request). Null = caller falls back to [LoadNativeAd].
  */
 class TakeGameNativeAd(

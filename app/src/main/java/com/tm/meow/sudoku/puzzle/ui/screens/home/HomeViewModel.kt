@@ -11,7 +11,6 @@ import com.tm.meow.sudoku.puzzle.domain.billing.ShopProduct
 import com.tm.meow.sudoku.puzzle.domain.billing.StoreResult
 import com.tm.meow.sudoku.puzzle.domain.usecase.BuyProduct
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadShopCatalog
-import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsExposure
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsRemoved
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveShopCatalog
 import com.tm.meow.sudoku.puzzle.domain.model.WorldRules
@@ -70,17 +69,16 @@ class HomeViewModel @Inject constructor(
     observeSettings: ObserveSettings,
     private val updateSettings: UpdateSettings,
     observeAdsRemoved: ObserveAdsRemoved,
-    observeAdsExposure: ObserveAdsExposure,
     private val observeShopCatalog: ObserveShopCatalog,
     private val loadShopCatalog: LoadShopCatalog,
     private val buyProduct: BuyProduct,
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) : ViewModel() {
 
-    /** Remove-ads badge: only once ads can appear (past the ad-free levels), ads not removed, AND Play priced Forever (live). */
+    /** Remove-ads badge: all levels; ads not removed AND Play priced Forever (live). */
     private val removeAdsBadge: Flow<Boolean> =
-        combine(observeAdsRemoved(), observeShopCatalog(), observeAdsExposure()) { removed, catalog, exposed ->
-            HomeUiMapper.removeAdsBadgeVisible(removed, catalog, exposed)
+        combine(observeAdsRemoved(), observeShopCatalog()) { removed, catalog ->
+            HomeUiMapper.removeAdsBadgeVisible(removed, catalog)
         }
 
     private val eventChannel = Channel<HomeEvent>(Channel.BUFFERED)

@@ -12,6 +12,20 @@ import com.tm.meow.sudoku.puzzle.domain.model.AppFlags
 import com.tm.meow.sudoku.puzzle.domain.model.Puzzle
 import com.tm.meow.sudoku.puzzle.domain.repository.PuzzleRepository
 import com.tm.meow.sudoku.puzzle.domain.startup.SplashTiming
+import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
+import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
+import com.tm.meow.sudoku.puzzle.domain.ads.GameNativeAdCache
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdHandle
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdRepository
+import com.tm.meow.sudoku.puzzle.domain.usecase.LoadNativeAd
+import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadGameNativeAd
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import com.tm.meow.sudoku.puzzle.domain.ads.AppOpenConfig
+import com.tm.meow.sudoku.puzzle.domain.usecase.FakeAppOpenRepository
+import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadAppOpenAd
+import com.tm.meow.sudoku.puzzle.domain.usecase.ShowAppOpenIfAllowed
+import com.tm.meow.sudoku.puzzle.domain.usecase.ShowAppOpenOnSplash
 import com.tm.meow.sudoku.puzzle.domain.usecase.FakeProgressRepository
 import com.tm.meow.sudoku.puzzle.domain.usecase.FakePuzzleRepository
 import com.tm.meow.sudoku.puzzle.domain.usecase.FakeSavedGameRepository
@@ -29,6 +43,7 @@ import com.tm.meow.sudoku.puzzle.ui.screens.game.RecordingGenerator
 import com.tm.meow.sudoku.puzzle.ui.screens.game.fixturePuzzle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,11 +84,21 @@ class SplashViewModelTest {
         override suspend fun showPrivacyOptions() = Unit
     }
 
-    private class FakeRemoteConfig : RemoteConfigRepository {
+    private class FakeRemoteConfig(private val config: AppRemoteConfig = AppRemoteConfig()) : RemoteConfigRepository {
         var refreshes = 0
-        override fun current() = AppRemoteConfig()
+        override fun current() = config
         override fun refresh() {
             refreshes++
+        }
+    }
+
+    private class CountingNativeRepository : NativeAdRepository {
+        var loads = 0
+        override suspend fun load(): NativeAdHandle? {
+            loads++
+            return object : NativeAdHandle {
+                override fun destroy() = Unit
+            }
         }
     }
 
@@ -93,15 +118,33 @@ class SplashViewModelTest {
         consentMode: ConsentMode = ConsentMode.OK,
         adsThrow: Boolean = false,
         canRequestAds: Boolean = true,
+        val appOpen: FakeAppOpenRepository = FakeAppOpenRepository(),
+        splashAppOpenAdShow: Boolean = true,
     ) {
         val flags = FakeAppFlagsRepository(flags)
         val puzzles = FakePuzzleRepository().apply { rows[1] = fixturePuzzle(1) }
         val generator = RecordingGenerator()
         private val cache: PuzzleRepository = if (hangWarm) HangingPuzzleRepository else puzzles
         val consent = FakeConsent(consentMode, canRequestAds)
-        val remoteConfig = FakeRemoteConfig()
+        val remoteConfig = FakeRemoteConfig(AppRemoteConfig(splashAppOpenAdShow = splashAppOpenAdShow))
         val ads = FakeAds(adsThrow)
         val tracker = AdSessionTracker(FakeTimeProvider(today = 20_000L))
+        private val sdk = object : AdsSdkStatus {
+            override val isInitialized: StateFlow<Boolean> = MutableStateFlow(true)
+        }
+        val nativeRepo = CountingNativeRepository()
+        private val preloadNative = PreloadGameNativeAd(
+            LoadNativeAd(consent, nativeRepo, AdPolicyConfig()),
+            GameNativeAdCache(FakeTimeProvider(today = 20_000L), CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)),
+            this.flags,
+        )
+        private val preloadAppOpen = PreloadAppOpenAd(consent, sdk, appOpen)
+        private val showAppOpen = ShowAppOpenOnSplash(
+            appOpen,
+            preloadAppOpen,
+            ShowAppOpenIfAllowed(consent, sdk, appOpen, tracker, AppOpenConfig(), preloadAppOpen),
+            remoteConfig = remoteConfig,
+        )
 
         fun viewModel() = SplashViewModel(
             observeReturningLaunch = ObserveReturningLaunch(this.flags),
@@ -111,6 +154,9 @@ class SplashViewModelTest {
             ),
             gather = GatherConsentAndInitAds(consent, ads, this.flags),
             isConsentFormShowing = IsConsentFormShowing(tracker),
+            showAppOpenOnSplash = showAppOpen,
+            preloadAppOpen = preloadAppOpen,
+            preloadNative = preloadNative,
             refreshRemoteConfig = RefreshRemoteConfig(remoteConfig) { consent.state.value.canRequestAds },
         )
     }
@@ -270,5 +316,142 @@ class SplashViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
         assertEquals(0, rig.remoteConfig.refreshes)
+    }
+
+    @Test
+    fun finishedWaitsForAppOpenDismissal() {
+        val dismissed = CompletableDeferred<AdShowResult>()
+        val rig = Rig(appOpen = FakeAppOpenRepository(ageMs = 0L, showBlock = { dismissed.await() }))
+        vmTest(rig) { r, vm ->
+            vm.events.test {
+                advanceTimeBy(SplashTiming.MIN_FIRST_MS + SplashTiming.TICK_MS * 4)
+                runCurrent()
+                assertEquals(1, r.appOpen.shows)
+                expectNoEvents() // ad on screen: no navigation
+                dismissed.complete(AdShowResult.SHOWN)
+                runCurrent()
+                assertEquals(SplashEvent.Finished, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+    }
+
+    @Test
+    fun splashAppOpenFlagOffSkipsPreloadAndShowButFinishes() = vmTest(
+        Rig(appOpen = FakeAppOpenRepository(ageMs = 0L), splashAppOpenAdShow = false),
+    ) { r, vm ->
+        vm.events.test {
+            advanceTimeBy(SplashTiming.MIN_FIRST_MS + SplashTiming.TICK_MS * 4)
+            runCurrent()
+            assertEquals(SplashEvent.Finished, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertEquals(0, r.appOpen.preloads)
+        assertEquals(0, r.appOpen.shows)
+    }
+
+    @Test
+    fun splashAppOpenFlagOnPreloadsAndShows() = vmTest(
+        Rig(appOpen = FakeAppOpenRepository(ageMs = 0L), splashAppOpenAdShow = true),
+    ) { r, vm ->
+        vm.events.test {
+            advanceTimeBy(SplashTiming.MIN_FIRST_MS + SplashTiming.TICK_MS * 4)
+            runCurrent()
+            assertEquals(SplashEvent.Finished, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertTrue(r.appOpen.preloads >= 1)
+        assertEquals(1, r.appOpen.shows)
+    }
+
+    @Test
+    fun appOpenShowFailureStillFinishes()= vmTest(
+        Rig(appOpen = FakeAppOpenRepository(ageMs = 0L, showBlock = { AdShowResult.FAILED })),
+    ) { _, vm ->
+        vm.events.test {
+            advanceTimeBy(SplashTiming.MIN_FIRST_MS + SplashTiming.TICK_MS * 4)
+            runCurrent()
+            assertEquals(SplashEvent.Finished, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun appOpenLoadStuckFirstLaunchFinishesAtFifteenSecondsFromSplashStart() = vmTest(
+        Rig(appOpen = FakeAppOpenRepository(ageMs = null, loading = true)),
+    ) { _, vm ->
+        vm.events.test {
+            advanceTimeBy(SplashTiming.APP_OPEN_WAIT_FIRST_MS - 100)
+            expectNoEvents()
+            advanceTimeBy(SplashTiming.TICK_MS * 6)
+            runCurrent()
+            assertEquals(SplashEvent.Finished, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun appOpenLoadStuckReturningLaunchFinishesAtFifteenSecondsFromSplashStart() = vmTest(
+        Rig(AppFlags(tutorialDone = true), appOpen = FakeAppOpenRepository(ageMs = null, loading = true)),
+    ) { _, vm ->
+        vm.events.test {
+            advanceTimeBy(SplashTiming.APP_OPEN_WAIT_FIRST_MS - 100)
+            expectNoEvents()
+            advanceTimeBy(SplashTiming.TICK_MS * 6)
+            runCurrent()
+            assertEquals(SplashEvent.Finished, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun firstLaunchAdLoadedMidWaitShowsImmediately() {
+        val repo = FakeAppOpenRepository(ageMs = null, loading = true)
+        vmTest(Rig(appOpen = repo)) { _, vm ->
+            vm.events.test {
+                advanceTimeBy(8_000)
+                expectNoEvents()
+                assertEquals(0, repo.shows)
+                repo.ageMs = 0L
+                repo.loading = false
+                advanceTimeBy(SplashTiming.TICK_MS * 2)
+                runCurrent()
+                assertEquals(1, repo.shows)
+                assertEquals(SplashEvent.Finished, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+    }
+
+    @Test
+    fun firstLaunchFailedLoadDoesNotBurnTheBudget() = vmTest(
+        Rig(appOpen = FakeAppOpenRepository(ageMs = null, loading = false)),
+    ) { r, vm ->
+        vm.events.test {
+            advanceTimeBy(SplashTiming.MIN_FIRST_MS + SplashTiming.TICK_MS * 4)
+            runCurrent()
+            assertEquals(SplashEvent.Finished, awaitItem())
+            assertEquals(0, r.appOpen.shows)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun splashPreloadsBothHomeNativeAds() = vmTest { rig, vm ->
+        vm.events.test {
+            advanceTimeBy(SplashTiming.MIN_FIRST_MS + SplashTiming.TICK_MS * 4)
+            runCurrent()
+            assertEquals(SplashEvent.Finished, awaitItem())
+            assertEquals(2, rig.nativeRepo.loads)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun appOpenWaitBudget() {
+        assertEquals(14_650L, SplashTiming.appOpenWaitMs(returning = true, elapsedMs = 350))
+        assertEquals(13_800L, SplashTiming.appOpenWaitMs(returning = false, elapsedMs = 1_200))
+        // late consent: never below the returning wait
+        assertEquals(SplashTiming.APP_OPEN_WAIT_MS, SplashTiming.appOpenWaitMs(returning = false, elapsedMs = 10_000))
     }
 }

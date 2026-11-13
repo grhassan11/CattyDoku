@@ -70,8 +70,7 @@ data class ShopUiState(
     /** The in-flight call is a restore: show the progress indicator. Implies [busy]. */
     val restoring: Boolean = false,
     /**
-     * Remove Ads card (monthly + forever rows) is on screen: only once ads can appear for the player, OR when they already
-     * own / subscribe (existing buyers keep their Owned / Active / Manage rows at any level).
+     * Remove Ads card (monthly + forever rows) is on screen. Always true: shown at every level (no ads-exposure gate).
      */
     val showRemoveAds: Boolean = true,
 )

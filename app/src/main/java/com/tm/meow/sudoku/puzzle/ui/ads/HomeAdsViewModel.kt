@@ -9,6 +9,7 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.LoadNativeAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkStartFlowComplete
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsRemoved
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadGameNativeAd
+import com.tm.meow.sudoku.puzzle.domain.usecase.TakeGameNativeAd
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -37,6 +38,7 @@ abstract class HomeAdsViewModel(
     observeAdsRemoved: ObserveAdsRemoved,
     private val preloadGameNative: PreloadGameNativeAd,
     private val gamePlacement: AdPlacement,
+    private val takeNativeAd: TakeGameNativeAd,
 ) : ViewModel() {
 
     // Loading from the start when ads are allowed, so the slot is reserved on the very first frame (no shift).
@@ -93,7 +95,10 @@ abstract class HomeAdsViewModel(
         loadJob = viewModelScope.launch {
             // Bounded skeleton: past the cap the load is cancelled (a late ad is destroyed by the repo) and the slot collapses.
             val handle = try {
-                withTimeoutOrNull(SKELETON_TIMEOUT_MS) { loadNativeAd(placement) }
+                // Splash-preloaded ad first (waits for an in-flight preload); else load now.
+                withTimeoutOrNull(SKELETON_TIMEOUT_MS) {
+                    takeNativeAd(placement, Int.MAX_VALUE) ?: loadNativeAd(placement)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
@@ -159,9 +164,10 @@ class LevelsHomeAdsViewModel @Inject constructor(
     time: TimeProvider,
     observeAdsRemoved: ObserveAdsRemoved,
     preloadGameNative: PreloadGameNativeAd,
+    takeNativeAd: TakeGameNativeAd,
 ) : HomeAdsViewModel(
     AdPlacement.LEVELS_HOME, loadNativeAd, markStartFlowComplete, time, observeAdsRemoved,
-    preloadGameNative, AdPlacement.LEVELS_GAME,
+    preloadGameNative, AdPlacement.LEVELS_GAME, takeNativeAd,
 )
 
 /** Sudoku entry bottom native ad (`sudoku_home_native_ad_show`). */
@@ -172,7 +178,8 @@ class SudokuHomeAdsViewModel @Inject constructor(
     time: TimeProvider,
     observeAdsRemoved: ObserveAdsRemoved,
     preloadGameNative: PreloadGameNativeAd,
+    takeNativeAd: TakeGameNativeAd,
 ) : HomeAdsViewModel(
     AdPlacement.SUDOKU_HOME, loadNativeAd, markStartFlowComplete, time, observeAdsRemoved,
-    preloadGameNative, AdPlacement.SUDOKU_GAME,
+    preloadGameNative, AdPlacement.SUDOKU_GAME, takeNativeAd,
 )

@@ -108,10 +108,10 @@ class GameAdUseCasesTest {
     )
 
     @Test
-    fun surfacesOffThroughLevelNineOnFromTen() = runTest {
+    fun surfacesHaveNoEarlyLevelGate() = runTest {
         for (l in 0..9) {
             val s = surfaces(flagLevel = l)(MutableStateFlow(l)).first()
-            assertFalse("rewarded L$l", s.levelsBoosters || s.levelsRevive || s.sudokuBoosters || s.sudokuRevive)
+            assertTrue("rewarded L$l", s.levelsBoosters && s.levelsRevive && s.sudokuBoosters && s.sudokuRevive)
             assertTrue("levels native L$l (no level gate)", s.levelsGameNative)
         }
         val s = surfaces(flagLevel = 10)(MutableStateFlow(10)).first()
@@ -189,9 +189,9 @@ class GameAdUseCasesTest {
         val repo = GaRewarded()
         val uc = PreloadRewardedAd(GaConsent(), GaSdk(), repo, AdPolicyConfig())
         uc(playerLevel = 9)
-        assertEquals(0, repo.preloadCalls)
+        assertEquals(1, repo.preloadCalls) // no early-level gate
         uc(playerLevel = 10)
-        assertEquals(1, repo.preloadCalls)
+        assertEquals(2, repo.preloadCalls)
     }
 
     @Test
@@ -258,12 +258,11 @@ class GameAdUseCasesTest {
     }
 
     @Test
-    fun adFreeLevelsNeverTouchTheRepository() = runTest {
+    fun earlyLevelsNoLongerGateRewardedShow() = runTest {
         for (l in 0..9) {
             val r = ShowRig()
-            assertEquals("L$l", RewardedResult.NOT_READY, r.show(l))
-            assertEquals("L$l", 0, r.repo.showCalls)
-            assertNull(r.tracker.lastAdShownMs)
+            assertEquals("L$l", RewardedResult.EARNED, r.show(l))
+            assertEquals("L$l", 1, r.repo.showCalls)
         }
     }
 

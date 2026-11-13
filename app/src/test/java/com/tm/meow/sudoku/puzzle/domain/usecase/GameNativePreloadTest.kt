@@ -120,11 +120,14 @@ class GameNativePreloadTest {
     }
 
     @Test
-    fun homePlacementsAreNeverPreloadedAsGameAds() = runTest {
+    fun homePlacementsArePreloadedAndTakeable() = runTest {
         val rig = Rig()
         rig.preload(AdPlacement.LEVELS_HOME)
         rig.preload(AdPlacement.SUDOKU_HOME)
-        assertEquals(0, rig.repo.loads)
+        assertEquals(2, rig.repo.loads)
+        assertNotNull(rig.take(AdPlacement.LEVELS_HOME, playerLevel = 1))
+        assertNotNull(rig.take(AdPlacement.SUDOKU_HOME, playerLevel = 1))
+        assertEquals("take did not hit the SDK", 2, rig.repo.loads)
     }
 
     @Test

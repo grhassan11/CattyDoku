@@ -83,9 +83,6 @@ import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.PillButton
 import com.tm.meow.sudoku.puzzle.ui.components.StatusBarIconsEffect
 import com.tm.meow.sudoku.puzzle.ui.components.Sunburst
-import com.tm.meow.sudoku.puzzle.ui.components.sprite.CatSprite
-import com.tm.meow.sudoku.puzzle.ui.components.sprite.CatSprites
-import com.tm.meow.sudoku.puzzle.ui.components.sprite.SpriteSheet
 import com.tm.meow.sudoku.puzzle.ui.theme.FredokaFamily
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 
@@ -207,7 +204,6 @@ private fun WinDialog(
         message = message,
         mascotRes = mascotRes,
         mascotDescription = mascotDescription,
-        mascotSheet = if (animalSet == null) CatSprites.Cheer else null,
         score = outcome.score,
         stats = {
             StatChip(
@@ -264,7 +260,6 @@ internal fun WinScreenLayout(
     homeDescription: String = stringResource(R.string.win_home),
     confetti: Boolean = true,
     inputArmed: Boolean = true,
-    mascotSheet: SpriteSheet? = null,
 ) {
     DialogScrim(Modifier.semantics { paneTitle = headline }, scrimColor = GameColors.OutcomeScrim) {
         StatusBarIconsEffect()
@@ -284,7 +279,6 @@ internal fun WinScreenLayout(
             MascotStage(
                 mascotRes = mascotRes,
                 description = mascotDescription,
-                sheet = mascotSheet,
             )
 
             Text(
@@ -424,9 +418,9 @@ private fun HeadlineRibbon(text: String) {
     }
 }
 
-/** Sunburst + mascot. Springs in; static art bobs gently, [sheet] (cat cheer loop) animates itself. */
+/** Sunburst + mascot placeholder (user cat art). Springs in, then bobs gently. */
 @Composable
-private fun MascotStage(mascotRes: Int, description: String, sheet: SpriteSheet?) {
+private fun MascotStage(mascotRes: Int, description: String) {
     val pop = remember { Animatable(0.5f) }
     val popAnimated = rememberAnimationsEnabled(null)
     LaunchedEffect(popAnimated) {
@@ -455,17 +449,13 @@ private fun MascotStage(mascotRes: Int, description: String, sheet: SpriteSheet?
             .graphicsLayer {
                 scaleX = pop.value
                 scaleY = pop.value
-                translationY = if (sheet == null) (bob?.value ?: 0f) * density else 0f
+                translationY = (bob?.value ?: 0f) * density
             }
-        if (sheet != null) {
-            CatSprite(sheet, popMod, contentDescription = description)
-        } else {
-            androidx.compose.foundation.Image(
-                painter = painterResource(mascotRes),
-                contentDescription = description,
-                modifier = popMod,
-            )
-        }
+        androidx.compose.foundation.Image(
+            painter = painterResource(mascotRes),
+            contentDescription = description,
+            modifier = popMod,
+        )
     }
 }
 

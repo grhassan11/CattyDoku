@@ -22,6 +22,27 @@ object SplashTiming {
     /** Warm-up is optional: stop waiting for it after this. */
     const val WARM_CAP_MS = 3_000L
 
+    /**
+     * Splash app-open ad load wait. Runs AFTER the splash loop above, so it is NOT counted against [MAX_MS].
+     * Splash-specific: independent of AdPolicyConfig.loadWaitTimeoutMs (interstitial load wait).
+     */
+    const val APP_OPEN_WAIT_MS = 5_000L
+
+    /**
+     * First-launch app-open wait ceiling (15 s). Counted from splash start (loop ticks, UMP form time excluded), not
+     * stacked after the loop: see [appOpenWaitMs]. Returning launches keep [APP_OPEN_WAIT_MS].
+     */
+    const val APP_OPEN_WAIT_FIRST_MS = 15_000L
+
+    /**
+     * Wait budget handed to the splash app-open load wait, given the splash-loop [elapsedMs] already spent.
+     * First and returning launches alike: whatever remains of [APP_OPEN_WAIT_FIRST_MS] (15 s from splash start), never below
+     * [APP_OPEN_WAIT_MS]. The wait itself exits at once on ad ready / load finished without an ad.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun appOpenWaitMs(returning: Boolean, elapsedMs: Long): Long =
+        (APP_OPEN_WAIT_FIRST_MS - elapsedMs).coerceAtLeast(APP_OPEN_WAIT_MS)
+
     /** Loop step for the ticker. */
     const val TICK_MS = 50L
 

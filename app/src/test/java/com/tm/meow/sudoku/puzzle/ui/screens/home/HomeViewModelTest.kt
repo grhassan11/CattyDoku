@@ -1,6 +1,5 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.home
 
-import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
 import com.tm.meow.sudoku.puzzle.domain.billing.BillingFailure
 import com.tm.meow.sudoku.puzzle.domain.billing.CatalogState
 import com.tm.meow.sudoku.puzzle.domain.billing.Entitlement
@@ -12,7 +11,6 @@ import com.tm.meow.sudoku.puzzle.domain.billing.StoreResult
 import com.tm.meow.sudoku.puzzle.domain.repository.ShopRepository
 import com.tm.meow.sudoku.puzzle.domain.usecase.BuyProduct
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadShopCatalog
-import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsExposure
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsRemoved
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveShopCatalog
 import kotlinx.coroutines.flow.Flow
@@ -109,7 +107,6 @@ class HomeViewModelTest {
             observeSettings = ObserveSettings(settingsRepo),
             updateSettings = UpdateSettings(settingsRepo),
             observeAdsRemoved = ObserveAdsRemoved(ads),
-            observeAdsExposure = ObserveAdsExposure(this.flags, AdPolicyConfig()),
             observeShopCatalog = ObserveShopCatalog(shop),
             loadShopCatalog = LoadShopCatalog(shop),
             buyProduct = BuyProduct(shop),
@@ -149,19 +146,12 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun badgeHiddenDuringAdFreeLevelsEvenWithPrice() = vmTest(Rig(AppFlags(lastPlayedLevel = 9), shop = FakeShop(foreverReady))) { _, vm ->
-        assertFalse(vm.state.value.removeAdsBadgeVisible)
+    fun badgeVisibleDuringFormerAdFreeLevelsWithPrice() = vmTest(Rig(AppFlags(lastPlayedLevel = 3), shop = FakeShop(foreverReady))) { _, vm ->
+        assertTrue(vm.state.value.removeAdsBadgeVisible)
     }
 
     @Test
-    fun badgeHiddenOnFreshInstall() = vmTest(Rig(shop = FakeShop(foreverReady))) { _, vm ->
-        assertFalse(vm.state.value.removeAdsBadgeVisible)
-    }
-
-    @Test
-    fun badgeAppearsOnceLevelTenIsReached() = vmTest(Rig(AppFlags(lastPlayedLevel = 9), shop = FakeShop(foreverReady))) { rig, vm ->
-        assertFalse(vm.state.value.removeAdsBadgeVisible)
-        rig.flags.update { it.copy(lastPlayedLevel = 10) }
+    fun badgeVisibleOnFreshInstallWithPrice() = vmTest(Rig(shop = FakeShop(foreverReady))) { _, vm ->
         assertTrue(vm.state.value.removeAdsBadgeVisible)
     }
 

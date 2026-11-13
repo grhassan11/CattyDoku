@@ -1,5 +1,6 @@
 package com.tm.meow.sudoku.puzzle.ui.screens.game
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
@@ -13,6 +14,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState
@@ -33,6 +36,7 @@ import com.tm.meow.sudoku.puzzle.domain.analytics.QuitReason
 import com.tm.meow.sudoku.puzzle.ui.components.LocalAudioController
 import com.tm.meow.sudoku.puzzle.ui.screens.rate.RateUsHost
 import com.tm.meow.sudoku.puzzle.ui.screens.rate.RateUsViewModel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -90,6 +94,31 @@ fun GameRoute(
         resumed = resumed,
     )
     val nudging = rememberIdleNudge(nudgeEligible, interactionClock)
+
+    // Win interstitial, exactly once per win, whatever exit the player picks (Next / Home icon / system back / Daily CTA):
+    // 0 = not yet, 1 = ad in flight (further taps ignored), 2 = done (later exits navigate at once). Reset when the dialog goes.
+    val wonShown = content?.outcome is OutcomeUi.Won
+    var winAdState by remember { mutableIntStateOf(0) }
+    LaunchedEffect(wonShown) { if (!wonShown) winAdState = 0 }
+    val winAdThen: (() -> Unit) -> Unit = { navigate ->
+        when (winAdState) {
+            1 -> Unit
+            2 -> navigate()
+            else -> {
+                winAdState = 1
+                val started = adsViewModel.afterWin(adLevel, adIsDaily) {
+                    winAdState = 2
+                    scope.launch {
+                        // Back from a full-screen ad: wait for RESUMED so popBackStack (popIfResumed) is not dropped.
+                        snapshotFlow { resumed }.first { it }
+                        withFrameNanos { }
+                        navigate()
+                    }
+                }
+                if (!started) winAdState = 0 // another ad action in flight: let the player tap again
+            }
+        }
+    }
 
     // App-wide audio (music + SFX, silenced during full-screen ads): provided in MainActivity.
     val audio = LocalAudioController.current
@@ -206,6 +235,11 @@ fun GameRoute(
         }
     }
 
+    // System back on the Win dialog = Home icon (interstitial first). Rate-us dialog has its own BackHandler on top.
+    BackHandler(enabled = wonShown) {
+        audio?.stopSfx()
+        winAdThen { onBack() }
+    }
     Box(modifier.fillMaxSize().trackInteractions(interactionClock)) {
     GameScreen(
         state = state,
@@ -217,7 +251,7 @@ fun GameRoute(
         },
         onWinHome = {
             audio?.stopSfx() // silence the win / award cue before leaving
-            onBack()
+            winAdThen { onBack() }
         },
         settingsVisible = settingsVisible,
         onOpenSettings = {
@@ -256,10 +290,10 @@ fun GameRoute(
         // The one-time Rate us dialog (after Lv 5 is won) goes FIRST, then the normal ad boundary + next level.
         onNextLevel = {
             audio?.stopSfx() // silence the win / award cue now, before the rate dialog, ad or next level starts
-            val proceed = { adsViewModel.afterWin(adLevel, adIsDaily, onDone = viewModel::onNextLevel) }
             if (adIsDaily) {
-                proceed()
+                winAdThen { onBack() } // Daily "Back to Home": interstitial first, then leave
             } else {
+                val proceed = { winAdThen { viewModel.onNextLevel() } }
                 scope.launch {
                     if (rateUsViewModel.tryShow()) pendingNextLevel = proceed else proceed()
                 }

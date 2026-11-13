@@ -9,8 +9,10 @@
     <color name="native_ad_body">#FF6B5E57</color>
     <color name="native_ad_top_stroke">#1F000000</color>
     <color name="ad_button_color">#FFC46A00</color>
+    <!-- CTA bg #02C403 (L~0.40): white text 2.4:1 (fail), near-black 8:1 (pass) -> dark text. -->
+    <color name="native_ad_cta_bg">#FF02C403</color>
     <color name="native_ad_cta_text">#FFFFFFFF</color>
-    <color name="native_ad_cta_ripple">#33FFFFFF</color>
+    <color name="native_ad_cta_ripple">#33000000</color>
     <!-- Same red as AdBadgeRed (Button3D.kt). -->
     <color name="native_ad_badge_background">#FFE53935</color>
     <color name="native_ad_badge_text">#FFFFFFFF</color>

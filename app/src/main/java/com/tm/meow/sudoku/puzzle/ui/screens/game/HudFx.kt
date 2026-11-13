@@ -35,6 +35,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tm.meow.sudoku.puzzle.R
+import com.tm.meow.sudoku.puzzle.ui.components.OutlinedShadowText
 import kotlinx.coroutines.launch
 
 private val ComboTextDark = Color(0xFF5D4037)
@@ -63,12 +64,13 @@ internal fun ComboChip(streak: Int, modifier: Modifier = Modifier) {
             .padding(horizontal = 7.dp, vertical = 2.dp)
             .semantics { contentDescription = description },
     ) {
-        Text(
+        OutlinedShadowText(
             text = stringResource(R.string.combo_chip, streak),
             // Light tiers (gold / amber) need dark text; orange / pink keep white.
             color = if (ComboStyle.tier(streak) <= 1) ComboTextDark else Color.White,
             fontSize = 13.sp,
-            fontWeight = FontWeight.ExtraBold,
+            fontWeight = FontWeight.Bold,
+            outlineWidth = 1.5.dp,
         )
     }
 }

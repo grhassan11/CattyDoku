@@ -248,7 +248,7 @@ class AdsUseCasesTest {
 
     @Test
     fun policyDenialNeverTouchesTheSdk() = runTest {
-        val r = rig(wins = 1, flags = AppFlags(lastInterstitialLevel = 12)) // level 16 is not a multiple of the default frequency 5
+        val r = rig(wins = 1, flags = AppFlags(lastInterstitialLevel = 12), config = AdPolicyConfig(levelsInterstitialFrequency = 5)) // level 16 is not a multiple of 5
         assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 16))
         assertEquals(0, r.ads.showCalls)
     }
@@ -278,10 +278,11 @@ class AdsUseCasesTest {
     }
 
     @Test
-    fun dailyNeverShows() = runTest {
+    fun dailyWinAndRetryShow() = runTest {
         val r = rig()
-        assertFalse(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20, isDaily = true))
-        assertEquals(0, r.ads.showCalls)
+        assertTrue(r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 0, isDaily = true))
+        assertTrue(r.show(AdTrigger.LOSE_RETRY, level = 0, isDaily = true))
+        assertEquals(2, r.ads.showCalls)
     }
 
     @Test
@@ -351,8 +352,11 @@ class AdsUseCasesTest {
         assertTrue(r5.show(AdTrigger.LEVEL_WON_CONTINUE, level = 5))
         assertEquals(1, r5.ads.showCalls)
         val r3 = rig()
-        assertFalse(r3.show(AdTrigger.LEVEL_WON_CONTINUE, level = 3))
-        assertEquals(0, r3.ads.showCalls)
+        assertTrue(r3.show(AdTrigger.LEVEL_WON_CONTINUE, level = 3)) // default frequency 1
+        assertEquals(1, r3.ads.showCalls)
+        val rF = rig(config = AdPolicyConfig(levelsInterstitialFrequency = 5))
+        assertFalse(rF.show(AdTrigger.LEVEL_WON_CONTINUE, level = 3))
+        assertEquals(0, rF.ads.showCalls)
     }
 
     @Test

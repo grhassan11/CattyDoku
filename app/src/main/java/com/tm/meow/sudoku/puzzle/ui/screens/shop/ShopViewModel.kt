@@ -11,7 +11,6 @@ import com.tm.meow.sudoku.puzzle.domain.billing.CatalogState
 import com.tm.meow.sudoku.puzzle.domain.billing.PurchaseEvent
 import com.tm.meow.sudoku.puzzle.domain.usecase.BuyProduct
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadShopCatalog
-import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsExposure
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveBoosterBalances
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveEntitlement
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObservePurchaseEvents
@@ -39,7 +38,6 @@ import kotlinx.coroutines.launch
 class ShopViewModel @Inject constructor(
     private val observeCatalog: ObserveShopCatalog,
     observeEntitlement: ObserveEntitlement,
-    observeAdsExposure: ObserveAdsExposure,
     observeBalances: ObserveBoosterBalances,
     private val loadCatalog: LoadShopCatalog,
     private val buyProduct: BuyProduct,
@@ -60,9 +58,8 @@ class ShopViewModel @Inject constructor(
         observeEntitlement(),
         observeBalances(),
         busyState,
-        observeAdsExposure(),
-    ) { catalog, entitlement, balances, busyPair, exposed ->
-        ShopUiMapper.map(catalog, entitlement, balances, busyPair.first, busyPair.second, exposed)
+    ) { catalog, entitlement, balances, busyPair ->
+        ShopUiMapper.map(catalog, entitlement, balances, busyPair.first, busyPair.second)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ShopUiMapper.initial())
 
     private val _events = Channel<PurchaseEvent>(Channel.BUFFERED)

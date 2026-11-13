@@ -20,12 +20,12 @@ enum class RewardedPlacement {
  * in AdsModule. Nothing else reads raw numbers. There is NO master switch: every format has its own per-surface switch.
  */
 data class AdPolicyConfig(
-    /** Levels 1..this are ad-free for rewarded; NOT for the Levels win / lose-retry interstitials or the game native slots (see [AdFreePolicy]). Ads start at this + 1 (default: Lv 10). */
+    /** No longer gates anything in game ads (rewarded, interstitials, natives); kept for RC compat. Was: Levels 1..this ad-free; NOT for the Levels win / lose-retry interstitials or the game native slots (see [AdFreePolicy]). Ads start at this + 1 (default: Lv 10). */
     val adFreeThroughLevel: Int = AdFreePolicy.AD_FREE_THROUGH_LEVEL,
     /**
      * Levels win interstitial frequency N (remote `levels_game_completed_interstitial_ad_frequency`, 1..50): an ad is
      * considered only when the JUST-COMPLETED level number is a multiple of N. The ad-free levels
-     * ([adFreeThroughLevel]) do NOT apply to this interstitial: it can show from Level 1 (default N=5: Lv 5, 10, 15...).
+     * ([adFreeThroughLevel]) do NOT apply to this interstitial: it can show from Level 1 (default N=1: every level).
      */
     val levelsInterstitialFrequency: Int = DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY,
     /**
@@ -78,7 +78,7 @@ data class AdPolicyConfig(
     }
 
     companion object {
-        const val DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY = 5
+        const val DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY = 1
         const val DEFAULT_SUDOKU_INTERSTITIAL_FREQUENCY = 1
         const val DEFAULT_LOAD_WAIT_TIMEOUT_MS = 3_000L
 

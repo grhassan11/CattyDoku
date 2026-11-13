@@ -79,7 +79,6 @@ object InterstitialPolicy {
             return if (ctx.trigger == AdTrigger.TUTORIAL) skip(AdSkipReason.TUTORIAL) else skip(AdSkipReason.NOT_A_BOUNDARY)
         }
         if (ctx.inTutorial) return skip(AdSkipReason.TUTORIAL)
-        if (ctx.isDaily) return skip(AdSkipReason.DAILY)
         if (!ctx.online) return skip(AdSkipReason.OFFLINE)
         if (!ctx.canRequestAds) return skip(AdSkipReason.NO_CONSENT)
         // Sudoku: product rule (tier + win count, see SudokuAdRules) decides upstream; no Queens pacing applies.
@@ -88,7 +87,6 @@ object InterstitialPolicy {
         // the Out of Lives Restart (LOSE_RETRY) also shows from Level 1 (user decision). Only its switch applies.
 
         if (ctx.trigger == AdTrigger.LEVEL_WON_CONTINUE) {
-            if (ctx.level <= ctx.lastInterstitialLevel) return skip(AdSkipReason.LEVEL_ALREADY_HAD_AD)
             // Level-number cadence: ctx.level is the JUST-COMPLETED level (the win dialog "Level N+1" button passes the
             // level just won). Ad-free levels do NOT apply here: show only when it is a multiple of the frequency
             // (default 5: Lv 5, 10, 15...). No exemptions.

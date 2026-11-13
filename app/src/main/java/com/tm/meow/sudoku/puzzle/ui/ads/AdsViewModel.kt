@@ -139,15 +139,16 @@ class AdsViewModel @Inject constructor(
     fun onLevelWon(isDaily: Boolean) = recordLevelWon(isDaily)
 
     /** Win dialog "Level N+1": maybe show an interstitial BEFORE [onDone] (navigates). Not ad-free gated: frequency rule only. */
-    fun afterWin(level: Int, isDaily: Boolean, onDone: () -> Unit) =
+    fun afterWin(level: Int, isDaily: Boolean, onDone: () -> Unit): Boolean =
         run(AdTrigger.LEVEL_WON_CONTINUE, level, isDaily, onDone)
 
     /** Lose dialog Retry: maybe an interstitial (remote `levels_game_restarted_interstitial_ad_show`, default on) BEFORE [onDone]. */
-    fun beforeRetry(level: Int, isDaily: Boolean, onDone: () -> Unit) =
+    fun beforeRetry(level: Int, isDaily: Boolean, onDone: () -> Unit): Boolean =
         run(AdTrigger.LOSE_RETRY, level, isDaily, onDone)
 
-    private fun run(trigger: AdTrigger, level: Int, isDaily: Boolean, onDone: () -> Unit) {
-        if (!busy.compareAndSet(false, true)) return
+    /** Returns false (and never calls [onDone]) when another full-screen ad action is in flight. */
+    private fun run(trigger: AdTrigger, level: Int, isDaily: Boolean, onDone: () -> Unit): Boolean {
+        if (!busy.compareAndSet(false, true)) return false
         viewModelScope.launch {
             try {
                 showInterstitial(trigger, level, isDaily)
@@ -160,6 +161,7 @@ class AdsViewModel @Inject constructor(
             }
             onDone()
         }
+        return true
     }
 
     // ------------------------------------------------------------ rewarded

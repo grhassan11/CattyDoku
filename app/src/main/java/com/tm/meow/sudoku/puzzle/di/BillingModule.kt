@@ -4,7 +4,6 @@ import com.tm.meow.sudoku.puzzle.data.billing.PlayBillingGateway
 import com.tm.meow.sudoku.puzzle.data.billing.ShopRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.repository.AdsRemovedRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.repository.PurchaseGrantRepositoryImpl
-import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.billing.AdsRemovedRepository
 import com.tm.meow.sudoku.puzzle.domain.billing.BillingGateway
@@ -16,7 +15,6 @@ import com.tm.meow.sudoku.puzzle.domain.repository.ShopRepository
 import com.tm.meow.sudoku.puzzle.domain.time.TimeProvider
 import com.tm.meow.sudoku.puzzle.domain.usecase.BuyProduct
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadShopCatalog
-import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsExposure
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsRemoved
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveBoosterBalances
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveEntitlement
@@ -76,10 +74,6 @@ object BillingModule {
 
     @Provides
     fun provideObserveAdsRemoved(adsRemoved: AdsRemovedRepository): ObserveAdsRemoved = ObserveAdsRemoved(adsRemoved)
-
-    @Provides
-    fun provideObserveAdsExposure(flags: AppFlagsRepository, config: AdPolicyConfig): ObserveAdsExposure =
-        ObserveAdsExposure(flags, config)
 
     @Provides
     fun provideObserveEntitlement(adsRemoved: AdsRemovedRepository): ObserveEntitlement = ObserveEntitlement(adsRemoved)

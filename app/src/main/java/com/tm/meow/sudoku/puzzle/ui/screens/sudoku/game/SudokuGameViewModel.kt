@@ -591,6 +591,11 @@ class SudokuGameViewModel @Inject constructor(
 
     /** System / top-bar back. Closes a dialog first; otherwise pauses, saves, leaves. */
     fun onBack() {
+        // Win dialog: system back == its Back button (win interstitial first, then the entry).
+        if (dialog is SudokuDialogUi.Won) {
+            onWinDone()
+            return
+        }
         if (dialog.pausesClock) {
             setDialog(SudokuDialogUi.None)
             return

@@ -14,6 +14,7 @@ import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentState
 import com.tm.meow.sudoku.puzzle.domain.consent.TelemetryConsentPolicy
 import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
+import com.tm.meow.sudoku.puzzle.domain.network.ConnectivityObserver
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -41,6 +42,7 @@ class ConsentRepositoryImpl @Inject constructor(
     private val activities: CurrentActivityProvider,
     private val tracker: AdSessionTracker,
     private val crash: CrashReporter,
+    private val connectivity: ConnectivityObserver,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : ConsentRepository {
 
@@ -54,6 +56,9 @@ class ConsentRepositoryImpl @Inject constructor(
 
     override suspend fun gatherConsent() {
         try {
+            // Offline: the UMP info request cannot succeed and may hang up to UPDATE_TIMEOUT_MS. Skip it, publish the cached state
+            // (no ad can load offline anyway; the next online launch asks normally).
+            if (!connectivity.isOnline.value) return // finally publishes the cached state
             val activity = activities.current()
             if (activity == null) {
                 if (noActivityLogged.compareAndSet(false, true)) {

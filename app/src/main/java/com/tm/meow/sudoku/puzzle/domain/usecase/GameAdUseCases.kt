@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.map
 
 /*
  * Game-screen ad use cases: rewarded (booster refill + lose revive) and the compact game-screen native slot (loaded by LoadNativeAd).
- * Rewarded shares the early-level rule AdFreePolicy / AdPolicyConfig.adFreeThroughLevel; the game native slots do NOT.
+ * Rewarded and the game native slots have no early-level gate (adFreeThroughLevel is now unused by game ads).
  */
 
 /**
@@ -62,11 +62,10 @@ class ObserveAdSurfaces(
             val removed = consentAndRemoved.second
             val online = consentAndRemoved.third
             val level = maxOf(flagLevel, screen)
-            val base = consentState.canRequestAds && initialized &&
-                AdFreePolicy.adsAllowed(level, config.adFreeThroughLevel)
             // Game native slots (Levels + Sudoku): no level gate, Levels shows from Level 1. Remove Ads still suppresses them.
             val sudokuBase = consentState.canRequestAds && initialized
-            val rewardedBase = base && rewarded.isConfigured
+            // Rewarded: no early-level gate (Levels + Sudoku); only consent + SDK init + configured.
+            val rewardedBase = sudokuBase && rewarded.isConfigured
             logger.log(
                 "surfaces: level=$level adFreeThrough=${config.adFreeThroughLevel} canRequestAds=${consentState.canRequestAds} " +
                     "sdkInit=$initialized rewardedConfigured=${rewarded.isConfigured} boostersShow=${config.levelsBoostersRewardedShow} " +
@@ -102,7 +101,6 @@ class PreloadRewardedAd(
         try {
             if (!config.anyRewardedShow || !repository.isConfigured) return
             if (!connectivity.isOnline.value) return
-            if (AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel)) return
             if (!consent.state.value.canRequestAds || !sdk.isInitialized.value) return
             repository.preload()
         } catch (t: Throwable) {
@@ -112,7 +110,7 @@ class PreloadRewardedAd(
 }
 
 /**
- * Show the rewarded ad. Re-checks policy at the moment of the tap (kill switch, ad-free level, consent, SDK). Marks the
+ * Show the rewarded ad. Re-checks policy at the moment of the tap (kill switch, consent, SDK). Marks the
  * process full-screen-ad-showing while it runs (blocks app-open) and, when an ad actually showed, starts the shared
  * full-screen cool-down ([AdSessionTracker.recordRewardedShown]). Returns [RewardedResult.NOT_READY] when blocked.
  * The caller grants the reward iff the result is [RewardedResult.EARNED]. Never throws (except cancellation).
@@ -128,7 +126,6 @@ class ShowRewardedAd(
     suspend operator fun invoke(playerLevel: Int, placement: RewardedPlacement): RewardedResult {
         if (!config.rewardedShowFor(placement) || !repository.isConfigured) return RewardedResult.NOT_READY
         if (!connectivity.isOnline.value) return RewardedResult.NOT_READY // offline: never attempt a load or show
-        if (AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel)) return RewardedResult.NOT_READY
         if (!consent.state.value.canRequestAds || !sdk.isInitialized.value) return RewardedResult.NOT_READY
         return try {
             tracker.fullScreenAdShowing = true

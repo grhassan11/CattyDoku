@@ -423,7 +423,7 @@ private fun GameContent(
             outcome = content.outcome,
             level = content.levelNumber,
             maxHearts = content.maxHearts,
-            onNextLevel = if (content.isDaily) onBack else onNextLevel,
+            onNextLevel = onNextLevel, // Daily: GameRoute routes to Home after the win ad
             onRetry = onLoseRetry,
             onHome = onBack, // same pop-to-Home as the top-bar back
             onWinHome = onWinHome,

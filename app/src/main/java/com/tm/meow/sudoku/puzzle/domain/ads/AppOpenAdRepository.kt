@@ -8,6 +8,9 @@ interface AppOpenAdRepository {
     /** Age of the held ad in monotonic ms, or null when none is held. */
     fun readyAdAgeMs(): Long?
 
+    /** True while a load request is in flight (false once loaded or failed). */
+    fun isLoading(): Boolean
+
     /** Drop the held ad (expired). */
     fun discard()
 

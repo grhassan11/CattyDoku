@@ -37,8 +37,8 @@ class SudokuAdRulesTest {
     }
 
     @Test
-    fun unknownWinCountNeverShows() {
-        for (t in SudokuTier.entries) assertFalse("$t unknown", win(t, null))
+    fun unknownWinCountShows() {
+        for (t in SudokuTier.entries) assertTrue("$t unknown", win(t, null))
     }
 
     @Test
@@ -48,9 +48,8 @@ class SudokuAdRulesTest {
     }
 
     @Test
-    fun restartShowsEverywhereExceptEasy() {
-        assertFalse(SudokuAdRules.showOnRestart(SudokuTier.EASY))
-        for (t in nonEasy) assertTrue("$t", SudokuAdRules.showOnRestart(t))
+    fun restartShowsOnEveryTier() {
+        for (t in SudokuTier.entries) assertTrue("$t", SudokuAdRules.showOnRestart(t))
     }
 
     @Test
@@ -59,15 +58,14 @@ class SudokuAdRulesTest {
         coEvery { show(any(), any(), any(), any()) } returns true
         val uc = ShowSudokuInterstitialIfAllowed(show, AdPolicyConfig())
 
-        assertFalse(uc.onWin(SudokuTier.EASY, null))
-        assertFalse(uc.onRestart(SudokuTier.EASY))
-        coVerify(exactly = 0) { show(any(), any(), any(), any()) }
+        assertTrue(uc.onWin(SudokuTier.EASY, null)) // unknown count = show
+        assertTrue(uc.onRestart(SudokuTier.EASY))
+        coVerify(exactly = 1) { show(AdTrigger.SUDOKU_RESTART, 0, false, false) }
 
-        assertTrue(uc.onWin(SudokuTier.EASY, 1))
-        coVerify(exactly = 1) { show(AdTrigger.SUDOKU_WON_CONTINUE, 0, false, false) }
-        coVerify(exactly = 1) { show(AdTrigger.SUDOKU_WON_CONTINUE, 0, false, false) }
+        val freq3 = ShowSudokuInterstitialIfAllowed(show, AdPolicyConfig(sudokuWinInterstitialFrequency = 3))
+        assertFalse(freq3.onWin(SudokuTier.EASY, 2)) // rule says no: policy never asked
         assertTrue(uc.onWin(SudokuTier.MEDIUM, 1))
         assertTrue(uc.onRestart(SudokuTier.HARD))
-        coVerify(exactly = 1) { show(AdTrigger.SUDOKU_RESTART, 0, false, false) }
+        coVerify(exactly = 2) { show(AdTrigger.SUDOKU_RESTART, 0, false, false) }
     }
 }
