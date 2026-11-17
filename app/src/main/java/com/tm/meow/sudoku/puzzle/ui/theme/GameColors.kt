@@ -18,7 +18,14 @@ object GameColors {
     val Conflict = Color(0xFFE14B4B)
     val HintTarget = Color(0xFFF39522)
     val HintReason = Color(0xFFFFFFFF)
-    val FishOff = Color(0xFFD9CEC8)
+    // Gameplay rule-card diagrams (3x3 mini grids). Not in the board region palette, not red.
+    /** Diagram cell fill: soft lavender. */
+    val RuleCellFill = Color(0xFFDFD9EE)
+    /** Diagram highlighted region (REGION card 2x2 block): light pastel green, same lightness class as RuleCellFill. */
+    val RuleCellGreen = Color(0xFFC5EBBC)
+    /** Diagram X glyph: quiet dusty mauve-grey, recedes behind the cat. */
+    val RuleCross = Color(0xFF9C8F9A)
+    val FishOff =Color(0xFFD9CEC8)
     val Disabled = Color(0xFFE6DCD5)
 
     // home screen

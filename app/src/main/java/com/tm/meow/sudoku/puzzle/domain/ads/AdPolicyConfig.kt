@@ -16,6 +16,15 @@ enum class RewardedPlacement {
 }
 
 /**
+ * Live source of the ad policy. Consumers call [current] ONCE per decision (atomic read) instead of capturing a config at
+ * construction, so a Remote Config value activated mid-session (late fetch, B+C) applies to the next decision. A plain
+ * [AdPolicyConfig] is itself a fixed source (defaults / tests).
+ */
+fun interface AdPolicySource {
+    fun current(): AdPolicyConfig
+}
+
+/**
  * Ad policy constants in ONE place. Defaults ship in the app; Remote Config overrides by providing a different instance
  * in AdsModule. Nothing else reads raw numbers. There is NO master switch: every format has its own per-surface switch.
  */
@@ -23,9 +32,10 @@ data class AdPolicyConfig(
     /** No longer gates anything in game ads (rewarded, interstitials, natives); kept for RC compat. Was: Levels 1..this ad-free; NOT for the Levels win / lose-retry interstitials or the game native slots (see [AdFreePolicy]). Ads start at this + 1 (default: Lv 10). */
     val adFreeThroughLevel: Int = AdFreePolicy.AD_FREE_THROUGH_LEVEL,
     /**
-     * Levels win interstitial frequency N (remote `levels_game_completed_interstitial_ad_frequency`, 1..50): an ad is
-     * considered only when the JUST-COMPLETED level number is a multiple of N. The ad-free levels
-     * ([adFreeThroughLevel]) do NOT apply to this interstitial: it can show from Level 1 (default N=1: every level).
+     * Levels win interstitial frequency N (remote `levels_game_completed_interstitial_ad_frequency`, 1..50): applies ONLY
+     * to levels ABOVE 10; an ad is considered when the JUST-COMPLETED level number is a multiple of N (N=1: 11, 12, 13...;
+     * N=10: 20, 30, 40...). Levels 1..10 are governed by [levelsFirstTenInterstitialLevels] instead. The ad-free levels
+     * ([adFreeThroughLevel]) do NOT apply to this interstitial.
      */
     val levelsInterstitialFrequency: Int = DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY,
     /**
@@ -59,7 +69,14 @@ data class AdPolicyConfig(
     val levelsReviveRewardedShow: Boolean = DEFAULT_SHOW,
     /** Sudoku revive rewarded (remote `sudoku_game_revive_rewarded_ad_show`). */
     val sudokuReviveRewardedShow: Boolean = DEFAULT_SHOW,
-) {
+    /**
+     * Levels 1..10 only (remote `levels_game_first_10_levels_completed_interstitial_ad_frequency`, comma list): the win
+     * interstitial shows after completing exactly these levels. Levels 1..10 ignore [levelsInterstitialFrequency].
+     */
+    val levelsFirstTenInterstitialLevels: Set<Int> = DEFAULT_LEVELS_FIRST_TEN_INTERSTITIAL_LEVELS,
+) : AdPolicySource {
+    override fun current(): AdPolicyConfig = this
+
     /** False = no interstitial surface is on: never preload or request one. */
     val anyInterstitialShow: Boolean
         get() = levelsWinInterstitialShow || sudokuWinInterstitialShow ||
@@ -81,6 +98,10 @@ data class AdPolicyConfig(
         const val DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY = 1
         const val DEFAULT_SUDOKU_INTERSTITIAL_FREQUENCY = 1
         const val DEFAULT_LOAD_WAIT_TIMEOUT_MS = 3_000L
+
+        /** Last level governed by the first-10 list; levels above use the frequency N. */
+        const val FIRST_TEN_LAST_LEVEL = 10
+        val DEFAULT_LEVELS_FIRST_TEN_INTERSTITIAL_LEVELS: Set<Int> = setOf(2, 4, 6, 8, 10)
 
         /** Default of every per-surface show switch. */
         const val DEFAULT_SHOW = true

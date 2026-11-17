@@ -24,8 +24,8 @@ turbine = "1.2.1"
 mockk = "1.14.11"
 # Ads / consent (phase 9). Kept as is: bump SDK + adapters TOGETHER.
 adsMobileSdk = "1.6.0"
-# Explicit UMP pin (Gradle picks the higher of this and the SDK transitive). 4.0.0 exists (major), not taken.
-ump = "3.2.0"
+# Explicit UMP pin = the version Gradle already resolves transitively from the ads SDK (4.0.0: aar in Gradle cache + release R8 configuration.txt). Bump with the SDK.
+ump = "4.0.0"
 # Play Billing (Store). 9.1.0 = newest stable billing-ktx on Google Maven (2026-11-06). Keep core + ktx on the same version.
 billing = "9.1.0"
 # Firebase (phase 10). Libs below are BoM-managed (no versions). BoM 34.19.0 = newest 34.x; 35.1.0 exists (major, not taken).

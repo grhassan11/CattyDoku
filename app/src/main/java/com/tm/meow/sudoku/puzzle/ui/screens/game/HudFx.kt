@@ -38,7 +38,7 @@ import com.tm.meow.sudoku.puzzle.R
 import com.tm.meow.sudoku.puzzle.ui.components.OutlinedShadowText
 import kotlinx.coroutines.launch
 
-private val ComboTextDark = Color(0xFF5D4037)
+private val ComboTextRed = Color(0xFFE53935)
 
 /**
  * Cosmetic combo chip ("x3") shown next to the HUD score from streak 2. Pulses on every increment (finite spring, read in
@@ -66,11 +66,12 @@ internal fun ComboChip(streak: Int, modifier: Modifier = Modifier) {
     ) {
         OutlinedShadowText(
             text = stringResource(R.string.combo_chip, streak),
-            // Light tiers (gold / amber) need dark text; orange / pink keep white.
-            color = if (ComboStyle.tier(streak) <= 1) ComboTextDark else Color.White,
+            color = ComboTextRed, // red fill + white stroke, no shadow (all tiers)
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             outlineWidth = 1.5.dp,
+            outlineColor = Color.White,
+            withShadow = false,
         )
     }
 }

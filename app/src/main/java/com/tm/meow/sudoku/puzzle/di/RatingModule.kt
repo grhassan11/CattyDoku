@@ -4,7 +4,6 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.repository.AppFlagsRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.ProgressRepository
 import com.tm.meow.sudoku.puzzle.domain.usecase.DismissRateUs
-import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveRateUsRated
 import com.tm.meow.sudoku.puzzle.domain.usecase.SubmitRateUs
 import com.tm.meow.sudoku.puzzle.domain.usecase.TryShowRateUs
 import dagger.Module
@@ -26,9 +25,6 @@ object RatingModule {
 
     @Provides
     fun provideDismissRateUs(flags: AppFlagsRepository): DismissRateUs = DismissRateUs(flags)
-
-    @Provides
-    fun provideObserveRateUsRated(flags: AppFlagsRepository): ObserveRateUsRated = ObserveRateUsRated(flags)
 
     @Provides
     fun provideSubmitRateUs(flags: AppFlagsRepository): SubmitRateUs = SubmitRateUs(flags)

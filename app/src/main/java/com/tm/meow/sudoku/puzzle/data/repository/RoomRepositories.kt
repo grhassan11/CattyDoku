@@ -73,6 +73,14 @@ class SavedGameRepositoryImpl @Inject constructor(
 
     override suspend fun getLatest(): SavedGame? = decodeOrDrop(dao.getLatest())
 
+    override fun observe(levelIndex: Int): Flow<SavedGame?> = dao.observe(levelIndex).map { row ->
+        try {
+            row?.toDomain()
+        } catch (e: CodecException) {
+            null // read-only view: the corrupt row is dropped by the next get()
+        }
+    }
+
     override suspend fun save(game: SavedGame) = dao.upsert(game.toEntity())
 
     override suspend fun clear(levelIndex: Int) = dao.delete(levelIndex)

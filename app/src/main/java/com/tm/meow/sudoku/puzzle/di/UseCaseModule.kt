@@ -31,6 +31,7 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveCompletedDays
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveDailyStatus
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreakCalendar
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveLevelDetail
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveLevelResumable
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveWorldMap
 import com.tm.meow.sudoku.puzzle.domain.usecase.ResolveDaily
 import com.tm.meow.sudoku.puzzle.domain.usecase.FallbackPuzzleProvider
@@ -283,6 +284,10 @@ object UseCaseModule {
 
     @Provides
     fun provideObserveLevelDetail(progress: ProgressRepository): ObserveLevelDetail = ObserveLevelDetail(progress)
+
+    @Provides
+    fun provideObserveLevelResumable(savedGames: SavedGameRepository): ObserveLevelResumable =
+        ObserveLevelResumable(savedGames)
 
     @Provides
     fun provideObserveDailyStatus(

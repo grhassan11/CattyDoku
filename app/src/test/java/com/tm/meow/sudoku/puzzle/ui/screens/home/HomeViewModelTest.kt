@@ -33,6 +33,7 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveSettings
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveCompletedDays
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveDailyStatus
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveLevelDetail
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveLevelResumable
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreakCalendar
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveWorldMap
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreakRewards
@@ -95,7 +96,10 @@ class HomeViewModelTest {
         val time = FakeTimeProvider(now = 1_000L, today = 20_000L)
         private val completed = ObserveCompletedDays(progress)
 
-        fun viewModel() = HomeViewModel(
+        fun viewModel(
+            analytics: com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger =
+                com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger,
+        ) = HomeViewModel(
             resolveStartLevel = ResolveStartLevel(saved, this.flags, progress),
             observeStreakCalendar = ObserveStreakCalendar(streak, completed, time),
             observeDailyStatus = ObserveDailyStatus(progress, completed, time),
@@ -104,13 +108,40 @@ class HomeViewModelTest {
             ),
             observeWorldMap = ObserveWorldMap(progress),
             observeLevelDetail = ObserveLevelDetail(progress),
+            observeLevelResumable = ObserveLevelResumable(saved),
             observeSettings = ObserveSettings(settingsRepo),
             updateSettings = UpdateSettings(settingsRepo),
             observeAdsRemoved = ObserveAdsRemoved(ads),
             observeShopCatalog = ObserveShopCatalog(shop),
             loadShopCatalog = LoadShopCatalog(shop),
             buyProduct = BuyProduct(shop),
+            analytics = analytics,
         )
+    }
+
+    private class RecordingLogger : com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger {
+        val events = mutableListOf<com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent>()
+        override fun log(event: com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent) { events += event }
+        override fun applyConsent(a: Boolean, b: Boolean, c: Boolean, d: Boolean) = Unit
+        override fun setUserProperty(name: String, value: String?) = Unit
+    }
+
+    @Test
+    fun removeAdsClickLogsCheckoutAndFailureOnly() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val rig = Rig(adsLevel, shop = FakeShop(foreverReady))
+            val log = RecordingLogger()
+            val vm = rig.viewModel(log)
+            rig.shop.buyResult = StoreResult.Failure(BillingFailure.NETWORK)
+            vm.onRemoveAdsClick()
+            assertEquals(listOf("begin_checkout", "purchase_fail"), log.events.map { it.name })
+            assertEquals("remove_ads_forever", log.events[0].params["item_id"])
+            assertEquals("remove_ads_forever", log.events[1].params["product_id"])
+            assertEquals("network", log.events[1].params["reason"])
+        } finally {
+            Dispatchers.resetMain()
+        }
     }
 
     private fun vmTest(
@@ -343,6 +374,38 @@ class HomeViewModelTest {
         assertEquals(2, vm.state.value.levelSheet?.level)
         vm.onSheetDismissed()
         assertNull(vm.state.value.levelSheet)
+    }
+
+    private fun save(level: Int, state: GameState) = SavedGame(level, state, elapsedMs = 9_000L, savedAtMs = 5L)
+
+    @Test
+    fun sheetNotResumableWithoutRealProgress() = vmTest { rig, vm ->
+        rig.saved.save(save(2, GameState.initial(4))) // opened/restarted, nothing done
+        vm.onNodeSelected(2)
+        assertFalse(vm.state.value.levelSheet!!.resumable)
+    }
+
+    @Test
+    fun sheetResumableOnlyForThatLevelAndLiveAfterSaveAndClear() = vmTest { rig, vm ->
+        vm.onNodeSelected(2)
+        assertFalse(vm.state.value.levelSheet!!.resumable)
+        rig.saved.save(save(3, GameState.initial(4).copy(hintsUsed = 1))) // other level: no effect
+        assertFalse(vm.state.value.levelSheet!!.resumable)
+        rig.saved.save(save(2, GameState.initial(4).copy(hearts = 2)))
+        assertTrue(vm.state.value.levelSheet!!.resumable)
+        rig.saved.clear(2)
+        assertFalse(vm.state.value.levelSheet!!.resumable)
+    }
+
+    @Test
+    fun ctaLabelCompletedKeepsReplayEvenWithSave() {
+        val base = LevelSheetUi(1, 1, 4, com.tm.meow.sudoku.puzzle.domain.model.LevelDifficulty.Easy, false, 0, null, null)
+        assertEquals(com.tm.meow.sudoku.puzzle.R.string.level_sheet_play, ctaLabel(base))
+        assertEquals(com.tm.meow.sudoku.puzzle.R.string.level_sheet_resume, ctaLabel(base.copy(resumable = true)))
+        assertEquals(
+            com.tm.meow.sudoku.puzzle.R.string.level_sheet_replay,
+            ctaLabel(base.copy(completed = true, resumable = true)),
+        )
     }
 
     @Test

@@ -64,8 +64,9 @@ class PreloadAppOpenAd(
 /**
  * Resume-only app-open. Called by the process-lifecycle observer on every foreground; the observer reports whether this
  * is the cold-start foreground. No discretionary gates (user order).
- * Decision is the pure [AppOpenPolicy]. Coherence with interstitials via [AdSessionTracker]: a shown app-open starts the
- * shared cool-down (interstitial min interval) but does not touch the every-Nth-win counter or the interstitial cap, and
+ * Decision is the pure [AppOpenPolicy]. The foreground right after an ad click-out (browser / store) is skipped once
+ * ([AdSessionTracker.consumeAdClicked]). Coherence with interstitials via [AdSessionTracker]: a shown app-open sets the
+ * shared last-shown time (read by Rate us) but does not touch the every-Nth-win counter or the interstitial cap, and
  * an on-screen interstitial blocks it. After a show (or any skip that leaves no fresh ad) the next ad is preloaded.
  * Returns true when an ad was shown. Never throws.
  */
@@ -92,6 +93,9 @@ class ShowAppOpenIfAllowed(
                 adAgeMs = repository.readyAdAgeMs(),
                 adsRemoved = adsRemoved.adsRemoved.value,
                 online = connectivity.isOnline.value,
+                // One-shot: consumed on every foreground so the flag cannot stick; the splash path never consumes.
+                returnFromAdClick = !fromSplash && tracker.consumeAdClicked(),
+                suppressedScreen = tracker.appOpenSuppressedScreen,
             )
             val decision = AppOpenPolicy.decide(ctx, config)
             logger.log("app-open gate: coldStart=$coldStart fromSplash=$fromSplash -> $decision ctx=$ctx")
@@ -130,8 +134,8 @@ class ShowAppOpenIfAllowed(
 
 /**
  * Splash app-open: called once after the other splash work is done (so the wait is not part of SplashTiming.MAX_MS).
- * Starts / joins the app-open load, waits up to `waitMs` (per call; default [loadWaitTimeoutMs] = [SplashTiming.APP_OPEN_WAIT_MS], 5 s;
- * first launch passes the remainder of [SplashTiming.APP_OPEN_WAIT_FIRST_MS], 15 s) for it to finish, then shows through [ShowAppOpenIfAllowed] with the cold-start
+ * Starts / joins the app-open load, waits up to `waitMs` (per call; default [loadWaitTimeoutMs] = [SplashTiming.APP_OPEN_WAIT_MS], 5 s = floor;
+ * the splash passes the remainder of [SplashTiming.APP_OPEN_WAIT_FIRST_MS], 15 s, for first and returning launches alike) for it to finish, then shows through [ShowAppOpenIfAllowed] with the cold-start
  * skip lifted. The wait returns immediately when an ad is ready, or at once when gated (Remove Ads / offline / no consent / SDK off: no load can start). A failed / no-fill load is retried (1 s back-off) until the budget runs out: the timeout is the only reason an eligible launch ends without the ad. Suspends until the ad is dismissed / failed, bounded by [SHOW_GUARD_MS] so navigation can never hang.
  * A shown ad goes through the normal path: [AdSessionTracker.recordAppOpenShown] sets last-shown (shared cool-down).
  * Returns true when an ad was shown. Never throws; every failure / skip = false = continue without ad.
@@ -145,7 +149,7 @@ class ShowAppOpenOnSplash(
     private val remoteConfig: RemoteConfigRepository = NoopRemoteConfigRepository,
 ) {
     /**
-     * Remote Config kill switch `splash_app_open_ad_show`. Synchronous read of the frozen per-process snapshot (cached /
+     * Remote Config kill switch `splash_app_open_ad_show`. Synchronous read of the latest activated snapshot (cached /
      * default value); never awaits a fetch. Fails open (true) on any error. Splash only; lifecycle app-open ignores it.
      */
     fun isEnabled(): Boolean = try {

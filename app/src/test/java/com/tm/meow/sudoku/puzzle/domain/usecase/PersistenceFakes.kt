@@ -60,6 +60,9 @@ class FakePuzzleRepository : PuzzleRepository {
 
 class FakeSavedGameRepository : SavedGameRepository {
     val rows = LinkedHashMap<Int, SavedGame>()
+    private val version = MutableStateFlow(0)
+
+    override fun observe(levelIndex: Int): Flow<SavedGame?> = version.map { rows[levelIndex] }
 
     override suspend fun get(levelIndex: Int): SavedGame? = rows[levelIndex]
 
@@ -68,10 +71,12 @@ class FakeSavedGameRepository : SavedGameRepository {
 
     override suspend fun save(game: SavedGame) {
         rows[game.levelIndex] = game
+        version.value++
     }
 
     override suspend fun clear(levelIndex: Int) {
         rows.remove(levelIndex)
+        version.value++
     }
 }
 

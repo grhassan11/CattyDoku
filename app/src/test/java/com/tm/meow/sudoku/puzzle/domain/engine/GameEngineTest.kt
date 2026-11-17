@@ -164,6 +164,55 @@ class GameEngineTest {
     }
 
     @Test
+    fun undoCatFromTapGestureRestoresEmpty() {
+        var s = engine.applyTap(p, fresh(), Pos(0, 1)).state
+        s = engine.applyDoubleTap(p, s, Pos(0, 1), fromTapGesture = true).state
+        assertEquals(CellMark.CAT, s.board[0, 1])
+        assertEquals(1, s.undoStack.size)
+        s = engine.undo(s).state
+        assertEquals(CellMark.EMPTY, s.board[0, 1])
+    }
+
+    @Test
+    fun undoWrongCatFromTapGestureRestoresEmptyNoHeartRefund() {
+        var s = engine.applyTap(p, fresh(), Pos(0, 0)).state
+        val r = engine.applyDoubleTap(p, s, Pos(0, 0), fromTapGesture = true)
+        s = r.state
+        assertEquals(listOf<GameEvent>(GameEvent.WrongPlacement(Pos(0, 0), 2)), r.events)
+        assertEquals(1, s.undoStack.size)
+        s = engine.undo(s).state
+        assertEquals(CellMark.EMPTY, s.board[0, 0])
+        assertEquals(2, s.hearts)
+        assertTrue(s.undoStack.isEmpty())
+    }
+
+    @Test
+    fun undoLastHeartWrongCatFromTapGestureFoldsToo() {
+        var s = engine.applyTap(p, fresh().copy(hearts = 1), Pos(0, 0)).state
+        s = engine.applyDoubleTap(p, s, Pos(0, 0), fromTapGesture = true).state
+        assertEquals(GameStatus.LOST, s.status)
+        assertEquals(1, s.undoStack.size)
+        assertEquals(CellMark.EMPTY, s.undoStack.single().changes.single().before)
+    }
+
+    @Test
+    fun undoWrongCatOverEarlierXRestoresX() {
+        var s = engine.applyTap(p, fresh(), Pos(0, 0)).state
+        s = engine.applyDoubleTap(p, s, Pos(0, 0)).state // not a tap gesture: X was deliberate
+        s = engine.undo(s).state
+        assertEquals(CellMark.X, s.board[0, 0])
+    }
+
+    @Test
+    fun tapGestureFoldIgnoresUnrelatedLastEntry() {
+        var s = engine.applyTap(p, fresh(), Pos(2, 2)).state
+        s = engine.applyDoubleTap(p, s, Pos(0, 1), fromTapGesture = true).state
+        s = engine.undo(s).state
+        assertEquals(CellMark.EMPTY, s.board[0, 1])
+        assertEquals(CellMark.X, s.board[2, 2])
+    }
+
+    @Test
     fun undoWithEmptyStackIsNoOp() {
         val s = fresh()
         assertSame(s, engine.undo(s).state)

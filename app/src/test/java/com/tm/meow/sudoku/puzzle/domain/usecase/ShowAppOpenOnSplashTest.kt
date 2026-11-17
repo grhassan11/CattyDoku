@@ -245,4 +245,35 @@ class ShowAppOpenOnSplashTest {
             AppOpenPolicy.decide(ctx(true, true).copy(adAgeMs = AppOpenConfig.DEFAULT_AD_EXPIRY_MS)),
         )
     }
+
+    @Test
+    fun adClickReturnSkipsPolicyOnce() {
+        assertEquals(
+            AppOpenDecision.Skip(AppOpenSkipReason.AD_CLICK_RETURN),
+            AppOpenPolicy.decide(ctx(false, false).copy(returnFromAdClick = true)),
+        )
+    }
+
+    @Test
+    fun suppressedScreenSkipsPolicy() {
+        assertEquals(
+            AppOpenDecision.Skip(AppOpenSkipReason.SUPPRESSED_SCREEN),
+            AppOpenPolicy.decide(ctx(false, false).copy(suppressedScreen = true)),
+        )
+    }
+
+    @Test
+    fun adClickReturnSkipsOneForegroundThenShowsAgain() = runTest {
+        val repo = FakeAppOpenRepository(ageMs = 0L)
+        val t = tracker()
+        val consent = Consent(true)
+        val sdk = Sdk(true)
+        val preload = PreloadAppOpenAd(consent, sdk, repo)
+        val show = ShowAppOpenIfAllowed(consent, sdk, repo, t, AppOpenConfig(), preload)
+        t.markAdClicked()
+        assertFalse(show(coldStart = false))
+        assertEquals(0, repo.shows)
+        assertTrue(show(coldStart = false))
+        assertEquals(1, repo.shows)
+    }
 }

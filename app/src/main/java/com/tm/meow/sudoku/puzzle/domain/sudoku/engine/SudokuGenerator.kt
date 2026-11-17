@@ -43,7 +43,7 @@ object SudokuGenerator {
             if (best == null || c.dist < best.dist) best = c
             if (c.dist == 0) break
         }
-        val b = best!!
+        val b = checkNotNull(best) { "generator produced no candidate (MAX_ATTEMPTS >= 1)" }
         return SudokuPuzzle(tier, b.givens, b.solution, seed, SUDOKU_GENERATOR_VERSION, b.rating, b.dist == 0)
     }
 

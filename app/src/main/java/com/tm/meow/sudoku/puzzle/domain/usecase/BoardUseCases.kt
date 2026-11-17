@@ -14,8 +14,12 @@ class ToggleX(private val engine: GameEngine) {
 
 /** Double tap: place a cat (replaces X); on a cat cell it removes the cat. */
 class PlaceCat(private val engine: GameEngine) {
-    operator fun invoke(puzzle: Puzzle, state: GameState, pos: Pos): StepResult =
-        engine.applyDoubleTap(puzzle, state, pos)
+    operator fun invoke(
+        puzzle: Puzzle,
+        state: GameState,
+        pos: Pos,
+        fromTapGesture: Boolean = false,
+    ): StepResult = engine.applyDoubleTap(puzzle, state, pos, fromTapGesture)
 }
 
 /** Drag across cells: MARK or ERASE X, mode decided by the first cell. One undo step. */

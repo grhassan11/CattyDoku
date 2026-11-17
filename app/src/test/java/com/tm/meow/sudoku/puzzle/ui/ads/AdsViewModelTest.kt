@@ -258,11 +258,11 @@ class AdsViewModelTest {
         repeat(2) { vm.onLevelWon(isDaily = false) }
         rig.time.now += 200_000L
         var done = 0
-        vm.afterWin(level = 4, isDaily = false) { done++ }
+        vm.afterWin(level = 12, isDaily = false) { done++ }
         advanceUntilIdle()
         assertEquals(1, done)
-        assertEquals("default frequency 1: every level shows", 1, rig.interstitial.showCalls)
-        vm.afterWin(level = 5, isDaily = false) { done++ }
+        assertEquals("default frequency 1: every level above 10 shows", 1, rig.interstitial.showCalls)
+        vm.afterWin(level = 13, isDaily = false) { done++ }
         advanceUntilIdle()
         assertEquals(2, done)
         assertEquals(2, rig.interstitial.showCalls)

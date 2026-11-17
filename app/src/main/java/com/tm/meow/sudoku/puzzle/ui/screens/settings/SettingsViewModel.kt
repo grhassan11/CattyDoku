@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsUserProps
 import com.tm.meow.sudoku.puzzle.domain.model.Settings
 import com.tm.meow.sudoku.puzzle.domain.usecase.GetAppLanguage
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveSettings
@@ -69,6 +70,7 @@ class SettingsViewModel @Inject constructor(
             null // best effort: the picker simply keeps the old language
         } ?: return
         analytics.log(AnalyticsEvent.LanguageChange(applied.tag))
+        analytics.setUserProperty(AnalyticsUserProps.APP_LANGUAGE, applied.tag)
         _languageTag.value = applied.tag
     }
 

@@ -33,6 +33,12 @@ enum class AppOpenSkipReason {
 
     /** No validated internet connection. */
     OFFLINE,
+
+    /** Foreground is the return from an ad click-out (browser / store): skip this one app-open only. */
+    AD_CLICK_RETURN,
+
+    /** Foreground happened while a no-app-open screen (Settings) is current. Ad stays loaded for the next foreground. */
+    SUPPRESSED_SCREEN,
 }
 
 sealed interface AppOpenDecision {
@@ -55,6 +61,10 @@ data class AppOpenContext(
     val adsRemoved: Boolean = false,
     /** Validated internet connection present. Default true. */
     val online: Boolean = true,
+    /** This foreground is the return from an ad click-out (one-shot, already consumed by the caller). */
+    val returnFromAdClick: Boolean = false,
+    /** Current screen is Settings (or a sub-screen): no app-open here. Evaluated at the foreground moment only. */
+    val suppressedScreen: Boolean = false,
 )
 
 /** Pure show/skip decision. */
@@ -65,6 +75,8 @@ object AppOpenPolicy {
 
         if (AdFreePolicy.isSuppressedByPurchase(AdFormat.APP_OPEN, ctx.adsRemoved)) return skip(AppOpenSkipReason.ADS_REMOVED)
         if (ctx.coldStart && !ctx.fromSplash) return skip(AppOpenSkipReason.COLD_START)
+        if (ctx.returnFromAdClick) return skip(AppOpenSkipReason.AD_CLICK_RETURN)
+        if (ctx.suppressedScreen) return skip(AppOpenSkipReason.SUPPRESSED_SCREEN)
         if (!ctx.online) return skip(AppOpenSkipReason.OFFLINE)
         if (!ctx.canRequestAds) return skip(AppOpenSkipReason.NO_CONSENT)
         if (!ctx.sdkInitialized) return skip(AppOpenSkipReason.SDK_NOT_READY)

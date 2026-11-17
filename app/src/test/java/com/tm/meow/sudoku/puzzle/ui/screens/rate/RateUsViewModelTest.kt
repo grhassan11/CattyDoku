@@ -5,7 +5,6 @@ import com.tm.meow.sudoku.puzzle.domain.model.AppFlags
 import com.tm.meow.sudoku.puzzle.domain.usecase.DismissRateUs
 import com.tm.meow.sudoku.puzzle.domain.usecase.FakeProgressRepository
 import com.tm.meow.sudoku.puzzle.domain.usecase.FakeTimeProvider
-import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveRateUsRated
 import com.tm.meow.sudoku.puzzle.domain.usecase.SubmitRateUs
 import com.tm.meow.sudoku.puzzle.domain.usecase.TryShowRateUs
 import com.tm.meow.sudoku.puzzle.ui.screens.game.FakeAppFlagsRepository
@@ -29,7 +28,6 @@ class RateUsViewModelTest {
         TryShowRateUs(FakeProgressRepository(), flags, AdSessionTracker(FakeTimeProvider(now = 1L))),
         DismissRateUs(flags),
         SubmitRateUs(flags),
-        ObserveRateUsRated(flags),
     )
 
     private inline fun withMain(crossinline block: suspend kotlinx.coroutines.test.TestScope.() -> Unit) = runTest {
@@ -64,10 +62,8 @@ class RateUsViewModelTest {
     @Test
     fun exitSheetLowStarEmitsEmailWithoutTouchingFlags() = withMain {
         val vm = vm()
-        assertTrue(vm.showRateInExitSheet.value)
         vm.onExitSheetStar(3)
         assertEquals(RateUsEvent.OpenFeedbackEmail, vm.events.first())
-        assertTrue(vm.showRateInExitSheet.value)
         val f = flags.flags.first()
         assertFalse(f.rateUsRated)
         assertFalse(f.rateUsShown)
@@ -75,18 +71,13 @@ class RateUsViewModelTest {
     }
 
     @Test
-    fun exitSheetHighStarMarksRatedAndHidesContent() = withMain {
+    fun exitSheetHighStarMarksRatedAndOpensStoreAgainOnRepeat() = withMain {
         val vm = vm()
         vm.onExitSheetStar(5)
         assertEquals(RateUsEvent.OpenStoreListing, vm.events.first())
         assertTrue(flags.flags.first().rateUsRated)
-        assertFalse(vm.showRateInExitSheet.value)
-    }
-
-    @Test
-    fun exitSheetHiddenWhenAlreadyRated() = withMain {
-        flags.update { it.copy(rateUsRated = true) }
-        assertFalse(vm().showRateInExitSheet.value)
+        vm.onExitSheetStar(4)
+        assertEquals(RateUsEvent.OpenStoreListing, vm.events.first())
     }
 
     @Test

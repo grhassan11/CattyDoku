@@ -16,6 +16,7 @@ import com.tm.meow.sudoku.puzzle.domain.repository.ProgressRepository
 import com.tm.meow.sudoku.puzzle.domain.repository.StreakRepository
 import com.tm.meow.sudoku.puzzle.domain.sudoku.repository.SudokuRepository
 import com.tm.meow.sudoku.puzzle.domain.time.TimeProvider
+import com.tm.meow.sudoku.puzzle.domain.usecase.GetAppLanguage
 import com.tm.meow.sudoku.puzzle.domain.usecase.SyncAnalyticsUserProperties
 import com.tm.meow.sudoku.puzzle.domain.usecase.UserPropsSync
 import com.tm.meow.sudoku.puzzle.domain.config.RemoteConfigRepository
@@ -100,13 +101,19 @@ object FirebaseModule {
         adsRemoved: AdsRemovedRepository,
         notifications: NotificationStatus,
         time: TimeProvider,
+        language: GetAppLanguage,
     ): UserPropsSync = SyncAnalyticsUserProperties(
-        analytics, consent, flags, progress, sudoku, streak, adsRemoved, notifications, time,
+        analytics, consent, flags, progress, sudoku, streak, adsRemoved, notifications, time, language,
     )
 
     @Provides
     fun provideRefreshRemoteConfig(
         repository: RemoteConfigRepository,
         consent: ConsentRepository,
-    ): RefreshRemoteConfig = RefreshRemoteConfig(repository) { consent.state.value.canRequestAds }
+        connectivity: com.tm.meow.sudoku.puzzle.domain.network.ConnectivityObserver,
+    ): RefreshRemoteConfig = RefreshRemoteConfig(
+        repository,
+        allowed = { consent.state.value.canRequestAds },
+        online = { connectivity.isOnline.value },
+    )
 }

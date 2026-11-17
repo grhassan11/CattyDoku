@@ -12,6 +12,9 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.tm.meow.sudoku.puzzle.R
+import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
+import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.analytics.NotificationType
 import com.tm.meow.sudoku.puzzle.domain.engine.ReminderCopy
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -24,6 +27,7 @@ import javax.inject.Singleton
 @Singleton
 class StreakReminderNotifier @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val analytics: AnalyticsLogger,
 ) {
     private val soundUri: Uri = Uri.parse("android.resource://${context.packageName}/${R.raw.sfx_meow}")
 
@@ -34,7 +38,10 @@ class StreakReminderNotifier @Inject constructor(
         ensureChannel()
         val i = ReminderCopy.indexFor(epochDay, TITLES.size)
         val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP) }
+            ?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra(NotificationType.EXTRA_KEY, NotificationType.STREAK)
+        }
         val tap = launch?.let {
             PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }
@@ -49,6 +56,7 @@ class StreakReminderNotifier @Inject constructor(
             .setContentIntent(tap)
             .build()
         manager.notify(NOTIFICATION_ID, n)
+        analytics.log(AnalyticsEvent.NotificationShown(NotificationType.STREAK)) // closest signal to delivery
     }
 
     private fun ensureChannel() {

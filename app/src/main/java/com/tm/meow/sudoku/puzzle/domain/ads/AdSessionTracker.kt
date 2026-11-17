@@ -37,11 +37,20 @@ class AdSessionTracker(private val time: TimeProvider) {
     /** UMP form is on screen right now. Blocks app-open. */
     @Volatile var consentFormShowing: Boolean = false
 
+    /** Current screen is one where app-open must not show (Settings + its sub-screens). Set by navigation, read on each foreground. */
+    @Volatile var appOpenSuppressedScreen: Boolean = false
+
     /** The consent gather + ads init startup step has begun this process (in-app splash, or the restored-back-stack fallback). */
     @Volatile var startupGatherStarted: Boolean = false
 
     /** The consent gather + first ads-init attempt have finished this process (success or not). Gate for init retries. */
     @Volatile var startupGatherFinished: Boolean = false
+
+    /**
+     * The last UMP consent gather did not complete an info update (offline, no foreground Activity, timeout, error). Set by the
+     * consent repository, cleared on a successful update. While true, a late-online recovery re-runs the gather.
+     */
+    @Volatile var consentGatherPending: Boolean = false
 
     /** Home reached this process = Splash / Terms / consent / notification prompt / Tutorial are all behind us. */
     @Volatile var startFlowComplete: Boolean = false
@@ -69,8 +78,7 @@ class AdSessionTracker(private val time: TimeProvider) {
     }
 
     /**
-     * Rewarded ad shown (user opted in): starts the shared full-screen cool-down ([lastAdShownMs], read by the 180 s app-open rule
-     * and Rate us) but does NOT reset [winsSinceLastAd].
+     * Rewarded ad shown (user opted in): starts the shared full-screen cool-down ([lastAdShownMs], read by Rate us) but does NOT reset [winsSinceLastAd].
      */
     fun recordRewardedShown() {
         lastAdShownMs = time.monotonicMillis()
@@ -94,6 +102,7 @@ class AdSessionTracker(private val time: TimeProvider) {
 
     private companion object {
         const val NONE = -1L
-        const val CLICK_WINDOW_MS = 10_000L
+        /** Click-out (browser / store) can last minutes; a click older than this no longer suppresses an app-open. */
+        const val CLICK_WINDOW_MS = 5 * 60_000L
     }
 }

@@ -134,6 +134,7 @@
     <string name="home_tab_sudoku">数独</string>
     <string name="booster_mouse">ネズミ、残り%1$d</string>
     <string name="booster_no_mouse">ネズミがありません</string>
+    <string name="mouse_cannot_use_here">ここではネズミを使えません</string>
     <string name="booster_locked">レベル%1$dで解放</string>
     <string name="booster_locked_label">Lv.%1$d</string>
     <string name="booster_no_cat">ネコブースターがありません</string>
@@ -165,7 +166,6 @@
     <string name="reward_mouse_store">ストアでネズミを入手</string>
     <string name="reward_ad_unavailable">現在動画を利用できません。しばらくしてからもう一度お試しください。</string>
     <string name="reward_not_earned">報酬を受け取るには動画を最後まで見てください。</string>
-    <string name="ad_slot_description">広告</string>
 
     <string name="hint_wrong_cat">このネコは間違った場所にいます。</string>
     <string name="hint_x_on_solution">この×は、ネコが入るべき場所を隠しています。</string>
@@ -331,7 +331,7 @@
     <string name="settings_how_to_play_hint">レベルモードのチュートリアル</string>
     <string name="settings_notifications_blocked">このアプリの通知はオフになっています</string>
     <string name="settings_notifications_open">設定を開く</string>
-    <string name="settings_privacy">プライバシー設定</string>
+    <string name="settings_privacy">同意を管理</string>
     <string name="settings_feedback_subject">%1$sのフィードバック</string>
     <string name="settings_feedback_no_app">メールアプリが見つかりません</string>
 
@@ -407,7 +407,6 @@
     <string name="shop_err_developer">このビルドではストアがまだ設定されていません。</string>
     <string name="shop_err_generic">問題が発生しました。もう一度お試しください。</string>
 
-    <string name="ad_badge">広告</string>
     <string name="ad_badge_description">広告</string>
 
     <string name="world_node_done">レベル%1$d、クリア済み、3つ星中%2$d。タップで詳細</string>
@@ -433,6 +432,7 @@
     <string name="level_sheet_none">--</string>
     <string name="level_sheet_play">プレイ</string>
     <string name="level_sheet_replay">もう一度</string>
+    <string name="level_sheet_resume">続ける</string>
     <string name="exit_sheet_message">本当に終了しますか？</string>
     <string name="exit_sheet_cancel">キャンセル</string>
     <string name="exit_sheet_exit">終了</string>
@@ -471,7 +471,6 @@
     <string name="sudoku_stat_score">スコア</string>
     <string name="sudoku_stat_time">タイム</string>
     <string name="sudoku_stat_mistakes">ミス</string>
-    <string name="sudoku_stat_hints">ヒント</string>
     <string name="sudoku_pause">一時停止</string>
     <string name="sudoku_resume">再開</string>
     <string name="sudoku_hearts_description">ハート残り%1$d/%2$d</string>

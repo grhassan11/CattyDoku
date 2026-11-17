@@ -31,8 +31,28 @@ class ApplyTelemetryConsent(
 class RefreshRemoteConfig(
     private val repository: RemoteConfigRepository,
     private val allowed: () -> Boolean = { true },
+    private val online: () -> Boolean = { true },
 ) {
     operator fun invoke() {
         if (allowed()) repository.refresh()
+    }
+
+    /**
+     * Splash variant (B): same consent gate, plus skipped while offline (no pointless wait). Bounded by [timeoutMs]; the
+     * fetch result activates into [RemoteConfigRepository.current]. Returns true when fresh values are active. Never throws.
+     */
+    suspend fun awaitFirst(timeoutMs: Long): Boolean {
+        if (!allowed()) return false
+        if (!online()) {
+            repository.refresh() // offline: still arm the single-flight attempt, but do not wait
+            return false
+        }
+        return try {
+            repository.refreshAndAwait(timeoutMs)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            false
+        }
     }
 }

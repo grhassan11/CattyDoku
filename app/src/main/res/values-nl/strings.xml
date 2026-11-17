@@ -137,6 +137,7 @@
     <string name="home_tab_sudoku">Sudoku</string>
     <string name="booster_mouse">Muis, %1$d over</string>
     <string name="booster_no_mouse">Geen muizen meer</string>
+    <string name="mouse_cannot_use_here">Muis kan hier niet worden gebruikt</string>
     <string name="booster_locked">Ontgrendelt bij level %1$d</string>
     <string name="booster_locked_label">Lv.%1$d</string>
     <string name="booster_no_cat">Geen katbooster meer</string>
@@ -169,7 +170,6 @@
     <string name="reward_mouse_store">Muizen halen in de winkel</string>
     <string name="reward_ad_unavailable">Video nu niet beschikbaar. Probeer het straks opnieuw.</string>
     <string name="reward_not_earned">Bekijk de hele video om je beloning te krijgen.</string>
-    <string name="ad_slot_description">Advertentie</string>
 
     <string name="hint_wrong_cat">Deze kat staat op de verkeerde plek.</string>
     <string name="hint_x_on_solution">Deze X bedekt een plek waar een kat thuishoort.</string>
@@ -335,7 +335,7 @@
     <string name="settings_how_to_play_hint">Tutorial voor de levelmodus</string>
     <string name="settings_notifications_blocked">Meldingen zijn uitgeschakeld voor deze app</string>
     <string name="settings_notifications_open">Instellingen openen</string>
-    <string name="settings_privacy">Privacy-instellingen</string>
+    <string name="settings_privacy">Toestemming beheren</string>
     <string name="settings_feedback_subject">Feedback over %1$s</string>
     <string name="settings_feedback_no_app">Geen e-mailapp gevonden</string>
 
@@ -411,7 +411,6 @@
     <string name="shop_err_developer">De winkel is voor deze build nog niet ingesteld.</string>
     <string name="shop_err_generic">Er is iets misgegaan. Probeer het opnieuw.</string>
 
-    <string name="ad_badge">Advertentie</string>
     <string name="ad_badge_description">Advertentie</string>
 
     <string name="world_node_done">Level %1$d, voltooid, %2$d van 3 sterren. Tik voor details</string>
@@ -437,6 +436,7 @@
     <string name="level_sheet_none">--</string>
     <string name="level_sheet_play">Spelen</string>
     <string name="level_sheet_replay">Opnieuw spelen</string>
+    <string name="level_sheet_resume">Hervatten</string>
     <string name="exit_sheet_message">Weet je zeker dat je wilt afsluiten?</string>
     <string name="exit_sheet_cancel">Annuleren</string>
     <string name="exit_sheet_exit">Afsluiten</string>
@@ -475,7 +475,6 @@
     <string name="sudoku_stat_score">Score</string>
     <string name="sudoku_stat_time">Tijd</string>
     <string name="sudoku_stat_mistakes">Fouten</string>
-    <string name="sudoku_stat_hints">Hints</string>
     <string name="sudoku_pause">Pauze</string>
     <string name="sudoku_resume">Hervatten</string>
     <string name="sudoku_hearts_description">%1$d van %2$d hartjes over</string>

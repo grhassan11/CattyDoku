@@ -51,6 +51,9 @@ interface SavedGameDao {
     @Query("SELECT * FROM saved_game WHERE levelIndex = :levelIndex")
     suspend fun get(levelIndex: Int): SavedGameEntity?
 
+    @Query("SELECT * FROM saved_game WHERE levelIndex = :levelIndex")
+    fun observe(levelIndex: Int): Flow<SavedGameEntity?>
+
     /** Levels only: daily autosaves use a negative key and must never be "latest". */
     @Query("SELECT * FROM saved_game WHERE levelIndex > 0 ORDER BY updatedAt DESC LIMIT 1")
     suspend fun getLatest(): SavedGameEntity?

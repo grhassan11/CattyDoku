@@ -149,4 +149,20 @@ class TelemetryConsentPolicyTest {
         com.tm.meow.sudoku.puzzle.domain.usecase.RefreshRemoteConfig(repo)()
         assertEquals(2, repo.n)
     }
+
+    @Test
+    fun statusLabelMapsConsentState() {
+        assertEquals("denied", TelemetryConsentPolicy.statusLabel(ConsentState()))
+        assertEquals("denied", TelemetryConsentPolicy.statusLabel(ConsentState(canRequestAds = true, analyticsAllowed = false)))
+        assertEquals(
+            "not_required",
+            TelemetryConsentPolicy.statusLabel(ConsentState(canRequestAds = true, analyticsAllowed = true)),
+        )
+        assertEquals(
+            "granted",
+            TelemetryConsentPolicy.statusLabel(
+                ConsentState(canRequestAds = true, analyticsAllowed = true, privacyOptionsRequired = true),
+            ),
+        )
+    }
 }

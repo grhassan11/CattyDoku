@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.tm.meow.sudoku.puzzle.R
 import com.tm.meow.sudoku.puzzle.ui.components.Button3D
 import com.tm.meow.sudoku.puzzle.ui.components.ButtonStyle
+import com.tm.meow.sudoku.puzzle.ui.components.ctaTextStyle
 import com.tm.meow.sudoku.puzzle.ui.theme.FredokaFamily
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 
@@ -41,7 +42,6 @@ import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 fun ExitSheet(
     onDismiss: () -> Unit,
     onExit: () -> Unit,
-    showRateUs: Boolean,
     onRateStar: (stars: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -63,10 +63,8 @@ fun ExitSheet(
                 .semantics { paneTitle = message },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (showRateUs) {
-                RateUsContent(onStarSelected = onRateStar, catSize = 64.dp)
-                Spacer(Modifier.height(24.dp))
-            }
+            RateUsContent(onStarSelected = onRateStar, catSize = 64.dp)
+            Spacer(Modifier.height(24.dp))
             Text(
                 message,
                 color = GameColors.Title,
@@ -105,6 +103,7 @@ fun ExitSheet(
                         fontWeight = FontWeight.Bold,
                         fontFamily = FredokaFamily,
                         maxLines = 1,
+                        style = ctaTextStyle(),
                     )
                 }
             }

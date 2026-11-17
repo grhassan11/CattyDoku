@@ -68,6 +68,7 @@ fun GameRoute(
     val noCatText by rememberUpdatedState(stringResource(PieceWording.boosterNone(content?.pieceSkin.word())))
     val noHintText = stringResource(R.string.booster_no_hint)
     val noMouseText = stringResource(R.string.booster_no_mouse)
+    val mouseNoTargetText = stringResource(R.string.mouse_cannot_use_here)
     val adUnavailableText = stringResource(R.string.reward_ad_unavailable)
     val rewardNotEarnedText = stringResource(R.string.reward_not_earned)
     val context = LocalContext.current
@@ -198,6 +199,10 @@ fun GameRoute(
                             Booster.MOUSE -> noMouseText
                         },
                     )
+                }
+                GameUiEvent.MouseNoTarget -> scope.launch {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar(mouseNoTargetText)
                 }
                 // Win counts toward the every-Nth-win ad rule (daily ignored: its key is <= 0). The ad itself
                 // only ever shows later, when the user taps "Level N+1".

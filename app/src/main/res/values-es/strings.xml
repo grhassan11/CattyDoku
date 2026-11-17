@@ -140,6 +140,7 @@
     <string name="home_tab_sudoku">Sudoku</string>
     <string name="booster_mouse">Ratón, quedan %1$d</string>
     <string name="booster_no_mouse">No quedan ratones</string>
+    <string name="mouse_cannot_use_here">No se puede usar el ratón aquí</string>
     <string name="booster_locked">Se desbloquea en el nivel %1$d</string>
     <string name="booster_locked_label">Nv.%1$d</string>
     <string name="booster_no_cat">No quedan potenciadores de gato</string>
@@ -173,7 +174,6 @@
     <string name="reward_mouse_store">Conseguir ratones en la tienda</string>
     <string name="reward_ad_unavailable">Vídeo no disponible ahora. Inténtalo de nuevo pronto.</string>
     <string name="reward_not_earned">Mira el vídeo completo para obtener tu recompensa.</string>
-    <string name="ad_slot_description">Anuncio</string>
 
     <string name="hint_wrong_cat">Este gato está en el lugar equivocado.</string>
     <string name="hint_x_on_solution">Esta X cubre un lugar donde debe ir un gato.</string>
@@ -339,7 +339,7 @@
     <string name="settings_how_to_play_hint">Tutorial del modo Niveles</string>
     <string name="settings_notifications_blocked">Las notificaciones están desactivadas para esta app</string>
     <string name="settings_notifications_open">Abrir ajustes</string>
-    <string name="settings_privacy">Ajustes de privacidad</string>
+    <string name="settings_privacy">Administrar consentimiento</string>
     <string name="settings_feedback_subject">Comentarios sobre %1$s</string>
     <string name="settings_feedback_no_app">No se encontró ninguna app de correo</string>
 
@@ -415,7 +415,6 @@
     <string name="shop_err_developer">La tienda aún no está configurada para esta compilación.</string>
     <string name="shop_err_generic">Algo salió mal. Inténtalo de nuevo.</string>
 
-    <string name="ad_badge">Anuncio</string>
     <string name="ad_badge_description">Anuncio</string>
 
     <string name="world_node_done">Nivel %1$d, completado, %2$d de 3 estrellas. Toca para ver detalles</string>
@@ -441,6 +440,7 @@
     <string name="level_sheet_none">--</string>
     <string name="level_sheet_play">Jugar</string>
     <string name="level_sheet_replay">Repetir</string>
+    <string name="level_sheet_resume">Continuar</string>
     <string name="exit_sheet_message">¿Seguro que quieres salir?</string>
     <string name="exit_sheet_cancel">Cancelar</string>
     <string name="exit_sheet_exit">Salir</string>
@@ -479,7 +479,6 @@
     <string name="sudoku_stat_score">Puntos</string>
     <string name="sudoku_stat_time">Tiempo</string>
     <string name="sudoku_stat_mistakes">Errores</string>
-    <string name="sudoku_stat_hints">Pistas</string>
     <string name="sudoku_pause">Pausa</string>
     <string name="sudoku_resume">Reanudar</string>
     <string name="sudoku_hearts_description">Quedan %1$d de %2$d corazones</string>

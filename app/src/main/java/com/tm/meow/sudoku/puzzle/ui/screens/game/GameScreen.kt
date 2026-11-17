@@ -645,6 +645,9 @@ private const val HINT_BOUNCE_MS = 600
 
 private enum class RuleKind { REGION, LINE, TOUCH }
 
+/** Rule diagrams show the black tuxedo cat (placed-cat variant 9 = ic_cat_10). */
+private const val RULE_CAT_VARIANT = 9
+
 @Composable
 private fun RulesStrip(pieceSkin: PieceSkin) {
     val word = pieceSkin.word()
@@ -686,33 +689,26 @@ private fun RuleDiagram(kind: RuleKind, pieceSkin: PieceSkin) {
     }
     // Boss level: the level's booster animal replaces the cat head.
     val catPainter = painterResource(
-        pieceSkin.set?.let { IconArt.animalFor(it, pieceSkin.boosterIndex) } ?: IconArt.PlacedCat,
+        pieceSkin.set?.let { IconArt.animalFor(it, pieceSkin.boosterIndex) } ?: IconArt.placedCatFor(RULE_CAT_VARIANT),
     )
     Canvas(Modifier.size(36.dp)) {
         val cell = this.size.minDimension / 3f
         val gap = 1.5f
         for (r in 0 until 3) for (c in 0 until 3) {
             val tl = Offset(c * cell + gap, r * cell + gap)
-            val inRegion = kind == RuleKind.REGION && r < 2 && c < 2
             drawRoundRect(
-                color = if (inRegion) GameColors.Regions[3].copy(alpha = 0.7f) else Color(0xFFEBDCCD),
+                color = if (kind == RuleKind.REGION && r < 2 && c < 2) GameColors.RuleCellGreen else GameColors.RuleCellFill,
                 topLeft = tl,
                 size = Size(cell - 2 * gap, cell - 2 * gap),
                 cornerRadius = CornerRadius(3f),
             )
             when (marks[r][c]) {
                 'X' -> {
-                    // Highlighted cross cell: soft red tint + bold deep-red X.
+                    // Blocked cell: thin muted X on the plain cell fill (recedes behind the cat).
                     val side = cell - 2 * gap
-                    drawRoundRect(
-                        color = GameColors.Conflict.copy(alpha = 0.32f),
-                        topLeft = tl,
-                        size = Size(side, side),
-                        cornerRadius = CornerRadius(3f),
-                    )
                     val inset = side * 0.28f
-                    val sw = side * 0.17f
-                    val red = Color(0xFFB3261E)
+                    val sw = side * 0.13f
+                    val red = GameColors.RuleCross
                     drawLine(red, Offset(tl.x + inset, tl.y + inset), Offset(tl.x + side - inset, tl.y + side - inset), sw, StrokeCap.Round)
                     drawLine(red, Offset(tl.x + side - inset, tl.y + inset), Offset(tl.x + inset, tl.y + side - inset), sw, StrokeCap.Round)
                 }
@@ -990,7 +986,7 @@ internal fun CountBadge(count: Int, modifier: Modifier = Modifier, showPlay: Boo
         contentAlignment = Alignment.Center,
     ) {
         if (showPlay) {
-            IconImage(R.drawable.ic_play, size = 12.dp, tint = Color.White)
+            IconImage(R.drawable.ic_watch_ad, size = 12.dp, tint = Color.White)
         } else {
             // Centered digit: no font padding, line box = font size, trimmed both sides so ascent/descent
             // metrics (Fredoka sits high/low in its line box) cannot push the glyph off-centre.

@@ -44,11 +44,6 @@ class DismissRateUs(private val flags: AppFlagsRepository) {
     }
 }
 
-/** Stream of "user already rated 4-5 stars" (drives hiding Rate us content on the exit sheet). */
-class ObserveRateUsRated(private val flags: AppFlagsRepository) {
-    operator fun invoke(): Flow<Boolean> = flags.flags.map { it.rateUsRated }.distinctUntilChanged()
-}
-
 /** A star rating was submitted. 4-5 marks the app as rated; returns what the UI does next. */
 class SubmitRateUs(private val flags: AppFlagsRepository) {
     suspend operator fun invoke(stars: Int): RateAction {

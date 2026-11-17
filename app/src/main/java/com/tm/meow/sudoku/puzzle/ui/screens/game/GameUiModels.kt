@@ -228,6 +228,9 @@ sealed interface GameUiEvent {
     /** Booster tapped with no charges left. */
     data class NoCharges(val booster: Booster) : GameUiEvent
 
+    /** Mouse tapped but no empty non-cat cell is left to cross out. No charge spent. */
+    data object MouseNoTarget : GameUiEvent
+
     /**
      * Visual-only wrong-move cue (red flash + broken heart on [cells], flat indices). Not filtered by sound / haptic settings;
      * the UI skips it when system animations are off. Never changes game state.

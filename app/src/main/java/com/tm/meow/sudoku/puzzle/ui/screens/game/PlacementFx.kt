@@ -15,6 +15,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextLayoutResult
@@ -37,6 +39,7 @@ import kotlinx.coroutines.launch
 internal class PlacementFx {
     private val t = Animatable(0f)
     private val pop = Animatable(0f)
+    private val popup = Animatable(0f)
     private var runToken by mutableIntStateOf(0)
 
     private val star = Path()
@@ -47,10 +50,15 @@ internal class PlacementFx {
     suspend fun run(token: Int) = coroutineScope {
         t.snapTo(0f)
         pop.snapTo(0f)
+        popup.snapTo(0f)
         runToken = token
         launch { pop.animateTo(1f, spring(dampingRatio = POP_DAMPING, stiffness = Spring.StiffnessMedium)) }
+        launch { popup.animateTo(1f, tween(POPUP_MS, easing = LinearEasing)) }
         t.animateTo(1f, tween(DURATION_MS, easing = LinearEasing))
     }
+
+    /** Linear 0..1 "+N" popup time for [token] (longer than [time]: ~1100 ms); 0 until [run] has started for it. */
+    fun popupTime(token: Int): Float = if (runToken == token) popup.value else 0f
 
     /** Linear 0..1 effect time for [token]; 0 until [run] has started for it. */
     fun time(token: Int): Float = if (runToken == token) t.value else 0f
@@ -82,6 +90,9 @@ internal class PlacementFx {
 
     companion object {
         const val DURATION_MS = 550
+
+        /** "+N" popup lifetime: quick fade-in, hold, float up, fade out. */
+        const val POPUP_MS = 1100
         const val POP_FROM = 0.6f
         const val POP_DAMPING = 0.33f
 
@@ -115,10 +126,6 @@ internal fun DrawScope.drawPlacementFx(
     idx: Int,
     board: BoardUi,
     gapPx: Float,
-    /** Pre-measured "+N" text (cached by the caller); null = no popup. Rises and fades on the same timeline. */
-    plus: TextLayoutResult? = null,
-    /** Pre-measured white-stroke + shadow layer of [plus], drawn behind it. */
-    plusOutline: TextLayoutResult? = null,
     /** Low-RAM device: draw 4 of the 8 sparkles. */
     halfSparkles: Boolean = false,
 ) {
@@ -169,19 +176,70 @@ internal fun DrawScope.drawPlacementFx(
         val path = fx.starPath(cx + RAY_COS[i] * dist, cy + RAY_SIN[i] * dist, if (even) baseR else baseR * 0.7f)
         drawPath(path, (if (even) GOLD else tint).copy(alpha = alpha))
     }
+}
 
-    // "+N" score popup: floats up from the cat and fades (fade-in 0..12 %, hold to 50 %, fade-out after).
-    if (plus != null) {
-        val a = when {
-            t < 0.12f -> t / 0.12f
-            t < 0.5f -> 1f
-            else -> 1f - (t - 0.5f) / 0.5f
-        }
-        val rise = cell * 0.9f * ease
-        val topLeft = Offset(cx - plus.size.width / 2f, cy - cell * 0.35f - plus.size.height / 2f - rise)
-        if (plusOutline != null) drawText(plusOutline, topLeft = topLeft, alpha = a.coerceIn(0f, 1f))
-        drawText(plus, topLeft = topLeft, alpha = a.coerceIn(0f, 1f))
+/**
+ * "+N" score popup, drawn LAST (above cells, region wave and sparkles) over ~[PlacementFx.POPUP_MS]: fade-in 0..8 %, hold to 60 %
+ * while floating up, fade-out after. [plus] / [plusOutline] are pre-measured (cached by the caller); null = no popup.
+ */
+internal fun DrawScope.drawScorePopup(
+    fx: PlacementFx,
+    token: Int,
+    idx: Int,
+    board: BoardUi,
+    gapPx: Float,
+    plus: TextLayoutResult?,
+    fill: Color,
+) {
+    if (plus == null) return
+    val n = board.size
+    if (idx !in 0 until n * n) return
+    val cell = (size.width - gapPx * (n - 1)) / n
+    if (cell <= 0f) return
+    val p = fx.popupTime(token)
+    if (p >= 1f) return
+    val pitch = cell + gapPx
+    val cx = (idx % n) * pitch + cell / 2f
+    val cy = (idx / n) * pitch + cell / 2f
+    val a = when {
+        p < 0.08f -> p / 0.08f
+        p < 0.6f -> 1f
+        else -> 1f - (p - 0.6f) / 0.4f
+    }.coerceIn(0f, 1f)
+    val inv = 1f - p
+    val rise = cell * 0.9f * (1f - inv * inv * inv)
+    val w = plus.size.width.toFloat()
+    val h = plus.size.height.toFloat()
+    val x = (cx - w / 2f).coerceIn(0f, max(0f, size.width - w)) // keep inside the board's left/right edges
+    // Starts on the cell's top edge (off the cat / X centre) and floats up from there.
+    val topLeft = Offset(x, cy - cell * 0.5f - h / 2f - rise)
+    // Stroke FIRST (white, round joins, ~13 % of font size visible), solid fill on top. Explicit colour + drawStyle override the
+    // layout's style so nothing depends on how it was measured. No shadow: it only blurs the glyph edges.
+    val outlineW = h * 0.2f // line height ~1.25 x font -> ~0.25 x font total; inner half is covered by the fill
+    drawText(plus, color = POPUP_OUTLINE, topLeft = topLeft, alpha = a, drawStyle = Stroke(width = outlineW, join = StrokeJoin.Round))
+    drawText(plus, color = fill, topLeft = topLeft, alpha = a, drawStyle = Fill)
+}
+
+private val POPUP_OUTLINE = Color.White // white halo: dark fill + white stroke reads on light pink / cream / pastel cells
+
+// Dark saturated "+N" fills: teal, blue, purple, orange-red, magenta.
+private val POPUP_FILLS = listOf(
+    Color(0xFF00695C), Color(0xFF1565C0), Color(0xFF6A1B9A), Color(0xFFD84315), Color(0xFFAD1457),
+)
+
+/**
+ * Random "+N" popup fill, independent of score. Call once per popup (remember keyed on the placement token). [prev] is a
+ * one-slot holder of the last picked index so two consecutive popups never share a colour.
+ */
+internal fun pickScorePopupFill(prev: IntArray): Color {
+    val i = if (prev[0] < 0) {
+        kotlin.random.Random.nextInt(POPUP_FILLS.size)
+    } else {
+        val r = kotlin.random.Random.nextInt(POPUP_FILLS.size - 1)
+        if (r >= prev[0]) r + 1 else r // skip prev
     }
+    prev[0] = i
+    return POPUP_FILLS[i]
 }
 
 private const val WAVE_START = 0.04f

@@ -33,6 +33,7 @@ import com.tm.meow.sudoku.puzzle.ui.components.Button3D
 import com.tm.meow.sudoku.puzzle.ui.components.ButtonStyle
 import com.tm.meow.sudoku.puzzle.ui.components.IconArt
 import com.tm.meow.sudoku.puzzle.ui.components.ShadowedIcon
+import com.tm.meow.sudoku.puzzle.ui.components.ctaTextStyle
 import com.tm.meow.sudoku.puzzle.ui.screens.home.worlds.WorldThemes
 import com.tm.meow.sudoku.puzzle.ui.theme.FredokaFamily
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
@@ -129,12 +130,13 @@ private fun LevelSheetContent(sheet: LevelSheetUi, onPlay: (Int) -> Unit) {
         style = ButtonStyle.Green,
     ) {
         Text(
-            stringResource(if (sheet.completed) R.string.level_sheet_replay else R.string.level_sheet_play),
+            stringResource(ctaLabel(sheet)),
             color = Color.White,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FredokaFamily,
             maxLines = 1,
+            style = ctaTextStyle(),
         )
     }
 }
@@ -173,6 +175,13 @@ private fun ValueText(text: String) {
 @Composable
 private fun RowDivider() {
     HorizontalDivider(color = GameColors.Wordmark.copy(alpha = 0.15f))
+}
+
+/** Completed = Replay (unchanged); else a real in-progress save = Resume; else Play. */
+internal fun ctaLabel(sheet: LevelSheetUi): Int = when {
+    sheet.completed -> R.string.level_sheet_replay
+    sheet.resumable -> R.string.level_sheet_resume
+    else -> R.string.level_sheet_play
 }
 
 private fun difficultyLabel(d: LevelDifficulty): Int = when (d) {

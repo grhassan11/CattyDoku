@@ -143,6 +143,7 @@
     <string name="home_tab_sudoku">Судоку</string>
     <string name="booster_mouse">Мышь, осталось %1$d</string>
     <string name="booster_no_mouse">Мышей не осталось</string>
+    <string name="mouse_cannot_use_here">Мышь здесь использовать нельзя</string>
     <string name="booster_locked">Откроется на уровне %1$d</string>
     <string name="booster_locked_label">Ур.%1$d</string>
     <string name="booster_no_cat">Бустеров с котами не осталось</string>
@@ -177,7 +178,6 @@
     <string name="reward_mouse_store">Получить мышей в магазине</string>
     <string name="reward_ad_unavailable">Видео сейчас недоступно. Попробуй чуть позже.</string>
     <string name="reward_not_earned">Досмотри видео до конца, чтобы получить награду.</string>
-    <string name="ad_slot_description">Реклама</string>
 
     <string name="hint_wrong_cat">Этот кот стоит не на своём месте.</string>
     <string name="hint_x_on_solution">Этот X закрывает клетку, где должен стоять кот.</string>
@@ -343,7 +343,7 @@
     <string name="settings_how_to_play_hint">Обучение для режима «Уровни»</string>
     <string name="settings_notifications_blocked">Уведомления для этого приложения отключены</string>
     <string name="settings_notifications_open">Открыть настройки</string>
-    <string name="settings_privacy">Настройки конфиденциальности</string>
+    <string name="settings_privacy">Управление согласием</string>
     <string name="settings_feedback_subject">Отзыв о %1$s</string>
     <string name="settings_feedback_no_app">Почтовое приложение не найдено</string>
 
@@ -419,7 +419,6 @@
     <string name="shop_err_developer">Магазин для этой сборки ещё не настроен.</string>
     <string name="shop_err_generic">Что-то пошло не так. Попробуй снова.</string>
 
-    <string name="ad_badge">Реклама</string>
     <string name="ad_badge_description">Реклама</string>
 
     <string name="world_node_done">Уровень %1$d, пройден, звёзд: %2$d из 3. Нажми для подробностей</string>
@@ -445,6 +444,7 @@
     <string name="level_sheet_none">--</string>
     <string name="level_sheet_play">Играть</string>
     <string name="level_sheet_replay">Переиграть</string>
+    <string name="level_sheet_resume">Продолжить</string>
     <string name="exit_sheet_message">Точно хочешь выйти?</string>
     <string name="exit_sheet_cancel">Отмена</string>
     <string name="exit_sheet_exit">Выйти</string>
@@ -483,7 +483,6 @@
     <string name="sudoku_stat_score">Счёт</string>
     <string name="sudoku_stat_time">Время</string>
     <string name="sudoku_stat_mistakes">Ошибки</string>
-    <string name="sudoku_stat_hints">Подсказки</string>
     <string name="sudoku_pause">Пауза</string>
     <string name="sudoku_resume">Продолжить</string>
     <string name="sudoku_hearts_description">Осталось сердец: %1$d из %2$d</string>

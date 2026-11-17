@@ -19,6 +19,7 @@ class MusicPlayer(context: Context) {
     /** Latest play/pause intent, applied when an in-flight prepare completes. */
     private var wantPlaying = false
     private var index = 0
+    private var ducked = false
 
     fun play() {
         wantPlaying = true
@@ -37,6 +38,15 @@ class MusicPlayer(context: Context) {
         if (!prepared) return // onPrepared sees wantPlaying=false and stays paused
         runCatching { if (p.isPlaying) p.pause() }.onFailure { releasePlayer() }
     }
+
+    /** Audio focus: another app asked us to duck (true) / gave the volume back (false). */
+    fun setDucked(value: Boolean) {
+        ducked = value
+        val p = player ?: return
+        if (prepared) runCatching { p.setVolume(currentVolume(), currentVolume()) }
+    }
+
+    private fun currentVolume() = if (ducked) MUSIC_VOLUME * DUCK_FACTOR else MUSIC_VOLUME
 
     fun stop() {
         wantPlaying = false
@@ -62,7 +72,7 @@ class MusicPlayer(context: Context) {
             appContext.resources.openRawResourceFd(tracks[index]).use { afd ->
                 mp.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
             }
-            mp.setVolume(MUSIC_VOLUME, MUSIC_VOLUME)
+            mp.setVolume(currentVolume(), currentVolume())
             mp.setOnPreparedListener { m ->
                 if (player !== m) {
                     runCatching { m.release() }
@@ -106,5 +116,6 @@ class MusicPlayer(context: Context) {
 
     private companion object {
         const val MUSIC_VOLUME = 0.6f
+        const val DUCK_FACTOR = 0.3f
     }
 }

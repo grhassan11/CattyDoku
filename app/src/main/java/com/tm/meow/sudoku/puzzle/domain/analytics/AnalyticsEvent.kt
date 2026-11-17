@@ -211,6 +211,33 @@ sealed class AnalyticsEvent(val name: String, val params: Map<String, Any> = emp
     data class RewardedFailed(val placement: String) :
         AnalyticsEvent("rewarded_failed", mapOf("placement" to placement))
 
+    /**
+     * Ad funnel, one event name per step: ad_requested | ad_loaded | ad_failed | ad_shown | ad_dismissed | ad_clicked
+     * (see [AdFunnelStep]). [format] = [AdFormat]. [errorCode] = SDK error code (name or number) only (ad_failed). [loadLatencyMs] =
+     * request-to-callback time (ad_loaded / ad_failed) as `ad_load_latency_ms`. No ad unit ids, no messages.
+     */
+    data class AdFunnel(
+        val step: String,
+        val format: String,
+        val errorCode: String? = null,
+        val loadLatencyMs: Long? = null,
+    ) : AnalyticsEvent(
+        step,
+        buildMap<String, Any> {
+            put("ad_format", format)
+            errorCode?.let { put("error_code", it.take(40)) }
+            loadLatencyMs?.let { put("ad_load_latency_ms", it) }
+        },
+    )
+
+    /** Splash gate finished (consent + init + warm-up + app-open step). [durationMs] = splash tick time, excludes UMP form time. */
+    data class SplashDone(val durationMs: Long, val returning: Boolean) :
+        AnalyticsEvent("splash_done", mapOf("duration_ms" to durationMs, "returning" to flag(returning)))
+
+    /** Once per session after UMP resolved. [status] = granted | denied | not_required (see TelemetryConsentPolicy.statusLabel). */
+    data class ConsentStatus(val status: String) :
+        AnalyticsEvent("consent_status", mapOf("status" to status))
+
     // ---- settings / misc ----
 
     /** [setting]: lowercase toggle name (music, sfx, voice, haptics, pattern_mode). */
@@ -226,6 +253,25 @@ sealed class AnalyticsEvent(val name: String, val params: Map<String, Any> = emp
 
     /** [action]: "shown", "dismissed", "store_listing" (4-5 stars) or "submitted_low" (1-3 stars). */
     data class RatePrompt(val action: String) : AnalyticsEvent("rate_prompt", mapOf("action" to action))
+
+    // ---- reminder notifications. [type] = [NotificationType] ----
+
+    /** Logged where the app calls notify() (no OS delivery receipt exists). */
+    data class NotificationShown(val type: String) :
+        AnalyticsEvent("notification_shown", mapOf("type" to type))
+
+    /** The user tapped the notification (content intent reached MainActivity). */
+    data class NotificationOpen(val type: String) :
+        AnalyticsEvent("notification_open", mapOf("type" to type))
+}
+
+/** Reminder kinds for `notification_shown` / `notification_open`, plus the content-intent extra that carries the kind. */
+object NotificationType {
+    const val STREAK = "streak"
+    const val DAILY = "daily"
+    const val SUDOKU = "sudoku"
+    const val EXTRA_KEY = "notif_type"
+    val ALL = listOf(STREAK, DAILY, SUDOKU)
 }
 
 private fun flag(value: Boolean): Long = if (value) 1L else 0L

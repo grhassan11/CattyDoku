@@ -39,8 +39,11 @@ sealed interface MouseBoosterResult {
 
     data object NoCharge : MouseBoosterResult
 
-    /** Game finished, or no eligible cell left (nothing marked, no charge spent). */
+    /** Game finished (nothing marked, no charge spent). */
     data object Unavailable : MouseBoosterResult
+
+    /** Game running but no empty non-cat cell left to cross out: booster would do nothing (no charge spent). */
+    data object NoTarget : MouseBoosterResult
 }
 
 /** Hint booster: spends a HINT charge and counts toward the score penalty. */
@@ -85,8 +88,9 @@ class UseMouseBooster(
     operator fun invoke(puzzle: Puzzle, state: GameState): MouseBoosterResult {
         if (!state.isPlaying) return MouseBoosterResult.Unavailable
         if (state.chargesOf(Booster.MOUSE) <= 0) return MouseBoosterResult.NoCharge
+        if (!mouseBooster.hasTarget(puzzle, state.board)) return MouseBoosterResult.NoTarget
         val cells = mouseBooster.pick(puzzle, state.board, SeededRng(seedSource()))
-        if (cells.isEmpty()) return MouseBoosterResult.Unavailable
+        if (cells.isEmpty()) return MouseBoosterResult.NoTarget
         val n = puzzle.size
         val marks = state.board.marks.toMutableList()
         for (c in cells) marks[c.index(n)] = CellMark.X

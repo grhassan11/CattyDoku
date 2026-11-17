@@ -8,7 +8,7 @@ import com.tm.meow.sudoku.puzzle.data.ads.AppOpenAdRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.ads.RewardedAdRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.ads.NativeAdRepositoryImpl
 import com.tm.meow.sudoku.puzzle.data.consent.ConsentRepositoryImpl
-import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
+import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicySource
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
@@ -33,10 +33,12 @@ import com.tm.meow.sudoku.puzzle.domain.repository.AppFlagsRepository
 import com.tm.meow.sudoku.puzzle.domain.time.TimeProvider
 import com.tm.meow.sudoku.puzzle.domain.usecase.EnsureConsentAndAdsInit
 import com.tm.meow.sudoku.puzzle.domain.usecase.GatherConsentAndInitAds
+import com.tm.meow.sudoku.puzzle.domain.usecase.RecoverAfterReconnect
 import com.tm.meow.sudoku.puzzle.domain.usecase.RetryAdsInit
 import com.tm.meow.sudoku.puzzle.domain.usecase.IsConsentFormShowing
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadNativeAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkStartFlowComplete
+import com.tm.meow.sudoku.puzzle.domain.usecase.SetAppOpenScreenSuppressed
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadAppOpenAd
 import com.tm.meow.sudoku.puzzle.domain.startup.SplashTiming
 import com.tm.meow.sudoku.puzzle.domain.usecase.ShowAppOpenIfAllowed
@@ -81,10 +83,13 @@ abstract class AdsBindsModule {
 @InstallIn(SingletonComponent::class)
 object AdsModule {
 
-    /** Remote Config backed (frozen per process, see RemoteConfigRepository). Defaults = [AdPolicyConfig] defaults. */
+    /**
+     * LIVE Remote Config backed policy (B+C: a fetch that activates mid-session applies to the next decision; consumers read
+     * AdPolicySource.current() once per decision). Defaults = AdPolicyConfig defaults.
+     */
     @Provides @Singleton
-    fun provideAdPolicyConfig(remoteConfig: RemoteConfigRepository): AdPolicyConfig =
-        remoteConfig.current().toAdPolicyConfig()
+    fun provideAdPolicySource(remoteConfig: RemoteConfigRepository): AdPolicySource =
+        AdPolicySource { remoteConfig.current().toAdPolicyConfig() }
 
     /** App-open policy constants (no remote switch, no level gate). */
     @Provides @Singleton
@@ -111,6 +116,27 @@ object AdsModule {
         tracker: AdSessionTracker,
     ): EnsureConsentAndAdsInit = EnsureConsentAndAdsInit(gather, refreshRemoteConfig, tracker)
 
+    /** Singleton: its Mutex is the single-flight guard shared by the connectivity observer and the resume fallback. */
+    @Provides @Singleton
+    fun provideRecoverAfterReconnect(
+        consent: ConsentRepository,
+        ads: AdsRepository,
+        tracker: AdSessionTracker,
+        refreshRemoteConfig: RefreshRemoteConfig,
+        preloadInterstitial: PreloadInterstitialAd,
+        preloadAppOpen: PreloadAppOpenAd,
+        connectivity: ConnectivityObserver,
+        logger: AdLogger,
+    ): RecoverAfterReconnect = RecoverAfterReconnect(
+        consent, ads, tracker, refreshRemoteConfig,
+        preloadAds = {
+            preloadInterstitial(null) // null = no level gate (shared unit); policy switches / consent / Remove Ads gated inside
+            preloadAppOpen()
+        },
+        connectivity = connectivity,
+        logger = logger,
+    )
+
     @Provides
     fun provideIsConsentFormShowing(tracker: AdSessionTracker): IsConsentFormShowing = IsConsentFormShowing(tracker)
 
@@ -136,7 +162,7 @@ object AdsModule {
         ads: AdsRepository,
         tracker: AdSessionTracker,
         flags: AppFlagsRepository,
-        config: AdPolicyConfig,
+        config: AdPolicySource,
         adsRemoved: AdsRemovedRepository,
         logger: AdLogger,
         analytics: AnalyticsLogger,
@@ -148,7 +174,7 @@ object AdsModule {
     fun providePreloadInterstitialAd(
         consent: ConsentRepository,
         ads: AdsRepository,
-        config: AdPolicyConfig,
+        config: AdPolicySource,
         adsRemoved: AdsRemovedRepository,
         logger: AdLogger,
         connectivity: ConnectivityObserver,
@@ -158,7 +184,7 @@ object AdsModule {
     fun provideLoadNativeAd(
         consent: ConsentRepository,
         repository: NativeAdRepository,
-        config: AdPolicyConfig,
+        config: AdPolicySource,
         adsRemoved: AdsRemovedRepository,
         connectivity: ConnectivityObserver,
     ): LoadNativeAd = LoadNativeAd(consent, repository, config, adsRemoved, connectivity)
@@ -187,6 +213,10 @@ object AdsModule {
 
     @Provides
     fun provideMarkStartFlowComplete(tracker: AdSessionTracker): MarkStartFlowComplete = MarkStartFlowComplete(tracker)
+
+    @Provides
+    fun provideSetAppOpenScreenSuppressed(tracker: AdSessionTracker): SetAppOpenScreenSuppressed =
+        SetAppOpenScreenSuppressed(tracker)
 
     @Provides
     fun providePreloadAppOpenAd(
@@ -229,7 +259,7 @@ object AdsModule {
         sdk: AdsSdkStatus,
         rewarded: RewardedAdRepository,
         nativeAds: NativeAdRepository,
-        config: AdPolicyConfig,
+        config: AdPolicySource,
         adsRemoved: AdsRemovedRepository,
         logger: AdLogger,
         connectivity: ConnectivityObserver,
@@ -240,7 +270,7 @@ object AdsModule {
         consent: ConsentRepository,
         sdk: AdsSdkStatus,
         repository: RewardedAdRepository,
-        config: AdPolicyConfig,
+        config: AdPolicySource,
         connectivity: ConnectivityObserver,
     ): PreloadRewardedAd = PreloadRewardedAd(consent, sdk, repository, config, connectivity)
 
@@ -250,7 +280,7 @@ object AdsModule {
         sdk: AdsSdkStatus,
         repository: RewardedAdRepository,
         tracker: AdSessionTracker,
-        config: AdPolicyConfig,
+        config: AdPolicySource,
         connectivity: ConnectivityObserver,
     ): ShowRewardedAd = ShowRewardedAd(consent, sdk, repository, tracker, config, connectivity)
 

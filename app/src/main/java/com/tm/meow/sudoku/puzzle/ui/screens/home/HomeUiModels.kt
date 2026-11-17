@@ -71,9 +71,12 @@ data class LevelSheetUi(
     val stars: Int,
     val bestScore: Int?,
     val bestTimeMs: Long?,
+    /** A real started session is saved for this exact level: CTA reads "Resume" (completed levels keep "Replay"). */
+    val resumable: Boolean = false,
 ) {
     companion object {
-        fun from(d: LevelDetail): LevelSheetUi = LevelSheetUi(
+        fun from(d: LevelDetail, resumable: Boolean = false): LevelSheetUi = LevelSheetUi(
+            resumable = resumable,
             level = d.level,
             worldNumber = d.worldNumber,
             boardSize = d.boardSize,

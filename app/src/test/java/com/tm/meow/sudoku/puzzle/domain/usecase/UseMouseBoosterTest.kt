@@ -69,7 +69,22 @@ class UseMouseBoosterTest {
         assertEquals(2, two.cells.size)
 
         // Nothing eligible any more: charge is not consumed.
-        assertEquals(MouseBoosterResult.Unavailable, use(puzzle, two.state.copy(charges = mapOf(Booster.MOUSE to 4))))
+        val blocked = two.state.copy(charges = mapOf(Booster.MOUSE to 4))
+        assertEquals(MouseBoosterResult.NoTarget, use(puzzle, blocked))
+        assertEquals(4, blocked.chargesOf(Booster.MOUSE))
+    }
+
+    @Test
+    fun onlyCatCellsVacantIsNoTarget() {
+        // Every non-solution cell crossed out; solution cells still empty (the screenshot state).
+        var board = BoardState.empty(4)
+        for (r in 0 until 4) for (c in 0 until 4) {
+            if (!GameFixtures.isSolution(puzzle, Pos(r, c))) board = board.withMark(r, c, CellMark.X)
+        }
+        val engine = MouseBoosterEngine()
+        assertFalse(engine.hasTarget(puzzle, board))
+        assertTrue(engine.hasTarget(puzzle, BoardState.empty(4)))
+        assertEquals(MouseBoosterResult.NoTarget, use(puzzle, state(3, board)))
     }
 
     @Test

@@ -32,13 +32,38 @@ class GameEngine {
     fun applyTap(puzzle: Puzzle, state: GameState, pos: Pos): StepResult =
         toggleX(puzzle, state, pos)
 
-    fun applyDoubleTap(puzzle: Puzzle, state: GameState, pos: Pos): StepResult {
+    /**
+     * [fromTapGesture]: the caller saw this double tap arrive right after a tap on the same cell
+     * (the tap already toggled EMPTY -> X as the gesture's first half). The X is then only an
+     * intermediate step, so it is folded into the cat's undo entry: undo returns to EMPTY.
+     */
+    fun applyDoubleTap(
+        puzzle: Puzzle,
+        state: GameState,
+        pos: Pos,
+        fromTapGesture: Boolean = false,
+    ): StepResult {
         if (!usable(puzzle, state, pos)) return StepResult(state)
         return if (state.board[pos.row, pos.col] == CellMark.CAT) {
             removeCat(puzzle, state, pos)
         } else {
-            placeCat(puzzle, state, pos)
+            placeCat(puzzle, if (fromTapGesture) foldLeadingTap(puzzle, state, pos) else state, pos)
         }
+    }
+
+    /** Rewinds the gesture's own EMPTY -> X tap (last undo entry) so the cat records EMPTY as before. */
+    private fun foldLeadingTap(puzzle: Puzzle, state: GameState, pos: Pos): GameState {
+        val idx = pos.index(puzzle.size)
+        val last = state.undoStack.lastOrNull() ?: return state
+        val change = last.changes.singleOrNull() ?: return state
+        if (change.index != idx || change.before != CellMark.EMPTY) return state
+        if (state.board[pos.row, pos.col] != CellMark.X) return state
+        val marks = state.board.marks.toMutableList()
+        marks[idx] = CellMark.EMPTY
+        return state.copy(
+            board = BoardState(puzzle.size, marks),
+            undoStack = state.undoStack.dropLast(1),
+        )
     }
 
     fun toggleX(puzzle: Puzzle, state: GameState, pos: Pos): StepResult {

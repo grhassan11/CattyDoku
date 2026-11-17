@@ -2,6 +2,9 @@ package com.tm.meow.sudoku.puzzle.ui.screens.splash
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
+import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.config.NoopRemoteConfigRepository
 import com.tm.meow.sudoku.puzzle.domain.startup.SplashTiming
 import com.tm.meow.sudoku.puzzle.domain.usecase.RefreshRemoteConfig
@@ -51,6 +54,7 @@ class SplashViewModel @Inject constructor(
     private val preloadAppOpen: PreloadAppOpenAd,
     private val preloadNative: PreloadGameNativeAd,
     private val refreshRemoteConfig: RefreshRemoteConfig = RefreshRemoteConfig(NoopRemoteConfigRepository),
+    private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) : ViewModel() {
 
     private val eventChannel = Channel<SplashEvent>(Channel.BUFFERED)
@@ -81,18 +85,21 @@ class SplashViewModel @Inject constructor(
             } catch (t: Throwable) {
                 // fail open: ads stay off
             }
+            // Remote Config (B): consent is resolved, so the consent-gated fetch (A-003) may start. Await it briefly BEFORE the
+            // first policy read below, so a freshly published value (e.g. interstitial frequency) applies on this very launch.
+            // Bounded (RC_AWAIT_MS < SDK 3 s network timeout), skipped offline / without consent; timeout or failure = cached /
+            // default values, never blocks past the bound. Runs inside the consent job, so it is covered by the SplashTiming.MAX_MS cap.
+            try {
+                refreshRemoteConfig.awaitFirst(SplashTiming.RC_AWAIT_MS)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                // defaults stay
+            }
             // Consent + SDK init done: start the app-open load now, in parallel with the min splash / warm-up. Not awaited here;
             // ShowAppOpenOnSplash joins the in-flight load later. Idempotent, gated (consent / SDK / Remove Ads / offline), never throws.
             // Skipped when the splash app-open kill switch (Remote Config, cached/default, sync) is off.
             if (showAppOpenOnSplash.isEnabled()) preloadAppOpen()
-            // Consent is resolved: the Remote Config fetch is consent-gated (A-003), so it can only start now. Fire-and-forget
-            // on the repository's own scope + time budget: never awaited, never extends the splash caps. Fetched values apply
-            // from the next launch (config is frozen per process); until then cached / default values (kill switches default true).
-            try {
-                refreshRemoteConfig()
-            } catch (t: Throwable) {
-                // defaults stay
-            }
         }
         val warm: Job = viewModelScope.launch {
             try {
@@ -112,7 +119,7 @@ class SplashViewModel @Inject constructor(
         // Splash work done: load-wait + show the app-open ad (cold-start skip lifted). Returns when dismissed / failed / skipped /
         // timed out; Finished is only sent after, so Home / Tutorial never appears under the ad. Never throws.
         try {
-            // First launch: 15 s budget counted from splash start (elapsed loop ticks), returning: 5 s. Exits early on ready / failed load.
+            // 15 s budget counted from splash start (elapsed loop ticks, first and returning launches alike; floor 5 s). Exits early on ready / failed load.
             showAppOpenOnSplash(SplashTiming.appOpenWaitMs(returning, elapsed))
         } catch (e: CancellationException) {
             throw e
@@ -128,6 +135,7 @@ class SplashViewModel @Inject constructor(
         } catch (t: Throwable) {
             // best effort: Home loads by itself
         }
+        analytics.log(AnalyticsEvent.SplashDone(elapsed, returning))
         eventChannel.send(SplashEvent.Finished)
     }
 }

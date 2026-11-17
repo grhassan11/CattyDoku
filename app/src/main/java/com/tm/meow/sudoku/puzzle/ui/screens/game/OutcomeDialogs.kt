@@ -81,8 +81,10 @@ import com.tm.meow.sudoku.puzzle.ui.components.IconArt
 import com.tm.meow.sudoku.puzzle.ui.components.HomePlaceholder
 import com.tm.meow.sudoku.puzzle.ui.components.IconImage
 import com.tm.meow.sudoku.puzzle.ui.components.PillButton
+import com.tm.meow.sudoku.puzzle.ui.components.ShadowedIcon
 import com.tm.meow.sudoku.puzzle.ui.components.StatusBarIconsEffect
 import com.tm.meow.sudoku.puzzle.ui.components.Sunburst
+import com.tm.meow.sudoku.puzzle.ui.components.ctaTextStyle
 import com.tm.meow.sudoku.puzzle.ui.theme.FredokaFamily
 import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 
@@ -673,13 +675,22 @@ internal fun LoseScreenLayout(
                             maxLines = 1,
                         )
                         ready || offline -> {
-                            IconImage(R.drawable.ic_play, size = 22.dp, tint = style.content)
+                            ShadowedIcon(
+                                res = R.drawable.ic_watch_ad,
+                                size = 22.dp,
+                                tint = style.content,
+                                shadowAlpha = 0.4f,
+                                shadowOffsetY = 2.dp,
+                                shadowBlur = 3.dp,
+                            )
                             Text(
                                 reviveLabel,
                                 color = style.content,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
+                                fontFamily = FredokaFamily,
                                 maxLines = 1,
+                                style = ctaTextStyle(),
                             )
                         }
                         else -> Text(
@@ -687,7 +698,9 @@ internal fun LoseScreenLayout(
                             color = style.content,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
+                            fontFamily = FredokaFamily,
                             maxLines = 1,
+                            style = ctaTextStyle(),
                         )
                     }
                 }
@@ -728,6 +741,7 @@ internal fun LoseScreenLayout(
                     text = retryLabel,
                     onClick = { if (inputArmed) onRetry() },
                     leadingIconRes = R.drawable.ic_reloading,
+                    iconShadow = true,
                     style = ButtonStyle.Primary,
                     textSize = 20.sp,
                     horizontalPadding = 12.dp,

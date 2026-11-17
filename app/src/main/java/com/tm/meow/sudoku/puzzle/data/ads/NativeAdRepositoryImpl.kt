@@ -14,6 +14,11 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
 import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdHandle
 import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdRepository
+import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
+import com.tm.meow.sudoku.puzzle.domain.analytics.AdFormat
+import com.tm.meow.sudoku.puzzle.domain.analytics.AdFunnelTracker
+import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
 import com.tm.meow.sudoku.puzzle.domain.crash.NoopCrashReporter
 import javax.inject.Inject
@@ -29,14 +34,18 @@ import kotlin.coroutines.resume
 
 /**
  * GMA Next-Gen native loader (com.google.android.libraries.ads.mobile.sdk.nativead). One ad per [load]; the caller owns
- * and destroys it. Needs [AdsSdkStatus.isInitialized] (UMP allowed ads). Release placeholder unit ID = ads off.
+ * and destroys it. Needs [AdsSdkStatus.isInitialized] (UMP allowed ads). A placeholder unit ID = ads off; all build types currently use Google TEST ids.
  */
 @Singleton
 class NativeAdRepositoryImpl @Inject constructor(
     private val status: AdsSdkStatus,
     private val tracker: AdSessionTracker,
+    private val consent: ConsentRepository,
     private val crash: CrashReporter = NoopCrashReporter,
+    analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) : NativeAdRepository {
+
+    private val funnel = AdFunnelTracker(analytics, crash)
 
     override val isConfigured: Boolean
         get() = status.isInitialized.value && !BuildConfig.ADMOB_NATIVE_ID.contains(PLACEHOLDER_MARK)
@@ -44,7 +53,7 @@ class NativeAdRepositoryImpl @Inject constructor(
     override val configuredChanges: Flow<Boolean> = status.isInitialized.map { isConfigured }
 
     override suspend fun load(): NativeAdHandle? {
-        if (!isConfigured) return null
+        if (!isConfigured || !consent.state.value.canRequestAds) return null
         return try {
             withContext(Dispatchers.Main.immediate) { withTimeoutOrNull(LOAD_TIMEOUT_MS) { request() } }
         } catch (e: CancellationException) {
@@ -56,6 +65,8 @@ class NativeAdRepositoryImpl @Inject constructor(
     }
 
     private suspend fun request(): NativeAdHandle? = suspendCancellableCoroutine { cont ->
+        val startMs = tracker.now()
+        funnel.requested(AdFormat.NATIVE)
         val request = NativeAdRequest.Builder(BuildConfig.ADMOB_NATIVE_ID, listOf(NativeAd.NativeAdType.NATIVE))
             .setVideoOptions(VideoOptions.Builder().setStartMuted(true).build())
             // Top-right: admob_native_hundred.xml keeps that corner clear (headline row ends 20dp from the edge; "Ad" badge sits left of the headline; icon is top-left).
@@ -67,13 +78,20 @@ class NativeAdRepositoryImpl @Inject constructor(
                 override fun onNativeAdLoaded(nativeAd: NativeAd) {
                     nativeAd.adEventCallback = object : NativeAdEventCallback {
                         // Click-out (browser / store): the matching foreground must not trigger an app-open ad.
-                        override fun onAdClicked() = tracker.markAdClicked()
+                        override fun onAdClicked() {
+                            tracker.markAdClicked()
+                            funnel.clicked(AdFormat.NATIVE)
+                        }
+
+                        override fun onAdImpression() = funnel.shown(AdFormat.NATIVE)
                     }
+                    funnel.loaded(AdFormat.NATIVE, tracker.now() - startMs)
                     val handle = GmaNativeAdHandle(nativeAd)
                     if (cont.isActive) cont.resume(handle) else handle.destroy() // timed out / cancelled meanwhile
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
+                    funnel.failed(AdFormat.NATIVE, adError.code.toString(), tracker.now() - startMs)
                     if (cont.isActive) cont.resume(null)
                 }
             },

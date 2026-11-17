@@ -20,6 +20,8 @@ class AnalyticsEventTest {
         AnalyticsEvent.TutorialStep(2),
         AnalyticsEvent.TutorialComplete(skipped = true),
         AnalyticsEvent.NotificationPermission(granted = true),
+        AnalyticsEvent.NotificationShown(NotificationType.STREAK),
+        AnalyticsEvent.NotificationOpen(NotificationType.DAILY),
         AnalyticsEvent.LevelStart(ctx),
         AnalyticsEvent.LevelResume(ctx, stats),
         AnalyticsEvent.LevelEnd(ctx, stats, won = true, newBestTime = true, newBestScore = false),

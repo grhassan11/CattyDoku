@@ -140,6 +140,7 @@
     <string name="home_tab_sudoku">Sudoku</string>
     <string name="booster_mouse">Souris, %1$d restante(s)</string>
     <string name="booster_no_mouse">Plus de souris</string>
+    <string name="mouse_cannot_use_here">La souris ne peut pas être utilisée ici</string>
     <string name="booster_locked">Se débloque au niveau %1$d</string>
     <string name="booster_locked_label">Niv.%1$d</string>
     <string name="booster_no_cat">Plus de boosters chat</string>
@@ -173,7 +174,6 @@
     <string name="reward_mouse_store">Obtenir des souris dans la boutique</string>
     <string name="reward_ad_unavailable">Vidéo indisponible pour le moment. Réessaie bientôt.</string>
     <string name="reward_not_earned">Regarde toute la vidéo pour obtenir ta récompense.</string>
-    <string name="ad_slot_description">Publicité</string>
 
     <string name="hint_wrong_cat">Ce chat est au mauvais endroit.</string>
     <string name="hint_x_on_solution">Ce X cache une case où un chat doit aller.</string>
@@ -339,7 +339,7 @@
     <string name="settings_how_to_play_hint">Tutoriel du mode Niveaux</string>
     <string name="settings_notifications_blocked">Les notifications sont désactivées pour cette appli</string>
     <string name="settings_notifications_open">Ouvrir les réglages</string>
-    <string name="settings_privacy">Paramètres de confidentialité</string>
+    <string name="settings_privacy">Gérer le consentement</string>
     <string name="settings_feedback_subject">Commentaires sur %1$s</string>
     <string name="settings_feedback_no_app">Aucune appli de messagerie trouvée</string>
 
@@ -415,7 +415,6 @@
     <string name="shop_err_developer">La boutique n\'est pas encore configurée pour cette version.</string>
     <string name="shop_err_generic">Une erreur s\'est produite. Réessaie.</string>
 
-    <string name="ad_badge">Pub</string>
     <string name="ad_badge_description">Publicité</string>
 
     <string name="world_node_done">Niveau %1$d, terminé, %2$d étoiles sur 3. Touche pour les détails</string>
@@ -441,6 +440,7 @@
     <string name="level_sheet_none">--</string>
     <string name="level_sheet_play">Jouer</string>
     <string name="level_sheet_replay">Rejouer</string>
+    <string name="level_sheet_resume">Reprendre</string>
     <string name="exit_sheet_message">Veux-tu vraiment quitter ?</string>
     <string name="exit_sheet_cancel">Annuler</string>
     <string name="exit_sheet_exit">Quitter</string>
@@ -479,7 +479,6 @@
     <string name="sudoku_stat_score">Score</string>
     <string name="sudoku_stat_time">Temps</string>
     <string name="sudoku_stat_mistakes">Erreurs</string>
-    <string name="sudoku_stat_hints">Indices</string>
     <string name="sudoku_pause">Pause</string>
     <string name="sudoku_resume">Reprendre</string>
     <string name="sudoku_hearts_description">%1$d cœurs sur %2$d restants</string>

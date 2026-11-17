@@ -14,6 +14,7 @@ import android.view.Choreographer
 import com.tm.meow.sudoku.puzzle.audio.AudioController
 import com.tm.meow.sudoku.puzzle.data.ads.AppOpenLifecycleObserver
 import com.tm.meow.sudoku.puzzle.data.billing.BillingLifecycleObserver
+import com.tm.meow.sudoku.puzzle.data.network.NetworkRecoveryObserver
 import com.tm.meow.sudoku.puzzle.data.notification.DailyReminderObserver
 import com.tm.meow.sudoku.puzzle.data.notification.NotificationPermissionObserver
 import com.tm.meow.sudoku.puzzle.data.notification.StreakReminderObserver
@@ -44,6 +45,9 @@ class CatPuzzleApp : Application() {
     @Inject lateinit var appOpenObserver: Lazy<AppOpenLifecycleObserver>
     @Inject lateinit var billingObserver: Lazy<BillingLifecycleObserver>
 
+    // Offline -> online recovery (consent, ads init, Remote Config, preloads); also built after the first frame.
+    @Inject lateinit var networkRecoveryObserver: Lazy<NetworkRecoveryObserver>
+
     // Reminder schedulers are not needed for the first frame: built and started after it (see runAfterFirstFrame).
     @Inject lateinit var streakReminderObserver: Lazy<StreakReminderObserver>
     @Inject lateinit var dailyReminderObserver: Lazy<DailyReminderObserver>
@@ -66,11 +70,13 @@ class CatPuzzleApp : Application() {
             appOpenObserver.get().start()
             // Play Billing: listen for purchase updates + sync purchases / entitlement now and on every resume.
             billingObserver.get().start()
+            // App started offline / lost the network: when it returns, redo consent + ads init + Remote Config + preloads (any screen).
+            networkRecoveryObserver.get().start()
             // Evening streak-at-risk reminder: books / cancels the WorkManager check on start, toggle change, and every win.
             streakReminderObserver.get().start()
             // Daily 20:00 reminder: books on start and toggle change; the worker re-books itself every day.
             dailyReminderObserver.get().start()
-            // Unfinished-Sudoku one-shot reminder: books ~4 h after the app goes to background with a saved game; cancels on resume / finish / toggle off.
+            // Unfinished-Sudoku one-shot reminder: books ~2 h after the app goes to background with a saved game (moved into the 09:00-21:00 window); cancels on resume / finish / toggle off.
             sudokuReminderObserver.get().start()
             // Permission granted outside the app (system settings) -> all reminder toggles ON once, on every foreground.
             notificationPermissionObserver.get().start()

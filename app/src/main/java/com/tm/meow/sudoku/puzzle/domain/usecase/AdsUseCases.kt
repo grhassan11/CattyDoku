@@ -9,7 +9,7 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AdDecision
 import com.tm.meow.sudoku.puzzle.domain.ads.AdFormat
 import com.tm.meow.sudoku.puzzle.domain.ads.AdFreePolicy
 import com.tm.meow.sudoku.puzzle.domain.ads.AdLogger
-import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
+import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicySource
 import com.tm.meow.sudoku.puzzle.domain.ads.NoopAdLogger
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdShowResult
@@ -126,20 +126,21 @@ class RecordSudokuWon(private val tracker: AdSessionTracker) {
 class PreloadInterstitialAd(
     private val consent: ConsentRepository,
     private val ads: AdsRepository,
-    private val config: AdPolicyConfig,
+    private val config: AdPolicySource,
     private val adsRemoved: AdsRemovedRepository = NoAdsRemoved,
     private val logger: AdLogger = NoopAdLogger,
     private val connectivity: ConnectivityObserver = AlwaysOnline,
 ) {
     operator fun invoke(playerLevel: Int?) {
         try {
+            val cfg = config.current()
             val why = when {
-                !config.anyInterstitialShow -> "all interstitial switches off"
+                !cfg.anyInterstitialShow -> "all interstitial switches off"
                 AdFreePolicy.isSuppressedByPurchase(AdFormat.INTERSTITIAL, adsRemoved.adsRemoved.value) -> "ads removed"
                 // Levels win and lose-retry interstitials both ignore ad-free levels, so preload there whenever either is
                 // on; the level gate only still applies when neither Levels interstitial is on.
-                playerLevel != null && !config.levelsWinInterstitialShow && !config.levelsRestartInterstitialShow &&
-                    AdFreePolicy.isAdFree(playerLevel, config.adFreeThroughLevel) -> "ad-free level $playerLevel"
+                playerLevel != null && !cfg.levelsWinInterstitialShow && !cfg.levelsRestartInterstitialShow &&
+                    AdFreePolicy.isAdFree(playerLevel, cfg.adFreeThroughLevel) -> "ad-free level $playerLevel"
                 !connectivity.isOnline.value -> "offline"
                 !consent.state.value.canRequestAds -> "no consent"
                 !ads.isSdkInitialized -> "sdk not initialized"
@@ -166,7 +167,7 @@ class ShowInterstitialIfAllowed(
     private val ads: AdsRepository,
     private val tracker: AdSessionTracker,
     private val flags: AppFlagsRepository,
-    private val config: AdPolicyConfig,
+    private val config: AdPolicySource,
     private val adsRemoved: AdsRemovedRepository = NoAdsRemoved,
     private val logger: AdLogger = NoopAdLogger,
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
@@ -179,6 +180,7 @@ class ShowInterstitialIfAllowed(
         persistLevel: Boolean = true,
     ): Boolean {
         return try {
+            val cfg = config.current() // one read per decision
             val f = flags.flags.first()
             val ctx = InterstitialContext(
                 trigger = trigger,
@@ -190,7 +192,7 @@ class ShowInterstitialIfAllowed(
                 adsRemoved = adsRemoved.adsRemoved.value,
                 online = connectivity.isOnline.value,
             )
-            val decision = InterstitialPolicy.decide(ctx, config)
+            val decision = InterstitialPolicy.decide(ctx, cfg)
             val inputs = "trigger=${ctx.trigger} level=${ctx.level} daily=${ctx.isDaily} wins=${ctx.winsSinceLastAd} " +
                 "lastInterstitialLevel=${ctx.lastInterstitialLevel} " +
                 "consent=${ctx.canRequestAds} adsRemoved=${ctx.adsRemoved}"
@@ -202,7 +204,7 @@ class ShowInterstitialIfAllowed(
             // Blocks app-open while the interstitial (and its load wait) is in flight.
             tracker.fullScreenAdShowing = true
             val result = try {
-                ads.showIfReady(config.loadWaitTimeoutMs)
+                ads.showIfReady(cfg.loadWaitTimeoutMs)
             } finally {
                 tracker.fullScreenAdShowing = false
             }

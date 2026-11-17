@@ -26,6 +26,16 @@ object MouseBoosterPolicy {
  */
 class MouseBoosterEngine {
 
+    /** True when at least one empty, non-solution cell exists, i.e. [pick] would return something. */
+    fun hasTarget(puzzle: Puzzle, board: BoardState): Boolean {
+        val n = puzzle.size
+        require(board.size == n) { "board size" }
+        for (i in 0 until n * n) {
+            if (board.marks[i] == CellMark.EMPTY && puzzle.solution[i / n] != i % n) return true
+        }
+        return false
+    }
+
     fun pick(
         puzzle: Puzzle,
         board: BoardState,

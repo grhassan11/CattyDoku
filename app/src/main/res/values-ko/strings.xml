@@ -134,6 +134,7 @@
     <string name="home_tab_sudoku">스도쿠</string>
     <string name="booster_mouse">쥐, %1$d개 남음</string>
     <string name="booster_no_mouse">남은 쥐가 없어요</string>
+    <string name="mouse_cannot_use_here">여기서는 쥐를 사용할 수 없어요</string>
     <string name="booster_locked">레벨 %1$d에서 열려요</string>
     <string name="booster_locked_label">Lv.%1$d</string>
     <string name="booster_no_cat">남은 고양이 부스터가 없어요</string>
@@ -165,7 +166,6 @@
     <string name="reward_mouse_store">스토어에서 쥐 받기</string>
     <string name="reward_ad_unavailable">지금은 동영상을 볼 수 없어요. 잠시 후 다시 시도해주세요.</string>
     <string name="reward_not_earned">보상을 받으려면 동영상을 끝까지 시청해주세요.</string>
-    <string name="ad_slot_description">광고</string>
 
     <string name="hint_wrong_cat">이 고양이는 잘못된 자리에 있어요.</string>
     <string name="hint_x_on_solution">이 X가 고양이가 있어야 할 자리를 덮고 있어요.</string>
@@ -331,7 +331,7 @@
     <string name="settings_how_to_play_hint">레벨 게임 모드 튜토리얼</string>
     <string name="settings_notifications_blocked">이 앱의 알림이 꺼져 있어요</string>
     <string name="settings_notifications_open">설정 열기</string>
-    <string name="settings_privacy">개인정보 설정</string>
+    <string name="settings_privacy">동의 관리</string>
     <string name="settings_feedback_subject">%1$s 의견</string>
     <string name="settings_feedback_no_app">이메일 앱을 찾을 수 없어요</string>
 
@@ -407,7 +407,6 @@
     <string name="shop_err_developer">이 빌드에는 아직 스토어가 설정되지 않았어요.</string>
     <string name="shop_err_generic">문제가 발생했어요. 다시 시도해주세요.</string>
 
-    <string name="ad_badge">광고</string>
     <string name="ad_badge_description">광고</string>
 
     <string name="world_node_done">레벨 %1$d, 완료, 별 3개 중 %2$d개. 탭해서 자세히 보기</string>
@@ -433,6 +432,7 @@
     <string name="level_sheet_none">--</string>
     <string name="level_sheet_play">플레이</string>
     <string name="level_sheet_replay">다시 하기</string>
+    <string name="level_sheet_resume">이어하기</string>
     <string name="exit_sheet_message">정말 종료하시겠어요?</string>
     <string name="exit_sheet_cancel">취소</string>
     <string name="exit_sheet_exit">종료</string>
@@ -471,7 +471,6 @@
     <string name="sudoku_stat_score">점수</string>
     <string name="sudoku_stat_time">시간</string>
     <string name="sudoku_stat_mistakes">실수</string>
-    <string name="sudoku_stat_hints">힌트</string>
     <string name="sudoku_pause">일시정지</string>
     <string name="sudoku_resume">재개</string>
     <string name="sudoku_hearts_description">하트 %2$d개 중 %1$d개 남음</string>

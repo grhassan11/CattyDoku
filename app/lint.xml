@@ -20,4 +20,8 @@
     <issue id="HardcodedDebugMode" severity="error" />
     <!-- Leftover debug-only markers (STOPSHIP comments). -->
     <issue id="StopShip" severity="error" />
+    <!-- A-24: advisory only (warning, never fails the release build). -->
+    <issue id="ObsoleteSdkInt" severity="warning" />
+    <issue id="UnusedResources" severity="warning" />
+    <issue id="GradleDependency" severity="warning" />
 </lint>

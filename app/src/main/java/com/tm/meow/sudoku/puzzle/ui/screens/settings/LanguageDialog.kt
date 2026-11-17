@@ -118,7 +118,10 @@ internal fun LanguageDialog(
                 }
             }
 
-            val listState = rememberLazyListState()
+            // Open with the selected row in view (2 rows of context above). Initial index = no first-frame jump.
+            val listState = rememberLazyListState(
+                initialFirstVisibleItemIndex = (languages.indexOfFirst { it.tag == pendingTag } - 2).coerceAtLeast(0),
+            )
             LazyColumn(
                 state = listState,
                 modifier = Modifier

@@ -62,6 +62,16 @@ object TelemetryConsentPolicy {
     fun usRegulatedNoTcf(privacyOptionsRequired: Boolean, tcfPurposeConsents: String?): Boolean =
         privacyOptionsRequired && tcfPurposeConsents.isNullOrBlank()
 
+    /**
+     * Label for the `consent_status` analytics event: "denied" (ads / analytics not allowed), "not_required" (UMP needs
+     * no privacy entry in this region and ads are allowed), else "granted".
+     */
+    fun statusLabel(state: ConsentState): String = when {
+        !state.canRequestAds || !state.analyticsAllowed -> "denied"
+        !state.privacyOptionsRequired -> "not_required"
+        else -> "granted"
+    }
+
     fun from(state: ConsentState): TelemetryConsent = TelemetryConsent(
         analytics = state.analyticsAllowed,
         adStorage = state.adStorage,

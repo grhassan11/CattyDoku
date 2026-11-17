@@ -130,6 +130,34 @@ class AppRemoteConfigTest {
     }
 
     @Test
+    fun firstTenListKeyDefaultAndMapping() {
+        val k = RemoteConfigKeys.LEVELS_GAME_FIRST_10_LEVELS_COMPLETED_INTERSTITIAL_AD_FREQUENCY
+        assertEquals("levels_game_first_10_levels_completed_interstitial_ad_frequency", k)
+        assertEquals("2,4,6,8,10", RemoteConfigParser.defaults()[k])
+        assertEquals(setOf(2, 4, 6, 8, 10), AppRemoteConfig().levelsGameFirst10LevelsCompletedInterstitialAdLevels)
+        assertEquals(setOf(2, 4, 6, 8, 10), parse().toAdPolicyConfig().levelsFirstTenInterstitialLevels)
+        assertEquals((1..10).toSet(), parse(k to "1,2,3,4,5,6,7,8,9,10").toAdPolicyConfig().levelsFirstTenInterstitialLevels)
+    }
+
+    @Test
+    fun firstTenListParsesTrimsDedupesAndIgnoresBadTokens() {
+        val k = RemoteConfigKeys.LEVELS_GAME_FIRST_10_LEVELS_COMPLETED_INTERSTITIAL_AD_FREQUENCY
+        fun p(v: String) = parse(k to v).levelsGameFirst10LevelsCompletedInterstitialAdLevels
+        assertEquals(setOf(1, 3, 5), p(" 1 , 3,5 ,3"))
+        assertEquals(setOf(3, 7), p("0,3,abc,11,-2,7,2.5,,"))
+        assertEquals(setOf(10), p("10"))
+    }
+
+    @Test
+    fun firstTenListBlankOrUnparseableFallsBackToDefault() {
+        val k = RemoteConfigKeys.LEVELS_GAME_FIRST_10_LEVELS_COMPLETED_INTERSTITIAL_AD_FREQUENCY
+        val def = setOf(2, 4, 6, 8, 10)
+        for (bad in listOf("", "   ", ",", "abc", "0,11,99", "a,b")) {
+            assertEquals(bad, def, parse(k to bad).levelsGameFirst10LevelsCompletedInterstitialAdLevels)
+        }
+    }
+
+    @Test
     fun malformedAndOutOfRangeFallBackToDefault() {
         val c = parse(
             RemoteConfigKeys.AD_FREE_THROUGH_LEVEL to "9999",

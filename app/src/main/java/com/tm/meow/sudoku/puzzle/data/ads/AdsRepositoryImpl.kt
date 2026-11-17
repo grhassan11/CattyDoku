@@ -13,7 +13,7 @@ import com.google.android.libraries.ads.mobile.sdk.initialization.Initialization
 import com.google.android.libraries.ads.mobile.sdk.interstitial.InterstitialAdEventCallback
 import com.google.android.libraries.ads.mobile.sdk.interstitial.InterstitialAdPreloader
 import com.tm.meow.sudoku.puzzle.BuildConfig
-import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
+import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicySource
 import com.tm.meow.sudoku.puzzle.domain.network.ConnectivityObserver
 import com.tm.meow.sudoku.puzzle.data.platform.CurrentActivityProvider
 import com.tm.meow.sudoku.puzzle.di.IoDispatcher
@@ -23,7 +23,12 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AdShowResult
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
 import com.tm.meow.sudoku.puzzle.domain.billing.AdsRemovedRepository
+import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.tm.meow.sudoku.puzzle.domain.analytics.AdFormat
+import com.tm.meow.sudoku.puzzle.domain.analytics.AdFunnelTracker
+import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
 import com.tm.meow.sudoku.puzzle.domain.crash.NoopCrashReporter
 import javax.inject.Inject
@@ -34,10 +39,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -47,8 +53,7 @@ import kotlin.coroutines.resume
 
 /**
  * GMA Next-Gen SDK wrapper (com.google.android.libraries.ads.mobile.sdk). Interstitial (preload API) + SDK init state ([AdsSdkStatus]) shared with native / app-open.
- * IDs come from BuildConfig (debug = Google test IDs; release = placeholders until the user supplies real ones).
- * A release build with placeholder IDs never initialises the SDK (ads stay off, app unaffected).
+ * IDs come from BuildConfig (all build types currently use Google TEST ids; a placeholder id, if one is ever set, keeps the SDK uninitialised = ads off).
  * Child-directed / under-age: app is general audience, RequestConfiguration left at SDK defaults (decision, not an omission).
  */
 @Singleton
@@ -57,12 +62,16 @@ class AdsRepositoryImpl @Inject constructor(
     private val activities: CurrentActivityProvider,
     private val tracker: AdSessionTracker,
     private val adsRemoved: AdsRemovedRepository,
-    private val policy: AdPolicyConfig,
+    private val policy: AdPolicySource,
     @IoDispatcher private val io: CoroutineDispatcher,
-    @MainDispatcher main: CoroutineDispatcher,
+    @MainDispatcher private val main: CoroutineDispatcher,
     private val connectivity: ConnectivityObserver,
+    private val consent: ConsentRepository,
     private val crash: CrashReporter = NoopCrashReporter,
+    analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) : AdsRepository, AdsSdkStatus {
+
+    private val funnel = AdFunnelTracker(analytics, crash)
 
     private val initMutex = Mutex()
 
@@ -121,6 +130,13 @@ class AdsRepositoryImpl @Inject constructor(
                     if (removed) stopPreload()
                 }
             }
+            // Consent withdrawn mid-session (Privacy options): stop the interstitial preloader. Restart only through the
+            // existing policy-gated [preloadInterstitial] path once canRequestAds is true again.
+            scope.launch {
+                consent.state.map { it.canRequestAds }.distinctUntilChanged().collect { allowed ->
+                    if (!allowed) stopPreload()
+                }
+            }
         }
     }
 
@@ -146,7 +162,8 @@ class AdsRepositoryImpl @Inject constructor(
      */
     override fun preloadInterstitial() {
         try {
-            if (!_initialized.value || !policy.anyInterstitialShow || adsRemoved.adsRemoved.value) return
+            if (!_initialized.value || !policy.current().anyInterstitialShow || adsRemoved.adsRemoved.value) return
+            if (!consent.state.value.canRequestAds) return
             if (!preloading) {
                 dbg("interstitial load requested (idle, start)")
                 startPreload()
@@ -191,11 +208,13 @@ class AdsRepositoryImpl @Inject constructor(
     private fun startPreload() {
         if (preloading) return
         // All four per-surface interstitial switches off: never request an interstitial.
-        if (!policy.anyInterstitialShow) return
+        if (!policy.current().anyInterstitialShow) return
+        if (!consent.state.value.canRequestAds) return
         preloading = true
         lastPreloadFailed = false
         bufferedSinceMs = 0L
         lastRequestMs = tracker.now()
+        funnel.requested(AdFormat.INTERSTITIAL)
         val request = AdRequest.Builder(unitId).build()
         val config = PreloadConfiguration(request)
         try {
@@ -210,12 +229,14 @@ class AdsRepositoryImpl @Inject constructor(
                             retryJob?.cancel()
                             retryJob = null
                             if (bufferedSinceMs == 0L) bufferedSinceMs = tracker.now()
+                            funnel.loaded(AdFormat.INTERSTITIAL, tracker.now() - lastRequestMs)
                             dbg("interstitial loaded")
                         }
                     }
 
                     override fun onAdFailedToPreload(preloadId: String, adError: LoadAdError) {
                         lastPreloadFailed = true
+                        funnel.failed(AdFormat.INTERSTITIAL, adError.code.toString(), tracker.now() - lastRequestMs)
                         dbg("interstitial load failed: $adError")
                         scope.launch { scheduleRetry() }
                     }
@@ -254,7 +275,7 @@ class AdsRepositoryImpl @Inject constructor(
                 dbg("interstitial retry parked: offline (attempt refunded)")
                 return@launch
             }
-            if (adsRemoved.adsRemoved.value || !policy.anyInterstitialShow) return@launch
+            if (adsRemoved.adsRemoved.value || !policy.current().anyInterstitialShow || !consent.state.value.canRequestAds) return@launch
             if (InterstitialAdPreloader.isAdAvailable(unitId)) return@launch
             val used = failedAttempts
             restartPreload() // resets counters
@@ -268,7 +289,7 @@ class AdsRepositoryImpl @Inject constructor(
             return AdShowResult.NOT_READY
         }
         return try {
-            withContext(Dispatchers.Main.immediate) {
+            withContext(main) {
                 // Start if idle (entry kick missed) and drop an expired cached ad before waiting.
                 preloadInterstitial()
             }
@@ -276,7 +297,7 @@ class AdsRepositoryImpl @Inject constructor(
                 dbg("showIfReady NOT_READY: no buffered ad (lastPreloadFailed=$lastPreloadFailed, preloading=$preloading, waitMs=$loadWaitTimeoutMs)")
                 return AdShowResult.NOT_READY
             }
-            withContext(Dispatchers.Main.immediate) {
+            withContext(main) {
                 val activity = activities.current() ?: run {
                     dbg("showIfReady NOT_READY: no current activity")
                     return@withContext AdShowResult.NOT_READY
@@ -289,18 +310,23 @@ class AdsRepositoryImpl @Inject constructor(
                 }
                 suspendCancellableCoroutine { cont ->
                     ad.adEventCallback = object : InterstitialAdEventCallback {
-                        override fun onAdShowedFullScreenContent() = Unit
+                        override fun onAdShowedFullScreenContent() = funnel.shown(AdFormat.INTERSTITIAL, unitId)
                         override fun onAdImpression() = Unit
                         // Click-out (browser / store): the matching foreground must not trigger an app-open ad.
-                        override fun onAdClicked() = tracker.markAdClicked()
+                        override fun onAdClicked() {
+                            tracker.markAdClicked()
+                            funnel.clicked(AdFormat.INTERSTITIAL)
+                        }
 
                         override fun onAdDismissedFullScreenContent() {
+                            funnel.dismissed(AdFormat.INTERSTITIAL)
                             bufferedSinceMs = 0L
                             if (cont.isActive) cont.resume(AdShowResult.SHOWN)
                             preloadInterstitial() // next one (the preloader also refills after pollAd; idempotent)
                         }
 
                         override fun onAdFailedToShowFullScreenContent(fullScreenContentError: FullScreenContentError) {
+                            funnel.showFailed()
                             dbg("showIfReady FAILED: onAdFailedToShowFullScreenContent $fullScreenContentError")
                             bufferedSinceMs = 0L
                             preloadInterstitial()

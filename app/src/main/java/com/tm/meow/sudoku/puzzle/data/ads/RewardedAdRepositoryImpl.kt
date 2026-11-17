@@ -12,17 +12,29 @@ import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAdEventCallb
 import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAdPreloader
 import com.tm.meow.sudoku.puzzle.BuildConfig
 import com.tm.meow.sudoku.puzzle.data.platform.CurrentActivityProvider
+import com.tm.meow.sudoku.puzzle.di.MainDispatcher
+import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsSdkStatus
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedAdRepository
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedResult
 import java.util.concurrent.atomic.AtomicBoolean
+import com.tm.meow.sudoku.puzzle.domain.analytics.AdFormat
+import com.tm.meow.sudoku.puzzle.domain.analytics.AdFunnelTracker
+import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
 import com.tm.meow.sudoku.puzzle.domain.crash.NoopCrashReporter
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,8 +54,14 @@ class RewardedAdRepositoryImpl @Inject constructor(
     private val status: AdsSdkStatus,
     private val activities: CurrentActivityProvider,
     private val tracker: AdSessionTracker,
+    private val consent: ConsentRepository,
+    @MainDispatcher main: CoroutineDispatcher,
     private val crash: CrashReporter = NoopCrashReporter,
+    analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) : RewardedAdRepository {
+
+    private val funnel = AdFunnelTracker(analytics, crash)
+    private var requestAtMs = 0L
 
     private val unitId: String get() = BuildConfig.ADMOB_REWARDED_ID
 
@@ -55,9 +73,34 @@ class RewardedAdRepositoryImpl @Inject constructor(
     private val lock = Any()
     private var started = false
     private var startedAtMs = 0L
+    private val scope = CoroutineScope(SupervisorJob() + main)
+    private var consentWatch = false
+
+    /** Consent withdrawn mid-session: destroy the preloader so it stops refilling. [preload] restarts it once consent is back. */
+    private fun watchConsent() {
+        if (consentWatch) return
+        consentWatch = true
+        scope.launch {
+            consent.state.map { it.canRequestAds }.distinctUntilChanged().collect { allowed ->
+                if (allowed) return@collect
+                synchronized(lock) {
+                    if (!started) return@collect
+                    try {
+                        RewardedAdPreloader.destroy(unitId)
+                    } catch (t: Throwable) {
+                        crash.recordNonFatal(t, "rewarded.stop")
+                    }
+                    started = false
+                    _loadState.value = RewardedLoadState.IDLE
+                }
+            }
+        }
+    }
 
     override fun preload() {
         if (!isConfigured || !status.isInitialized.value) return
+        if (!consent.state.value.canRequestAds) return
+        watchConsent()
         try {
             synchronized(lock) {
                 if (!started) {
@@ -83,6 +126,8 @@ class RewardedAdRepositoryImpl @Inject constructor(
     private fun startPreloader() {
         started = true
         startedAtMs = tracker.now()
+        requestAtMs = startedAtMs
+        funnel.requested(AdFormat.REWARDED)
         _loadState.value = RewardedLoadState.LOADING
         val config = PreloadConfiguration(AdRequest.Builder(unitId).build(), BUFFER_SIZE)
         RewardedAdPreloader.start(
@@ -91,10 +136,12 @@ class RewardedAdRepositoryImpl @Inject constructor(
             object : PreloadCallback {
                 override fun onAdPreloaded(preloadId: String, responseInfo: ResponseInfo) {
                     _loadState.value = RewardedLoadState.READY
+                    funnel.loaded(AdFormat.REWARDED, tracker.now() - requestAtMs)
                 }
 
                 override fun onAdFailedToPreload(preloadId: String, adError: LoadAdError) {
                     _loadState.value = RewardedLoadState.FAILED
+                    funnel.failed(AdFormat.REWARDED, adError.code.toString(), tracker.now() - requestAtMs)
                 }
 
                 override fun onAdsExhausted(preloadId: String) {
@@ -114,20 +161,27 @@ class RewardedAdRepositoryImpl @Inject constructor(
                 _loadState.value =
                     if (RewardedAdPreloader.isAdAvailable(unitId)) RewardedLoadState.READY else RewardedLoadState.LOADING
                 if (ad == null) return@withContext RewardedResult.NOT_READY
+                requestAtMs = tracker.now() // preloader refills after the poll
+                funnel.requested(AdFormat.REWARDED)
                 suspendCancellableCoroutine { cont ->
                     val earned = AtomicBoolean(false)
                     ad.adEventCallback = object : RewardedAdEventCallback {
-                        override fun onAdShowedFullScreenContent() = Unit
+                        override fun onAdShowedFullScreenContent() = funnel.shown(AdFormat.REWARDED, unitId)
                         override fun onAdImpression() = Unit
 
                         // Click-out (browser / store): the matching foreground must not trigger an app-open ad.
-                        override fun onAdClicked() = tracker.markAdClicked()
+                        override fun onAdClicked() {
+                            tracker.markAdClicked()
+                            funnel.clicked(AdFormat.REWARDED)
+                        }
 
                         override fun onAdDismissedFullScreenContent() {
+                            funnel.dismissed(AdFormat.REWARDED)
                             if (cont.isActive) cont.resume(if (earned.get()) RewardedResult.EARNED else RewardedResult.DISMISSED)
                         }
 
                         override fun onAdFailedToShowFullScreenContent(fullScreenContentError: FullScreenContentError) {
+                            funnel.showFailed()
                             if (cont.isActive) cont.resume(RewardedResult.FAILED)
                         }
                     }

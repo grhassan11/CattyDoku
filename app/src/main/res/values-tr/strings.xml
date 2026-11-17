@@ -137,6 +137,7 @@
     <string name="home_tab_sudoku">Sudoku</string>
     <string name="booster_mouse">Fare, %1$d kaldı</string>
     <string name="booster_no_mouse">Fare kalmadı</string>
+    <string name="mouse_cannot_use_here">Fare burada kullanılamaz</string>
     <string name="booster_locked">%1$d. seviyede açılır</string>
     <string name="booster_locked_label">Sv.%1$d</string>
     <string name="booster_no_cat">Kedi güçlendiricisi kalmadı</string>
@@ -169,7 +170,6 @@
     <string name="reward_mouse_store">Mağazadan Fare Al</string>
     <string name="reward_ad_unavailable">Video şu anda kullanılamıyor. Birazdan tekrar dene.</string>
     <string name="reward_not_earned">Ödülünü almak için videonun tamamını izle.</string>
-    <string name="ad_slot_description">Reklam</string>
 
     <string name="hint_wrong_cat">Bu kedi yanlış yerde.</string>
     <string name="hint_x_on_solution">Bu X, bir kedinin olması gereken yeri kapatıyor.</string>
@@ -335,7 +335,7 @@
     <string name="settings_how_to_play_hint">Seviyeler oyun modu eğitimi</string>
     <string name="settings_notifications_blocked">Bu uygulama için bildirimler kapalı</string>
     <string name="settings_notifications_open">Ayarları aç</string>
-    <string name="settings_privacy">Gizlilik Ayarları</string>
+    <string name="settings_privacy">Onayı yönet</string>
     <string name="settings_feedback_subject">%1$s geri bildirimi</string>
     <string name="settings_feedback_no_app">E-posta uygulaması bulunamadı</string>
 
@@ -411,7 +411,6 @@
     <string name="shop_err_developer">Mağaza bu sürüm için henüz kurulmadı.</string>
     <string name="shop_err_generic">Bir şeyler ters gitti. Lütfen tekrar dene.</string>
 
-    <string name="ad_badge">Reklam</string>
     <string name="ad_badge_description">Reklam</string>
 
     <string name="world_node_done">Seviye %1$d, tamamlandı, 3 yıldızdan %2$d tanesi. Ayrıntılar için dokun</string>
@@ -437,6 +436,7 @@
     <string name="level_sheet_none">--</string>
     <string name="level_sheet_play">Oyna</string>
     <string name="level_sheet_replay">Tekrar Oyna</string>
+    <string name="level_sheet_resume">Devam Et</string>
     <string name="exit_sheet_message">Çıkmak istediğine emin misin?</string>
     <string name="exit_sheet_cancel">İptal</string>
     <string name="exit_sheet_exit">Çık</string>
@@ -475,7 +475,6 @@
     <string name="sudoku_stat_score">Puan</string>
     <string name="sudoku_stat_time">Süre</string>
     <string name="sudoku_stat_mistakes">Hatalar</string>
-    <string name="sudoku_stat_hints">İpuçları</string>
     <string name="sudoku_pause">Duraklat</string>
     <string name="sudoku_resume">Devam Et</string>
     <string name="sudoku_hearts_description">%2$d kalpten %1$d tanesi kaldı</string>

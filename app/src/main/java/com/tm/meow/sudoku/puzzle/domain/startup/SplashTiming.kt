@@ -19,6 +19,9 @@ object SplashTiming {
     /** Hard cap: proceed even if consent / ads init is still running (ads stay off). */
     const val MAX_MS = 10_000L
 
+    /** Max splash wait for the first Remote Config fetch + activate (B). Under the SDK's own 3 s network timeout. */
+    const val RC_AWAIT_MS = 2_500L
+
     /** Warm-up is optional: stop waiting for it after this. */
     const val WARM_CAP_MS = 3_000L
 
@@ -30,7 +33,7 @@ object SplashTiming {
 
     /**
      * First-launch app-open wait ceiling (15 s). Counted from splash start (loop ticks, UMP form time excluded), not
-     * stacked after the loop: see [appOpenWaitMs]. Returning launches keep [APP_OPEN_WAIT_MS].
+     * stacked after the loop: see [appOpenWaitMs]. Returning launches get the same ceiling (see [appOpenWaitMs]); [APP_OPEN_WAIT_MS] is only the floor.
      */
     const val APP_OPEN_WAIT_FIRST_MS = 15_000L
 

@@ -55,6 +55,8 @@ class ConsentRepositoryImpl @Inject constructor(
     override val state: StateFlow<ConsentState> = _state
 
     override suspend fun gatherConsent() {
+        // Pending until an info update succeeds (offline / no Activity / timeout all leave it set: late-online recovery re-gathers).
+        tracker.consentGatherPending = true
         try {
             // Offline: the UMP info request cannot succeed and may hang up to UPDATE_TIMEOUT_MS. Skip it, publish the cached state
             // (no ad can load offline anyway; the next online launch asks normally).
@@ -70,7 +72,10 @@ class ConsentRepositoryImpl @Inject constructor(
             }
             withContext(Dispatchers.Main.immediate) {
                 val updated = withTimeoutOrNull(UPDATE_TIMEOUT_MS) { requestInfoUpdate(activity) } ?: false
-                if (updated) loadAndShowFormIfRequired(activity)
+                if (updated) {
+                    tracker.consentGatherPending = false
+                    loadAndShowFormIfRequired(activity)
+                }
             }
         } catch (e: CancellationException) {
             throw e

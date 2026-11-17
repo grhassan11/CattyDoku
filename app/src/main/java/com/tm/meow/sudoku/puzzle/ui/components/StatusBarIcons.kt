@@ -21,7 +21,9 @@ fun StatusBarIconsEffect() {
     val window = view.context.findWindow() ?: return
     SideEffect {
         // isAppearanceLightStatusBars = true means DARK icons.
-        WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = true
+        val controller = WindowInsetsControllerCompat(window, view)
+        controller.isAppearanceLightStatusBars = true
+        controller.isAppearanceLightNavigationBars = true // dark nav icons on cream bg
     }
 }
 

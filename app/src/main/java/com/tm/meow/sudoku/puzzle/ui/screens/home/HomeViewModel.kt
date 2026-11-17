@@ -15,12 +15,12 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveAdsRemoved
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveShopCatalog
 import com.tm.meow.sudoku.puzzle.domain.model.WorldRules
 import com.tm.meow.sudoku.puzzle.domain.model.DailyStatus
-import com.tm.meow.sudoku.puzzle.domain.model.LevelDetail
 import com.tm.meow.sudoku.puzzle.domain.model.Settings
 import com.tm.meow.sudoku.puzzle.domain.model.StreakCalendar
 import com.tm.meow.sudoku.puzzle.domain.model.StreakRewardState
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveDailyStatus
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveLevelDetail
+import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveLevelResumable
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveSettings
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreakCalendar
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreakRewards
@@ -66,6 +66,7 @@ class HomeViewModel @Inject constructor(
     private val observeStreakRewards: ObserveStreakRewards,
     private val observeWorldMap: ObserveWorldMap,
     private val observeLevelDetail: ObserveLevelDetail,
+    private val observeLevelResumable: ObserveLevelResumable,
     observeSettings: ObserveSettings,
     private val updateSettings: UpdateSettings,
     observeAdsRemoved: ObserveAdsRemoved,
@@ -108,7 +109,13 @@ class HomeViewModel @Inject constructor(
     private val selectedLevel = MutableStateFlow<Int?>(null)
 
     private val levelSheet: Flow<LevelSheetUi?> = selectedLevel.flatMapLatest { lvl ->
-        if (lvl == null) flowOf(null) else observeLevelDetail(lvl).map<LevelDetail, LevelSheetUi?> { LevelSheetUi.from(it) }
+        if (lvl == null) {
+            flowOf(null)
+        } else {
+            combine(observeLevelDetail(lvl), observeLevelResumable(lvl)) { detail, resumable ->
+                LevelSheetUi.from(detail, resumable)
+            }
+        }
     }
 
     val state: StateFlow<HomeUiState> =
@@ -160,15 +167,22 @@ class HomeViewModel @Inject constructor(
     /** Remove-ads badge tapped: open the Play sheet for Forever directly. A failed launch emits [HomeEvent.RemoveAdsFailed] (cancel stays silent). */
     fun onRemoveAdsClick() {
         if (!buyBusy.compareAndSet(expect = false, update = true)) return
+        val productId = ShopProduct.REMOVE_ADS_FOREVER.id
+        val price = (observeShopCatalog().value as? CatalogState.Ready)?.prices?.get(productId)
+        analytics.log(AnalyticsEvent.BeginCheckout(productId, price?.value, price?.currencyCode))
         viewModelScope.launch {
             try {
-                val result = buyProduct(ShopProduct.REMOVE_ADS_FOREVER.id)
-                if (result is StoreResult.Failure && result.failure != BillingFailure.USER_CANCELED) {
-                    eventChannel.trySend(HomeEvent.RemoveAdsFailed(result.failure))
+                val result = buyProduct(productId)
+                if (result is StoreResult.Failure) {
+                    analytics.log(AnalyticsEvent.PurchaseFail(productId, result.failure.name.lowercase()))
+                    if (result.failure != BillingFailure.USER_CANCELED) {
+                        eventChannel.trySend(HomeEvent.RemoveAdsFailed(result.failure))
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
+                analytics.log(AnalyticsEvent.PurchaseFail(productId, BillingFailure.ERROR.name.lowercase()))
                 eventChannel.trySend(HomeEvent.RemoveAdsFailed(BillingFailure.ERROR))
             } finally {
                 buyBusy.value = false

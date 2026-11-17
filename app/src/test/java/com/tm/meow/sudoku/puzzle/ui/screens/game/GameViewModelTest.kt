@@ -297,13 +297,14 @@ class GameViewModelTest {
         assertEquals(CellMarkUi.EMPTY, c.markAt(0, 0))
         assertFalse(c.wrongXAt(0, 0))
         assertEquals(2, c.hearts) // no refund
-        vm.onCellTap(Pos(1, 1)) // plain X, then wrong cat over it
+        vm.onCellTap(Pos(1, 1)) // tap + double tap = one gesture: wrong cat folds the tap's X
         vm.onCellDoubleTap(Pos(1, 1))
         assertTrue(vm.ready().wrongXAt(1, 1))
         vm.onUndo()
         c = vm.ready()
-        assertEquals(CellMarkUi.X, c.markAt(1, 1))
-        assertFalse(c.wrongXAt(1, 1)) // back to a normal X
+        assertEquals(CellMarkUi.EMPTY, c.markAt(1, 1)) // pre-gesture state, not a white X
+        assertFalse(c.wrongXAt(1, 1))
+        assertEquals(1, c.hearts) // still no refund
     }
 
     @Test
@@ -465,7 +466,28 @@ class GameViewModelTest {
     }
 
     @Test
-    fun mouseBoosterIgnoredBelowUnlockLevel() = vmTest { rig, vm ->
+    fun mouseBoosterWithOnlyCatCellsLeftEmitsNoTargetAndKeepsCharge() = vmTest(mouseRig()) { rig, vm ->
+        vm.ready()
+        for (r in 0 until 4) for (c in 0 until 4) {
+            if (Pos(r, c) !in solution && vm.ready().markAt(r, c) == CellMarkUi.EMPTY) vm.onCellTap(Pos(r, c))
+        }
+        advanceUntilIdle()
+        assertEquals(5, rig.inventory.get(Booster.MOUSE))
+        val xsBefore = vm.ready().board.cells.count { it.mark == CellMarkUi.X }
+        vm.events.test {
+            vm.onMouseBooster()
+            awaitEvent<GameUiEvent.MouseNoTarget>()
+            cancelAndIgnoreRemainingEvents()
+        }
+        advanceUntilIdle()
+        assertEquals(5, rig.inventory.get(Booster.MOUSE))
+        assertEquals(5, vm.ready().boosters.mouseCharges)
+        assertEquals(xsBefore, vm.ready().board.cells.count { it.mark == CellMarkUi.X })
+        assertNull(vm.ready().mouseRun)
+    }
+
+    @Test
+    fun mouseBoosterIgnoredBelowUnlockLevel()= vmTest { rig, vm ->
         assertTrue(vm.ready().boosters.thirdLocked)
         vm.onMouseBooster()
         advanceUntilIdle()

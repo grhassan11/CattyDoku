@@ -3,6 +3,8 @@
     <!-- AppCompat parent: MainActivity is an AppCompatActivity (per-app language recreation on API < 33). Compose draws everything; only the window attrs below matter. -->
     <style name="Theme.CatPuzzle" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowBackground">@color/cat_background</item>
+        <item name="android:colorBackground">@color/cat_background</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>

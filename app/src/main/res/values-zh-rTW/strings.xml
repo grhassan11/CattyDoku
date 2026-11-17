@@ -134,6 +134,7 @@
     <string name="home_tab_sudoku">數獨</string>
     <string name="booster_mouse">老鼠，剩餘%1$d</string>
     <string name="booster_no_mouse">沒有老鼠了</string>
+    <string name="mouse_cannot_use_here">此處無法使用老鼠</string>
     <string name="booster_locked">第%1$d關解鎖</string>
     <string name="booster_locked_label">Lv.%1$d</string>
     <string name="booster_no_cat">沒有貓咪道具了</string>
@@ -165,7 +166,6 @@
     <string name="reward_mouse_store">到商店取得老鼠</string>
     <string name="reward_ad_unavailable">目前無法提供影片。請稍後再試。</string>
     <string name="reward_not_earned">請看完整部影片才能獲得獎勵。</string>
-    <string name="ad_slot_description">廣告</string>
 
     <string name="hint_wrong_cat">這隻貓放錯位置了。</string>
     <string name="hint_x_on_solution">這個X蓋住了貓應該在的位置。</string>
@@ -331,7 +331,7 @@
     <string name="settings_how_to_play_hint">關卡模式教學</string>
     <string name="settings_notifications_blocked">這個應用程式的通知已關閉</string>
     <string name="settings_notifications_open">開啟設定</string>
-    <string name="settings_privacy">隱私設定</string>
+    <string name="settings_privacy">管理同意</string>
     <string name="settings_feedback_subject">%1$s意見回饋</string>
     <string name="settings_feedback_no_app">找不到電子郵件應用程式</string>
 
@@ -407,7 +407,6 @@
     <string name="shop_err_developer">此版本尚未設定商店。</string>
     <string name="shop_err_generic">發生錯誤。請再試一次。</string>
 
-    <string name="ad_badge">廣告</string>
     <string name="ad_badge_description">廣告</string>
 
     <string name="world_node_done">第%1$d關，已完成，3顆星中的%2$d顆。點選查看詳情</string>
@@ -433,6 +432,7 @@
     <string name="level_sheet_none">--</string>
     <string name="level_sheet_play">開始</string>
     <string name="level_sheet_replay">重玩</string>
+    <string name="level_sheet_resume">繼續</string>
     <string name="exit_sheet_message">確定要離開嗎？</string>
     <string name="exit_sheet_cancel">取消</string>
     <string name="exit_sheet_exit">離開</string>
@@ -471,7 +471,6 @@
     <string name="sudoku_stat_score">分數</string>
     <string name="sudoku_stat_time">時間</string>
     <string name="sudoku_stat_mistakes">失誤</string>
-    <string name="sudoku_stat_hints">提示</string>
     <string name="sudoku_pause">暫停</string>
     <string name="sudoku_resume">繼續</string>
     <string name="sudoku_hearts_description">剩餘愛心%1$d/%2$d</string>

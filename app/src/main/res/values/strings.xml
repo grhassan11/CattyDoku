@@ -152,6 +152,7 @@
     <string name="home_tab_sudoku">Sudoku</string>
     <string name="booster_mouse">Mouse, %1$d left</string>
     <string name="booster_no_mouse">No mice left</string>
+    <string name="mouse_cannot_use_here">Mouse cannot be used here</string>
     <string name="booster_locked">Unlocks at level %1$d</string>
     <string name="booster_locked_label">Lv.%1$d</string>
     <string name="booster_no_cat">No cat boosters left</string>
@@ -186,7 +187,6 @@
     <string name="reward_mouse_store">Get Mice in Store</string>
     <string name="reward_ad_unavailable">Video not available right now. Try again soon.</string>
     <string name="reward_not_earned">Watch the whole video to get your reward.</string>
-    <string name="ad_slot_description">Advertisement</string>
 
     <!-- Hint bar -->
     <string name="hint_wrong_cat">This cat is in the wrong spot.</string>
@@ -360,7 +360,7 @@
     <string name="settings_how_to_play_hint">Tutorial for Levels Game Mode</string>
     <string name="settings_notifications_blocked">Notifications are turned off for this app</string>
     <string name="settings_notifications_open">Open settings</string>
-    <string name="settings_privacy">Privacy Settings</string>
+    <string name="settings_privacy">Manage Consent</string>
     <string name="settings_feedback_subject">%1$s feedback</string>
     <string name="settings_feedback_no_app">No email app found</string>
 
@@ -439,7 +439,7 @@
     <string name="shop_err_generic">Something went wrong. Please try again.</string>
 
     <!-- Native ad attribution -->
-    <string name="ad_badge">Ad</string>
+    <string name="ad_badge" translatable="false">AD</string>
     <string name="ad_badge_description">Advertisement</string>
 
     <!-- Home world map -->
@@ -467,6 +467,7 @@
     <string name="level_sheet_none">--</string>
     <string name="level_sheet_play">Play</string>
     <string name="level_sheet_replay">Replay</string>
+    <string name="level_sheet_resume">Resume</string>
     <string name="exit_sheet_message">Are you sure you want to exit?</string>
     <string name="exit_sheet_cancel">Cancel</string>
     <string name="exit_sheet_exit">Exit</string>
@@ -507,7 +508,6 @@
     <string name="sudoku_stat_score">Score</string>
     <string name="sudoku_stat_time">Time</string>
     <string name="sudoku_stat_mistakes">Mistakes</string>
-    <string name="sudoku_stat_hints">Hints</string>
     <string name="sudoku_pause">Pause</string>
     <string name="sudoku_resume">Resume</string>
     <string name="sudoku_hearts_description">%1$d of %2$d hearts left</string>

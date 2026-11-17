@@ -349,13 +349,16 @@ class AdsUseCasesTest {
     @Test
     fun levelsWinIgnoresAdFreeLevelsAndFollowsFrequencyOnly() = runTest {
         val r5 = rig()
-        assertTrue(r5.show(AdTrigger.LEVEL_WON_CONTINUE, level = 5))
+        assertTrue(r5.show(AdTrigger.LEVEL_WON_CONTINUE, level = 6)) // default first-10 list 2,4,6,8,10
         assertEquals(1, r5.ads.showCalls)
         val r3 = rig()
-        assertTrue(r3.show(AdTrigger.LEVEL_WON_CONTINUE, level = 3)) // default frequency 1
-        assertEquals(1, r3.ads.showCalls)
+        assertFalse(r3.show(AdTrigger.LEVEL_WON_CONTINUE, level = 3)) // not in default first-10 list
+        assertEquals(0, r3.ads.showCalls)
+        val r11 = rig()
+        assertTrue(r11.show(AdTrigger.LEVEL_WON_CONTINUE, level = 11)) // default frequency 1 above level 10
+        assertEquals(1, r11.ads.showCalls)
         val rF = rig(config = AdPolicyConfig(levelsInterstitialFrequency = 5))
-        assertFalse(rF.show(AdTrigger.LEVEL_WON_CONTINUE, level = 3))
+        assertFalse(rF.show(AdTrigger.LEVEL_WON_CONTINUE, level = 13))
         assertEquals(0, rF.ads.showCalls)
     }
 

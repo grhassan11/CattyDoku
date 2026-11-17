@@ -18,27 +18,27 @@ android {
         applicationId = "com.tm.meow.sudoku.puzzle"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // ---- Ads / UMP (phase 9). ----
-        // ALL builds (debug, release, nonMinifiedRelease, benchmarkRelease) = Google TEST IDs, defined ONCE here.
-        // SWITCH TO REAL IDs BEFORE RELEASE BUILD: edit ONLY the ids below (single place). No per-buildType ad ids exist.
-        // REAL IDs (pub-4314093941046206), swap in for the TEST values below:
+        // ALL builds (debug, release, nonMinifiedRelease, benchmarkRelease) = REAL IDs, defined ONCE here.
+        // Edit ONLY the ids below (single place). No per-buildType ad ids exist.
+        // REAL IDs (pub-4314093941046206):
         //   app        ca-app-pub-4314093941046206~9747457418
         //   interstitial ca-app-pub-4314093941046206/9472125240
         //   native     ca-app-pub-4314093941046206/4495130734
         //   app open   ca-app-pub-4314093941046206/4609671647
         //   (banner unit 7814419481 retired: game screens now use the native unit above)
         //   rewarded   ca-app-pub-4314093941046206/9921708076
-        // Placeholder guard (PLACEHOLDER_MARK contains-check) passes for both sets, so ads stay enabled.
+        // Placeholder guard (PLACEHOLDER_MARK contains-check) passes for real IDs, so ads stay enabled.
         // No setTestDeviceIds is set: with REAL IDs do NOT run the release build on a dev device (invalid-traffic / policy risk).
-        val admobAppId = "ca-app-pub-3940256099942544~3347511713"
-        val admobInterstitialId = "ca-app-pub-3940256099942544/1033173712"
-        val admobNativeId = "ca-app-pub-3940256099942544/2247696110"
-        val admobAppOpenId = "ca-app-pub-3940256099942544/9257395921"
-        val admobRewardedId = "ca-app-pub-3940256099942544/5224354917"
+        val admobAppId = "ca-app-pub-4314093941046206~9747457418"
+        val admobInterstitialId = "ca-app-pub-4314093941046206/9472125240"
+        val admobNativeId = "ca-app-pub-4314093941046206/4495130734"
+        val admobAppOpenId = "ca-app-pub-4314093941046206/4609671647"
+        val admobRewardedId = "ca-app-pub-4314093941046206/9921708076"
         manifestPlaceholders["admobAppId"] = admobAppId
         buildConfigField("String", "ADMOB_APP_ID", "\"$admobAppId\"")
         buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"$admobInterstitialId\"")

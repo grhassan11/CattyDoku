@@ -153,9 +153,7 @@ fun HomeRoute(
     // One-time Rate us dialog (last child = on top of Home).
     RateUsHost(rateUsViewModel, snackbarHostState)
     if (showExit) {
-        val showRateInExit by rateUsViewModel.showRateInExitSheet.collectAsStateWithLifecycle()
         ExitSheet(
-            showRateUs = showRateInExit,
             onRateStar = rateUsViewModel::onExitSheetStar,
             onDismiss = { showExit = false },
             onExit = {

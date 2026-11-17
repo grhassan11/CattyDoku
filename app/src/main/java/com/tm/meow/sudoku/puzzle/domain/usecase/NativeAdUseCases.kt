@@ -2,7 +2,7 @@ package com.tm.meow.sudoku.puzzle.domain.usecase
 
 import com.tm.meow.sudoku.puzzle.domain.ads.AdFormat
 import com.tm.meow.sudoku.puzzle.domain.ads.AdFreePolicy
-import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicyConfig
+import com.tm.meow.sudoku.puzzle.domain.ads.AdPolicySource
 import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.GameNativeAdCache
 import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdHandle
@@ -32,17 +32,18 @@ enum class AdPlacement { LEVELS_HOME, SUDOKU_HOME, LEVELS_GAME, SUDOKU_GAME }
 class LoadNativeAd(
     private val consent: ConsentRepository,
     private val repository: NativeAdRepository,
-    private val config: AdPolicyConfig,
+    private val config: AdPolicySource,
     private val adsRemoved: AdsRemovedRepository = NoAdsRemoved,
     private val connectivity: ConnectivityObserver = AlwaysOnline,
 ) {
     /** Single policy gate: false = no slot at all (kill switch, Remove Ads, offline, no consent, SDK off / placeholder ID). */
     fun isAllowed(placement: AdPlacement): Boolean {
+        val cfg = config.current()
         val unitOn = when (placement) {
-            AdPlacement.LEVELS_HOME -> config.levelsHomeNativeShow
-            AdPlacement.SUDOKU_HOME -> config.sudokuHomeNativeShow
-            AdPlacement.LEVELS_GAME -> config.levelsGameNativeShow
-            AdPlacement.SUDOKU_GAME -> config.sudokuGameNativeShow
+            AdPlacement.LEVELS_HOME -> cfg.levelsHomeNativeShow
+            AdPlacement.SUDOKU_HOME -> cfg.sudokuHomeNativeShow
+            AdPlacement.LEVELS_GAME -> cfg.levelsGameNativeShow
+            AdPlacement.SUDOKU_GAME -> cfg.sudokuGameNativeShow
         }
         if (!unitOn) return false
         // Remove Ads: never even request the ad.
@@ -119,6 +120,13 @@ class TakeGameNativeAd(
     private companion object {
         /** Same cap as the skeleton on Home. */
         const val AWAIT_PRELOAD_MS = 6_000L
+    }
+}
+
+/** Navigation reports whether the current screen blocks app-open (Settings + sub-screens). Read on each foreground only. */
+class SetAppOpenScreenSuppressed(private val tracker: AdSessionTracker) {
+    operator fun invoke(suppressed: Boolean) {
+        tracker.appOpenSuppressedScreen = suppressed
     }
 }
 

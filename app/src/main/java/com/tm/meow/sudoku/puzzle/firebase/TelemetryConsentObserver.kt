@@ -1,7 +1,11 @@
 package com.tm.meow.sudoku.puzzle.firebase
 
 import com.tm.meow.sudoku.puzzle.di.DefaultDispatcher
+import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
+import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
+import com.tm.meow.sudoku.puzzle.domain.consent.TelemetryConsentPolicy
+import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
 import com.tm.meow.sudoku.puzzle.domain.usecase.ApplyTelemetryConsent
 import com.tm.meow.sudoku.puzzle.domain.usecase.UserPropsSync
 import java.util.concurrent.atomic.AtomicBoolean
@@ -24,9 +28,12 @@ class TelemetryConsentObserver @Inject constructor(
     private val consent: ConsentRepository,
     private val apply: ApplyTelemetryConsent,
     private val userProps: UserPropsSync,
+    private val analytics: AnalyticsLogger,
+    private val crash: CrashReporter,
     @DefaultDispatcher dispatcher: CoroutineDispatcher,
 ) {
     private val started = AtomicBoolean(false)
+    private val statusLogged = AtomicBoolean(false)
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
     fun start() {
@@ -36,6 +43,10 @@ class TelemetryConsentObserver @Inject constructor(
                 // drop(1): skip the fail-closed default emission (manifest defaults already deny).
                 consent.state.drop(1).collect {
                     apply(it)
+                    val status = TelemetryConsentPolicy.statusLabel(it)
+                    crash.setCustomKey("consent_state", status)
+                    // Once per session; only delivered when analytics consent allows it (collection is gated by apply above).
+                    if (statusLogged.compareAndSet(false, true)) analytics.log(AnalyticsEvent.ConsentStatus(status))
                     userProps.sync() // no-op until analytics consent allows it
                 }
             } catch (e: CancellationException) {

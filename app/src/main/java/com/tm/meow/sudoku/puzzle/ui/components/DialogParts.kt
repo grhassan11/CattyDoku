@@ -69,6 +69,7 @@ fun PillButton(
     modifier: Modifier = Modifier,
     filled: Boolean = true,
     leadingIconRes: Int? = null,
+    iconShadow: Boolean = false,
     textSize: TextUnit = 22.sp,
     horizontalPadding: Dp = 24.dp,
     style: ButtonStyle = if (filled) ButtonStyle.Primary else ButtonStyle.Secondary,
@@ -80,7 +81,20 @@ fun PillButton(
         style = style,
         horizontalPadding = horizontalPadding,
     ) {
-        if (leadingIconRes != null) IconImage(leadingIconRes, size = 22.dp, tint = content)
+        if (leadingIconRes != null) {
+            if (iconShadow) {
+                ShadowedIcon(
+                    res = leadingIconRes,
+                    size = 22.dp,
+                    tint = content,
+                    shadowAlpha = 0.4f,
+                    shadowOffsetY = 2.dp,
+                    shadowBlur = 3.dp,
+                )
+            } else {
+                IconImage(leadingIconRes, size = 22.dp, tint = content)
+            }
+        }
         Text(
             text,
             color = content,

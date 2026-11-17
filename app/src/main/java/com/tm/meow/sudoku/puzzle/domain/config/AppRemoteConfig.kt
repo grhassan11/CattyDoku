@@ -14,6 +14,7 @@ object RemoteConfigKeys {
     const val SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW = "sudoku_game_completed_interstitial_ad_show"
     const val LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW = "levels_game_completed_interstitial_ad_show"
     const val LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY = "levels_game_completed_interstitial_ad_frequency"
+    const val LEVELS_GAME_FIRST_10_LEVELS_COMPLETED_INTERSTITIAL_AD_FREQUENCY = "levels_game_first_10_levels_completed_interstitial_ad_frequency"
     const val SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY = "sudoku_game_completed_interstitial_ad_frequency"
     const val SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW ="sudoku_game_restarted_interstitial_ad_show"
     const val LEVELS_GAME_RESTARTED_INTERSTITIAL_AD_SHOW = "levels_game_restarted_interstitial_ad_show"
@@ -52,8 +53,10 @@ data class AppRemoteConfig(
     val sudokuGameNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val sudokuGameCompletedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val levelsGameCompletedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
-    /** Levels win ad on every Nth completed level (level % N == 0), 1..50. */
+    /** Levels win ad on every Nth completed level ABOVE 10 (level % N == 0), 1..50. Levels 1..10 use the list below. */
     val levelsGameCompletedInterstitialAdFrequency: Int = AdPolicyConfig.DEFAULT_LEVELS_INTERSTITIAL_FREQUENCY,
+    /** Levels 1..10 win ad after exactly these levels (remote comma list, default "2,4,6,8,10"). */
+    val levelsGameFirst10LevelsCompletedInterstitialAdLevels: Set<Int> = AdPolicyConfig.DEFAULT_LEVELS_FIRST_TEN_INTERSTITIAL_LEVELS,
     /** Sudoku win ad on every Nth tier win (N % freq == 0), 1..50, all tiers from win 1 (no ad-free gate). */
     val sudokuGameCompletedInterstitialAdFrequency: Int = AdPolicyConfig.DEFAULT_SUDOKU_INTERSTITIAL_FREQUENCY,
     val sudokuGameRestartedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
@@ -76,6 +79,7 @@ data class AppRemoteConfig(
     fun toAdPolicyConfig(): AdPolicyConfig = AdPolicyConfig(
         adFreeThroughLevel = adFreeThroughLevel,
         levelsInterstitialFrequency = levelsGameCompletedInterstitialAdFrequency,
+        levelsFirstTenInterstitialLevels = levelsGameFirst10LevelsCompletedInterstitialAdLevels,
         sudokuWinInterstitialFrequency = sudokuGameCompletedInterstitialAdFrequency,
         levelsHomeNativeShow = levelHomeNativeAdShow,
         sudokuHomeNativeShow = sudokuHomeNativeAdShow,
@@ -121,6 +125,10 @@ object RemoteConfigParser {
                 read(RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY),
                 d.levelsGameCompletedInterstitialAdFrequency,
                 AppRemoteConfig.INTERSTITIAL_FREQUENCY_RANGE,
+            ),
+            levelsGameFirst10LevelsCompletedInterstitialAdLevels = levelList(
+                read(RemoteConfigKeys.LEVELS_GAME_FIRST_10_LEVELS_COMPLETED_INTERSTITIAL_AD_FREQUENCY),
+                d.levelsGameFirst10LevelsCompletedInterstitialAdLevels,
             ),
             sudokuGameCompletedInterstitialAdFrequency = int(
                 read(RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY),
@@ -168,6 +176,8 @@ object RemoteConfigParser {
             RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to d.sudokuGameCompletedInterstitialAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to d.levelsGameCompletedInterstitialAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY to d.levelsGameCompletedInterstitialAdFrequency.toString(),
+            RemoteConfigKeys.LEVELS_GAME_FIRST_10_LEVELS_COMPLETED_INTERSTITIAL_AD_FREQUENCY to
+                d.levelsGameFirst10LevelsCompletedInterstitialAdLevels.sorted().joinToString(","),
             RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY to d.sudokuGameCompletedInterstitialAdFrequency.toString(),
             RemoteConfigKeys.SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW to d.sudokuGameRestartedInterstitialAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_RESTARTED_INTERSTITIAL_AD_SHOW to d.levelsGameRestartedInterstitialAdShow.toString(),
@@ -187,6 +197,16 @@ object RemoteConfigParser {
         "true", "1", "t", "yes", "y", "on" -> true
         "false", "0", "f", "no", "n", "off" -> false
         else -> default
+    }
+
+    /**
+     * Comma list of level numbers: split, trim, toIntOrNull, keep 1..10, dedupe. Bad tokens ignored; missing / blank /
+     * no valid token = [default].
+     */
+    private fun levelList(raw: String?, default: Set<Int>): Set<Int> {
+        val parsed = raw?.split(',')?.mapNotNull { it.trim().toIntOrNull() }
+            ?.filter { it in 1..AdPolicyConfig.FIRST_TEN_LAST_LEVEL }?.toSet()
+        return if (parsed.isNullOrEmpty()) default else parsed
     }
 
     /** Out of range = default (not clamped): a typo like 9999 must not silently become a policy value. */

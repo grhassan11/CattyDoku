@@ -33,7 +33,7 @@ enum class AdSkipReason {
     DAILY,
     AD_FREE_LEVEL,
     LEVEL_ALREADY_HAD_AD,
-    /** Levels win: completed level number is not a multiple of the remote frequency. */
+    /** Levels win: level 1..10 not in the remote first-10 list, or level > 10 not a multiple of the remote frequency. */
     LEVEL_NOT_ON_FREQUENCY,
 
     /** Player bought Remove Ads (monthly active or forever). */
@@ -83,14 +83,22 @@ object InterstitialPolicy {
         if (!ctx.canRequestAds) return skip(AdSkipReason.NO_CONSENT)
         // Sudoku: product rule (tier + win count, see SudokuAdRules) decides upstream; no Queens pacing applies.
         if (sudoku) return AdDecision.Show
-        // Ad-free levels no longer gate any Levels interstitial: the win ad starts at Level 1 (frequency rule below) and
+        // Ad-free levels no longer gate any Levels interstitial: the win ad starts at Level 1 (first-10 list / frequency rule below) and
         // the Out of Lives Restart (LOSE_RETRY) also shows from Level 1 (user decision). Only its switch applies.
 
         if (ctx.trigger == AdTrigger.LEVEL_WON_CONTINUE) {
             // Level-number cadence: ctx.level is the JUST-COMPLETED level (the win dialog "Level N+1" button passes the
-            // level just won). Ad-free levels do NOT apply here: show only when it is a multiple of the frequency
-            // (default 5: Lv 5, 10, 15...). No exemptions.
-            if (ctx.level % config.levelsInterstitialFrequency.coerceAtLeast(1) != 0) return skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY)
+            // level just won). Ad-free levels do NOT apply here. Levels 1..10: ONLY the first-10 list decides (frequency
+            // ignored). Levels > 10: ONLY the frequency N (level % N == 0; N=1: 11,12,...; N=10: 20,30,...).
+            // Daily puzzles carry no level number: not level-gated (unchanged).
+            if (!ctx.isDaily) {
+                val onCadence = if (ctx.level > AdPolicyConfig.FIRST_TEN_LAST_LEVEL) {
+                    ctx.level % config.levelsInterstitialFrequency.coerceAtLeast(1) == 0
+                } else {
+                    ctx.level in config.levelsFirstTenInterstitialLevels
+                }
+                if (!onCadence) return skip(AdSkipReason.LEVEL_NOT_ON_FREQUENCY)
+            }
         }
         return AdDecision.Show
     }

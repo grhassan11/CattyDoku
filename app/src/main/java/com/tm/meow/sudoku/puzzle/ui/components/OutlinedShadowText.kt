@@ -32,12 +32,17 @@ internal fun outlinedTextStyles(
     base: TextStyle,
     outlineWidthPx: Float,
     outlineColor: Color = OutlinedShadowDefaults.OutlineColor,
+    withShadow: Boolean = true,
 ): Pair<TextStyle, TextStyle> {
     val font = base.copy(fontFamily = FredokaFamily)
     val stroke = font.copy(
         color = outlineColor,
         drawStyle = Stroke(width = outlineWidthPx * 2f, join = StrokeJoin.Round), // inner half is covered by the fill
-        shadow = Shadow(OutlinedShadowDefaults.ShadowColor, OutlinedShadowDefaults.ShadowOffset, OutlinedShadowDefaults.ShadowBlur),
+        shadow = if (withShadow) {
+            Shadow(OutlinedShadowDefaults.ShadowColor, OutlinedShadowDefaults.ShadowOffset, OutlinedShadowDefaults.ShadowBlur)
+        } else {
+            null
+        },
     )
     val fill = font.copy(shadow = null, drawStyle = null)
     return stroke to fill
@@ -56,10 +61,11 @@ internal fun OutlinedShadowText(
     fontWeight: FontWeight = FontWeight.Bold,
     outlineWidth: Dp = 3.dp,
     outlineColor: Color = OutlinedShadowDefaults.OutlineColor,
+    withShadow: Boolean = true,
 ) {
     val outlinePx = with(LocalDensity.current) { outlineWidth.toPx() }
-    val (stroke, fill) = remember(color, fontSize, fontWeight, outlinePx, outlineColor) {
-        outlinedTextStyles(TextStyle(color = color, fontSize = fontSize, fontWeight = fontWeight), outlinePx, outlineColor)
+    val (stroke, fill) = remember(color, fontSize, fontWeight, outlinePx, outlineColor, withShadow) {
+        outlinedTextStyles(TextStyle(color = color, fontSize = fontSize, fontWeight = fontWeight), outlinePx, outlineColor, withShadow)
     }
     Box(modifier) {
         Text(text = text, style = stroke, modifier = Modifier.clearAndSetSemantics { })

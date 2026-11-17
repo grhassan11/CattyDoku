@@ -130,7 +130,7 @@ internal fun BoosterAdDialog(
                         else -> Unit // loading / busy: inert
                     }
                 },
-                leadingIconRes = if (failed) null else R.drawable.ic_play,
+                leadingIconRes = if (failed) null else R.drawable.ic_watch_ad,
                 textSize = 18.sp,
                 horizontalPadding = 16.dp,
                 style = when {

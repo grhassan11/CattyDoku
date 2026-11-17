@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsUserProps
 import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.usecase.ApplyNotificationPermission
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkNotificationPromptAsked
@@ -45,6 +46,7 @@ class NotificationAskViewModel @Inject constructor(
     /** System dialog result. Granted = all reminders ON (observers book the work); denied = all OFF. Best effort. */
     fun onResult(granted: Boolean) {
         analytics.log(AnalyticsEvent.NotificationPermission(granted))
+        analytics.setUserProperty(AnalyticsUserProps.NOTIF_ENABLED, if (granted) "1" else "0")
         viewModelScope.launch {
             try {
                 applyPermission(granted)

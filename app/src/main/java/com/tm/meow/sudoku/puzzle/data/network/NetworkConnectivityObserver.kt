@@ -28,6 +28,9 @@ class NetworkConnectivityObserver @Inject constructor(
     init {
         try {
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            // Seed from the current default network: with no network at all (airplane mode) the default callback never fires,
+            // so without this the flag would stay "online" and the offline -> online edge could never be seen.
+            _isOnline.value = cm.activeNetwork?.let { cm.getNetworkCapabilities(it) }?.let(::isUsable) ?: false
             cm.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
                 @Volatile private var current: Network? = null
 

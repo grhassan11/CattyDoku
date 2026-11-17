@@ -5,7 +5,8 @@ enum class AdFormat { NATIVE_HOME, NATIVE_GAME, INTERSTITIAL, APP_OPEN, REWARDED
 
 /**
  * The ONE early-level rule for rewarded prompts (Levels interstitials ignore it). App-open, Home native and the game native slots (Levels + Sudoku) have no level gate.
- * Levels 1..[AD_FREE_THROUGH_LEVEL] are ad-free; ads start at level [FIRST_AD_LEVEL].
+ * Early-level rule: levels 1..[AD_FREE_THROUGH_LEVEL] are ad-free, ads start at level [FIRST_AD_LEVEL]. Only [isAdFree] callers (rewarded prompt
+ * preload) apply it; [adsAllowed] has no production caller.
  * Also holds the purchase rule ([isSuppressedByPurchase]). Pure, no clock, no Android. Callers pass the level they care about (level just completed / being played / highest
  * level reached from progress state). Level <= 0 (nothing played yet, or daily with no level) counts as ad-free.
  */

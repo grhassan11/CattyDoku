@@ -1,7 +1,13 @@
 package com.tm.meow.sudoku.puzzle.audio
 
+import com.tm.meow.sudoku.puzzle.di.IoDispatcher
 import com.tm.meow.sudoku.puzzle.di.MainDispatcher
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -18,7 +24,6 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -34,6 +39,8 @@ import kotlinx.coroutines.withContext
  *   ([AdSessionTracker.fullScreenAdShowingState]); resumes in place afterwards.
  * - SFX: one shared [SfxPlayer]. Requests are ignored while a full-screen ad is showing; in-flight cues are cut when
  *   an ad starts. In-game cues arrive already filtered by the Sound setting (ViewModels); [playUiTap] gates itself.
+ * - Audio focus (music only): requested (transient, may duck) when music starts playing, released when it pauses / stops.
+ *   Focus loss pauses (or ducks) the music, regain resumes it. No request while the Music setting is off. SFX never request focus.
  * Native ads do not touch [AdSessionTracker.fullScreenAdShowing], so they never silence anything.
  * Everything runs on the main thread.
  */
@@ -43,6 +50,7 @@ class AudioController @Inject constructor(
     private val settings: SettingsRepository,
     private val tracker: AdSessionTracker,
     @MainDispatcher main: CoroutineDispatcher,
+    @IoDispatcher private val io: CoroutineDispatcher,
     private val crash: CrashReporter = NoopCrashReporter,
 ) : DefaultLifecycleObserver {
 
@@ -53,6 +61,52 @@ class AudioController @Inject constructor(
     private val sfxLazy = lazy { SfxPlayer(context) }
 
     @Volatile private var sfxEnabled = true
+
+    private val audioManager: AudioManager? = context.getSystemService(AudioManager::class.java)
+    private var focusRequest: AudioFocusRequest? = null
+
+    /** Latest music command is PLAY (focus callbacks may resume only then). */
+    private var wantPlay = false
+
+    private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
+        when (change) {
+            AudioManager.AUDIOFOCUS_GAIN -> if (wantPlay) {
+                music.setDucked(false)
+                music.play()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> music.setDucked(true)
+            AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> music.pause()
+        }
+    }
+
+    /** True = may play now. Delayed grant plays from [focusListener] on AUDIOFOCUS_GAIN. Fails open when audio service is unavailable. */
+    private fun requestMusicFocus(): Boolean {
+        val am = audioManager ?: return true
+        return try {
+            val request = focusRequest ?: AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_GAME)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build(),
+                )
+                .setAcceptsDelayedFocusGain(true)
+                .setOnAudioFocusChangeListener(focusListener, Handler(Looper.getMainLooper()))
+                .build()
+                .also { focusRequest = it }
+            am.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        } catch (t: Throwable) {
+            crash.recordNonFatal(t, "audio.focusRequest")
+            true
+        }
+    }
+
+    private fun abandonMusicFocus() {
+        val request = focusRequest ?: return
+        focusRequest = null
+        runCatching { audioManager?.abandonAudioFocusRequest(request) }
+        music.setDucked(false)
+    }
 
     /** Call once from `Application.onCreate` (main thread). */
     fun start() {
@@ -70,9 +124,20 @@ class AudioController @Inject constructor(
                     .distinctUntilChanged()
                     .collect { command ->
                         when (command) {
-                            MusicCommand.PLAY -> music.play()
-                            MusicCommand.PAUSE -> music.pause()
-                            MusicCommand.STOP -> music.stop()
+                            MusicCommand.PLAY -> {
+                                wantPlay = true
+                                if (requestMusicFocus()) music.play()
+                            }
+                            MusicCommand.PAUSE -> {
+                                wantPlay = false
+                                music.pause()
+                                abandonMusicFocus()
+                            }
+                            MusicCommand.STOP -> {
+                                wantPlay = false
+                                music.stop()
+                                abandonMusicFocus()
+                            }
                         }
                     }
             } catch (e: CancellationException) {
@@ -89,7 +154,7 @@ class AudioController @Inject constructor(
                 settings.settings.map { it.sfx }.distinctUntilChanged().collect { on ->
                     sfxEnabled = on
                     // Build the SoundPool (opens ~17 raw fds) off the main thread; lazy is thread-safe.
-                    if (on) withContext(Dispatchers.IO) { runCatching { sfxLazy.value } }
+                    if (on) withContext(io) { runCatching { sfxLazy.value } }
                 }
             } catch (e: CancellationException) {
                 throw e

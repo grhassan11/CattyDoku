@@ -5,16 +5,18 @@ import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import com.tm.meow.sudoku.puzzle.domain.config.AppRemoteConfig
 import com.tm.meow.sudoku.puzzle.domain.config.RemoteConfigParser
 import com.tm.meow.sudoku.puzzle.domain.config.RemoteConfigRepository
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
 /**
- * Remote Config adapter. In-app defaults come from [RemoteConfigParser.defaults] (no XML). [current] is frozen after the
- * first read (see [RemoteConfigRepository]). [refresh] runs on [scope] (app lifetime, NOT a ViewModel scope) under a hard
+ * Remote Config adapter. In-app defaults come from [RemoteConfigParser.defaults] (no XML). [current] is cached and the cache
+ * is replaced on every successful activate (B+C: late fetch applies in the same session; see [RemoteConfigRepository]). [refresh] runs on [scope] (app lifetime, NOT a ViewModel scope) under a hard
  * time budget; any failure leaves the previously activated values / defaults in place.
  */
 class FirebaseRemoteConfigRepository(
@@ -46,16 +48,39 @@ class FirebaseRemoteConfigRepository(
         }
     }
 
+    /** A fetch + activate completed successfully this process: later [refresh] calls (reconnect recovery) are no-ops. */
+    @Volatile private var fetched = false
+    @Volatile private var job: Job? = null
+    private val inFlight = AtomicBoolean(false)
+
+    /**
+     * Single-flight and idempotent: no-op while a fetch runs or after one succeeded this process. A failed / timed-out fetch
+     * (offline launch) leaves it re-armed, so the late-online recovery can call it again.
+     */
     override fun refresh() {
-        scope.launch {
+        if (fetched || !inFlight.compareAndSet(false, true)) return
+        job = scope.launch {
             try {
-                withTimeoutOrNull(FETCH_BUDGET_MS) { fetchAndActivate() }
+                if (withTimeoutOrNull(FETCH_BUDGET_MS) { fetchAndActivate() } == true) {
+                    fetched = true
+                    // Activated: replace the cache so the next current() read sees the new values.
+                    synchronized(this@FirebaseRemoteConfigRepository) { snapshot = readNow() }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
                 // failure = defaults / last activated values
+            } finally {
+                inFlight.set(false)
             }
         }
+    }
+
+    override suspend fun refreshAndAwait(timeoutMs: Long): Boolean {
+        refresh()
+        if (fetched) return true
+        withTimeoutOrNull(timeoutMs) { job?.join() }
+        return fetched
     }
 
     private fun readNow(): AppRemoteConfig = try {

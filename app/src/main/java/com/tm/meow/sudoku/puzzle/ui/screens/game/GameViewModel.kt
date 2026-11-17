@@ -212,6 +212,7 @@ class GameViewModel @Inject constructor(
         viewModelScope.launch {
             val charges = bestEffortResult { getBoosterCharges() } ?: s.state.charges
             pauseTimer()
+            logPendingLoss() // restart after a loss ends that attempt (before the new one starts)
             analytics.log(AnalyticsEvent.LevelRestart(levelContext(s.puzzle), attemptStats(s))) // restart is NOT a quit
             elapsedBaseMs = 0L
             val fresh = applyStarterCat(s.puzzle, GameState.initial(s.puzzle.size, charges))
@@ -247,6 +248,7 @@ class GameViewModel @Inject constructor(
 
     private fun loadLevel(requested: Int?) {
         loadJob?.cancel()
+        logPendingLoss()
         maybeLogQuit(QuitReason.SWITCH_LEVEL)
         session = null
         pauseTimer()
@@ -351,8 +353,14 @@ class GameViewModel @Inject constructor(
     fun onCellTap(pos: Pos) {
         dragCrossFeedback = 0
         val s = idle() ?: return
+        lastTapPos = pos
+        lastTapAtMs = System.currentTimeMillis()
         applyStep(s, toggleX(s.puzzle, s.state, pos), HapticKind.TICK, pos)
     }
+
+    // Double tap = tap (X) + cat. Remembered so undo of the cat returns to the pre-gesture cell.
+    private var lastTapPos: Pos? = null
+    private var lastTapAtMs = 0L
 
     /** Place a cat (replaces X) or remove the cat that is there. */
     fun onCellDoubleTap(pos: Pos) {
@@ -361,7 +369,10 @@ class GameViewModel @Inject constructor(
             sendSfx(SfxKind.BLOCKED) // double-tap on a starter / booster cat: refused
             return
         }
-        applyStep(s, placeCat(s.puzzle, s.state, pos), HapticKind.TICK, pos)
+        val fromTap = lastTapPos == pos &&
+            System.currentTimeMillis() - lastTapAtMs <= TAP_GESTURE_WINDOW_MS
+        lastTapPos = null
+        applyStep(s, placeCat(s.puzzle, s.state, pos, fromTap), HapticKind.TICK, pos)
     }
 
     /** Live drag feedback: one cross sfx + light tick per cell newly marked X as the finger enters it. */
@@ -453,7 +464,11 @@ class GameViewModel @Inject constructor(
                 _events.trySend(GameUiEvent.NoCharges(Booster.MOUSE))
                 sendSfx(SfxKind.BLOCKED)
             }
-            MouseBoosterResult.Unavailable -> Unit // nothing eligible: no charge spent
+            MouseBoosterResult.Unavailable -> Unit
+            MouseBoosterResult.NoTarget -> { // nothing to cross out: no charge spent, tell the user
+                _events.trySend(GameUiEvent.MouseNoTarget)
+                sendSfx(SfxKind.BLOCKED)
+            }
             is MouseBoosterResult.Marked -> {
                 attempt.boosterUsed()
                 analytics.log(AnalyticsEvent.BoosterUsed("mouse", levelContext(s.puzzle)))
@@ -508,6 +523,7 @@ class GameViewModel @Inject constructor(
         val revived = reviveGame(s.state) ?: return
         session = s.copy(state = revived, outcome = null, hint = null, hintOverlay = false)
         attempt.revive()
+        pendingLoss = null // revived attempt logs a single end later
         analytics.log(AnalyticsEvent.LevelRevive(levelContext(s.puzzle), attemptStats(s)))
         resumeTimer()
         enqueueSave() // finish() cleared the autosave on the loss; write the revived game back
@@ -670,18 +686,22 @@ class GameViewModel @Inject constructor(
         attempt.end() // a finished attempt can never be logged as a quit
         val ctx = levelContext(s.puzzle)
         val stats = attemptStats(s, result.score.total)
+        // A loss's `level_end` waits: the rewarded continue can still revive this attempt (see logPendingLoss).
+        if (!result.won) pendingLoss = PendingLoss(ctx, stats)
         viewModelScope.launch {
             val completion = bestEffortResult { completeLevel(result) }
-            analytics.log(
-                AnalyticsEvent.LevelEnd(
-                    // Replay is only known for sure after the save (first completion or not).
-                    ctx = if (result.won && !isDaily && completion != null) ctx.copy(isReplay = !completion.firstCompletion) else ctx,
-                    stats = stats,
-                    won = result.won,
-                    newBestTime = result.won && completion?.isNewBestTime == true,
-                    newBestScore = result.won && completion?.isNewBest == true,
-                ),
-            )
+            if (result.won) {
+                analytics.log(
+                    AnalyticsEvent.LevelEnd(
+                        // Replay is only known for sure after the save (first completion or not).
+                        ctx = if (!isDaily && completion != null) ctx.copy(isReplay = !completion.firstCompletion) else ctx,
+                        stats = stats,
+                        won = true,
+                        newBestTime = completion?.isNewBestTime == true,
+                        newBestScore = completion?.isNewBest == true,
+                    ),
+                )
+            }
             bestEffort { userProps.sync() }
         }
         sendHaptic(if (won) HapticKind.WIN else HapticKind.LOSE)
@@ -729,9 +749,25 @@ class GameViewModel @Inject constructor(
     }
 
     /** Player left the game screen through an explicit back action. */
-    fun onUserLeft(reason: String) = maybeLogQuit(reason)
+    fun onUserLeft(reason: String) {
+        logPendingLoss()
+        maybeLogQuit(reason)
+    }
+
+    /** Lost attempt whose `level_end` (lose) is held back until the loss truly ends (restart / leave / cleared). */
+    private data class PendingLoss(val ctx: LevelContext, val stats: AttemptStats)
+
+    private var pendingLoss: PendingLoss? = null
+
+    /** The game-over truly ended: log the held `level_end` (lose) once. A revive clears it instead. */
+    private fun logPendingLoss() {
+        val p = pendingLoss ?: return
+        pendingLoss = null
+        analytics.log(AnalyticsEvent.LevelEnd(ctx = p.ctx, stats = p.stats, won = false))
+    }
 
     override fun onCleared() {
+        logPendingLoss()
         maybeLogQuit(QuitReason.CLEARED)
         super.onCleared()
     }
@@ -815,5 +851,8 @@ class GameViewModel @Inject constructor(
          * level is started/resumed.
          */
         const val RECORD_STREAK_ON_LEVEL_START = false
+
+        /** Max gap between a tap and the double tap's cat for the X to count as the same gesture. */
+        const val TAP_GESTURE_WINDOW_MS = 700L
     }
 }

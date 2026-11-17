@@ -289,7 +289,7 @@ internal fun SudokuActionRow(
                 if (hintCharges > 0) {
                     BadgeText(hintCharges.toString())
                 } else {
-                    IconImage(R.drawable.ic_play, size = 10.dp, tint = Color.White)
+                    IconImage(R.drawable.ic_watch_ad, size = 10.dp, tint = Color.White)
                 }
             },
             onClick = onHint,

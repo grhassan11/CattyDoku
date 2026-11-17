@@ -245,8 +245,10 @@ private fun MilestoneRow(m: MilestoneUi, onClaim: (Int) -> Unit) {
                 color = GameColors.Title,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
+                fontFamily = FredokaFamily,
                 maxLines = 1,
-                modifier = Modifier.width(44.dp).clearAndSetSemantics { },
+                softWrap = false,
+                modifier = Modifier.widthIn(min = 56.dp).clearAndSetSemantics { },
             )
             FlowRow(
                 Modifier

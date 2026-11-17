@@ -27,7 +27,7 @@ object NoopUserPropsSync : UserPropsSync {
 }
 
 /**
- * Snapshot of player state pushed to GA4 as user properties (14 of the 25 custom dimensions). Skipped entirely unless
+ * Snapshot of player state pushed to GA4 as user properties (15 of the 25 custom dimensions). Skipped entirely unless
  * analytics consent allows it. `payer` comes from the persisted flag that
  * [com.tm.meow.sudoku.puzzle.domain.billing.PurchaseProcessor] writes on a fresh purchase (set only when true; GA4 keeps it). Never throws (except cancellation).
  */
@@ -41,6 +41,7 @@ class SyncAnalyticsUserProperties(
     private val adsRemoved: AdsRemovedRepository,
     private val notifications: NotificationStatus,
     private val time: TimeProvider,
+    private val language: GetAppLanguage,
 ) : UserPropsSync {
 
     override suspend fun sync() {
@@ -66,6 +67,7 @@ class SyncAnalyticsUserProperties(
             set(AnalyticsUserProps.STREAK_DAYS, days.current.toString())
             set(AnalyticsUserProps.TUTORIAL_DONE, flag(f.tutorialDone))
             set(AnalyticsUserProps.NOTIF_ENABLED, flag(notifications.areEnabled()))
+            set(AnalyticsUserProps.APP_LANGUAGE, language().tag)
             if (f.payer) set(AnalyticsUserProps.PAYER, "1") // sticky: only ever set, never cleared
         } catch (e: CancellationException) {
             throw e

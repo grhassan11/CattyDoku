@@ -128,6 +128,53 @@ class GameViewModelAnalyticsTest {
     }
 
     @Test
+    fun loseIsHeldUntilTheAttemptEnds() = vmTest { rig, vm ->
+        vm.loseLevelOne()
+        advanceUntilIdle()
+        assertEquals(0, rig.analytics.count("level_end"))
+    }
+
+    @Test
+    fun loseThenReviveThenWinLogsOnlyTheWinEnd() = vmTest { rig, vm ->
+        vm.loseLevelOne()
+        advanceUntilIdle()
+        vm.onRevive()
+        for (c in solution) vm.onCellDoubleTap(c)
+        advanceUntilIdle()
+        vm.onUserLeft(QuitReason.TOP_BAR_BACK)
+        assertEquals(1, rig.analytics.count("level_end"))
+        assertEquals("win", rig.analytics.first("level_end").params["result"])
+        assertEquals(1, rig.analytics.count("level_revive"))
+        assertEquals(0, rig.analytics.count("level_quit"))
+    }
+
+    @Test
+    fun loseThenRestartLogsLoseEndBeforeNewStart() = vmTest { rig, vm ->
+        vm.loseLevelOne()
+        advanceUntilIdle()
+        vm.onRestart()
+        advanceUntilIdle()
+        assertEquals(1, rig.analytics.count("level_end"))
+        assertEquals("lose", rig.analytics.first("level_end").params["result"])
+        assertEquals(1L, rig.analytics.first("level_end").params["attempt_no"])
+        assertEquals(listOf("level_start", "level_end", "level_restart", "level_start"), rig.analytics.names.filter {
+            it == "level_start" || it == "level_end" || it == "level_restart"
+        })
+        assertEquals(0, rig.analytics.count("level_quit"))
+    }
+
+    @Test
+    fun loseThenLeaveLogsOneLoseEndAndNoQuit() = vmTest { rig, vm ->
+        vm.loseLevelOne()
+        advanceUntilIdle()
+        vm.onUserLeft(QuitReason.TOP_BAR_BACK)
+        vm.onUserLeft(QuitReason.CLEARED)
+        assertEquals(1, rig.analytics.count("level_end"))
+        assertEquals("lose", rig.analytics.first("level_end").params["result"])
+        assertEquals(0, rig.analytics.count("level_quit"))
+    }
+
+    @Test
     fun undoLoggedOnlyWhenSomethingWasUndone() = vmTest { rig, vm ->
         vm.onUndo() // nothing to undo
         assertEquals(0, rig.analytics.count("undo_used"))

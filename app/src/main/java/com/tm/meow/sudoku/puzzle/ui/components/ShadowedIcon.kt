@@ -38,6 +38,7 @@ fun ShadowedIcon(
     shadowAlpha: Float = 0.35f,
     shadowOffsetY: Dp = 1.5.dp,
     shadowBlur: Dp = 1.5.dp,
+    tint: Color? = null,
 ) {
     val painter = painterResource(res)
     val imageAlpha = if (greyed) 0.5f else 1f
@@ -58,7 +59,11 @@ fun ShadowedIcon(
             contentDescription = null,
             modifier = Modifier.size(size),
             alpha = imageAlpha,
-            colorFilter = if (greyed) GreyscaleFilter else null,
+            colorFilter = when {
+                greyed -> GreyscaleFilter
+                tint != null -> ColorFilter.tint(tint)
+                else -> null
+            },
         )
     }
 }

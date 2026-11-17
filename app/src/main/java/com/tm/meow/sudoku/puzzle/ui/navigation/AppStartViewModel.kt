@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
+import com.tm.meow.sudoku.puzzle.domain.analytics.NotificationType
 import com.tm.meow.sudoku.puzzle.domain.crash.CrashReporter
 import com.tm.meow.sudoku.puzzle.domain.crash.NoopCrashReporter
 import com.tm.meow.sudoku.puzzle.domain.startup.StartInputs
@@ -47,6 +48,12 @@ class AppStartViewModel @Inject constructor(
         if (name == lastScreen) return
         lastScreen = name
         analytics.log(AnalyticsEvent.ScreenView(name))
+    }
+
+    /** Reminder tapped (content intent). Unknown types are dropped. Caller consumes the intent extra so it logs once. */
+    fun onNotificationOpened(type: String?) {
+        if (type == null || type !in NotificationType.ALL) return
+        analytics.log(AnalyticsEvent.NotificationOpen(type))
     }
 
     /** Null until the flags are read. */

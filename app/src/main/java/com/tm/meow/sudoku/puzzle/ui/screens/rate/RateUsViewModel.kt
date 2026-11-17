@@ -7,7 +7,6 @@ import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.rating.RateAction
 import com.tm.meow.sudoku.puzzle.domain.usecase.DismissRateUs
-import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveRateUsRated
 import com.tm.meow.sudoku.puzzle.domain.usecase.SubmitRateUs
 import com.tm.meow.sudoku.puzzle.domain.usecase.TryShowRateUs
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,13 +15,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** One-shot follow-ups the route performs (needs a Context, so not done here). */
@@ -43,18 +38,8 @@ class RateUsViewModel @Inject constructor(
     private val tryShowRateUs: TryShowRateUs,
     private val dismissRateUs: DismissRateUs,
     private val submitRateUs: SubmitRateUs,
-    observeRateUsRated: ObserveRateUsRated,
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
 ) : ViewModel() {
-
-    /**
-     * Whether the exit sheet shows the Rate us content: true only once the flag is known to be "not rated yet"
-     * (starts false so an already-rated user never sees a flash). No once-ever / cooldown policy applies to the sheet.
-     */
-    val showRateInExitSheet: StateFlow<Boolean> = observeRateUsRated()
-        .map { rated -> !rated }
-        .catch { emit(false) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _visible = MutableStateFlow(false)
     val visible: StateFlow<Boolean> = _visible.asStateFlow()

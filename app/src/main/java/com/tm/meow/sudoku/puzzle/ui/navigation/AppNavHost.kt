@@ -149,9 +149,14 @@ fun AppNavHost(
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
             startViewModel.onDestinationChanged(destination.route)
+            // Settings (+ About) block app-open; evaluated only at the foreground moment, so leaving Settings re-allows it.
+            startupRecovery.onDestinationChanged(destination.route)
         }
         navController.addOnDestinationChangedListener(listener)
-        onDispose { navController.removeOnDestinationChangedListener(listener) }
+        onDispose {
+            navController.removeOnDestinationChangedListener(listener)
+            startupRecovery.onDestinationChanged(null)
+        }
     }
     NavHost(navController = navController, startDestination = Routes.SPLASH, modifier = modifier) {
         composable(Routes.SPLASH) {
