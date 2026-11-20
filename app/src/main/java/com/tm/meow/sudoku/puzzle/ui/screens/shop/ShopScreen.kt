@@ -166,20 +166,25 @@ private fun ShopTopBar(restoreEnabled: Boolean, onBack: () -> Unit, onRestore: (
             fontSize = 24.sp,
             fontFamily = FredokaFamily, fontWeight = FontWeight.SemiBold,
         )
-        TextButton(
-            onClick = onRestore,
-            enabled = restoreEnabled,
-            modifier = Modifier.align(Alignment.CenterEnd).heightIn(min = 48.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.shop_restore),
-                color = if (restoreEnabled) GameColors.CtaGreenLip else GameColors.Disabled,
-                fontSize = 16.sp,
-                fontFamily = FredokaFamily, fontWeight = FontWeight.Medium,
-            )
+        if (SHOW_RESTORE) {
+            TextButton(
+                onClick = onRestore,
+                enabled = restoreEnabled,
+                modifier = Modifier.align(Alignment.CenterEnd).heightIn(min = 48.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.shop_restore),
+                    color = if (restoreEnabled) GameColors.CtaGreenLip else GameColors.Disabled,
+                    fontSize = 16.sp,
+                    fontFamily = FredokaFamily, fontWeight = FontWeight.Medium,
+                )
+            }
         }
     }
 }
+
+/** Set true to show the Restore controls (top bar + footer). Rendering only; restore logic untouched. */
+private const val SHOW_RESTORE = false
 
 @Composable
 private fun ShopFooter(restoreEnabled: Boolean, onRestore: () -> Unit, onPrivacy: () -> Unit) {
@@ -188,8 +193,10 @@ private fun ShopFooter(restoreEnabled: Boolean, onRestore: () -> Unit, onPrivacy
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FooterLink(stringResource(R.string.shop_footer_restore), onRestore, enabled = restoreEnabled)
-        FooterDot()
+        if (SHOW_RESTORE) {
+            FooterLink(stringResource(R.string.shop_footer_restore), onRestore, enabled = restoreEnabled)
+            FooterDot()
+        }
         FooterLink(stringResource(R.string.shop_footer_privacy), onPrivacy)
     }
 }

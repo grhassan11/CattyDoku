@@ -430,11 +430,11 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    /** Hint dim overlay closed (tap anywhere / Got it / back). Pure UI: no charge, no score, hint highlight stays until the next move. */
+    /** Hint dim overlay closed (tap anywhere / Got it / back). Pure UI: no charge, no score. Also clears the hint itself so the board returns to normal colours (no faded REASON / orange TARGET cells left behind). */
     fun onHintOverlayDismiss() {
         val s = session ?: return
         if (!s.hintOverlay) return
-        session = s.copy(hintOverlay = false)
+        session = s.copy(hintOverlay = false, hint = null)
         publish()
     }
 

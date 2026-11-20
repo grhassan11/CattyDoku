@@ -244,7 +244,7 @@ sealed class AnalyticsEvent(val name: String, val params: Map<String, Any> = emp
     data class SettingChange(val setting: String, val enabled: Boolean) :
         AnalyticsEvent("settings_change", mapOf("setting" to setting, "enabled" to flag(enabled)))
 
-    /** [language]: BCP-47 tag picked in the Language dialog (en, ja, zh-TW, nl, de, ko, it, es, fr, ru, tr). */
+    /** [language]: BCP-47 tag picked in the Language dialog (en, ja, zh-TW, nl, de, ko, it, es, fr, ru, tr, pt). */
     data class LanguageChange(val language: String) :
         AnalyticsEvent("language_change", mapOf("language" to language))
 

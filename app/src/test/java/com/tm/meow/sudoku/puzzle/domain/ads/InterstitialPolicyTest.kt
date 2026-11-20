@@ -83,6 +83,14 @@ class InterstitialPolicyTest {
     }
 
     @Test
+    fun loseHomeSharesRetrySwitchAndGates() {
+        val off = cfg.copy(levelsRestartInterstitialShow = false)
+        assertEquals(skip(AdSkipReason.DISABLED), InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_HOME), off))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_HOME, level = 1), cfg))
+        assertEquals(skip(AdSkipReason.NO_CONSENT), InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_HOME, canRequestAds = false), cfg))
+    }
+
+    @Test
     fun levelsRetrySwitchGatesOnlyRetry() {
         val off = cfg.copy(levelsRestartInterstitialShow = false)
         assertEquals(skip(AdSkipReason.DISABLED), InterstitialPolicy.decide(ok(trigger = AdTrigger.LOSE_RETRY), off))

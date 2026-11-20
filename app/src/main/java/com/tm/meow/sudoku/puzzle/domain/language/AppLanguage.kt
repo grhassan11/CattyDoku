@@ -23,6 +23,7 @@ object AppLanguages {
         AppLanguage("fr", "Français", "French"),
         AppLanguage("ru", "Русский", "Russian"),
         AppLanguage("tr", "Türkçe", "Turkish"),
+        AppLanguage("pt", "Português", "Portuguese"),
     )
 
     /**

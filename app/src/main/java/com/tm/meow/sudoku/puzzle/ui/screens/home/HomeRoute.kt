@@ -156,6 +156,11 @@ fun HomeRoute(
         ExitSheet(
             onRateStar = rateUsViewModel::onExitSheetStar,
             onDismiss = { showExit = false },
+            showRemoveAds = state.removeAdsBadgeVisible,
+            onRemoveAds = {
+                showExit = false
+                viewModel.onRemoveAdsClick()
+            },
             onExit = {
                 showExit = false
                 onExit()

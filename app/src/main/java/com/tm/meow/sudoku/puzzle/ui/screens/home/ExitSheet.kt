@@ -35,7 +35,8 @@ import com.tm.meow.sudoku.puzzle.ui.theme.GameColors
 
 /**
  * Exit confirmation bottom sheet (system Back on Home). Stateless: [onDismiss] = Cancel / scrim / drag-down / Back
- * (the sheet consumes Back itself), [onExit] = leave the app.
+ * (the sheet consumes Back itself), [onExit] = leave the app. [showRemoveAds] swaps the Cancel button for a green
+ * Remove Ads button ([onRemoveAds]); false = Cancel (ads already removed / price unavailable).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +45,8 @@ fun ExitSheet(
     onExit: () -> Unit,
     onRateStar: (stars: Int) -> Unit,
     modifier: Modifier = Modifier,
+    showRemoveAds: Boolean = false,
+    onRemoveAds: () -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val message = stringResource(R.string.exit_sheet_message)
@@ -75,20 +78,39 @@ fun ExitSheet(
             )
             Spacer(Modifier.height(24.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button3D(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                    style = ButtonStyle.Secondary,
-                    horizontalPadding = 8.dp,
-                ) {
-                    Text(
-                        stringResource(R.string.exit_sheet_cancel),
-                        color = ButtonStyle.Secondary.content,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FredokaFamily,
-                        maxLines = 1,
-                    )
+                if (showRemoveAds) {
+                    Button3D(
+                        onClick = onRemoveAds,
+                        modifier = Modifier.weight(1f),
+                        style = ButtonStyle.Green,
+                        horizontalPadding = 8.dp,
+                    ) {
+                        Text(
+                            stringResource(R.string.exit_remove_ads),
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FredokaFamily,
+                            maxLines = 1,
+                            style = ctaTextStyle(),
+                        )
+                    }
+                } else {
+                    Button3D(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        style = ButtonStyle.Secondary,
+                        horizontalPadding = 8.dp,
+                    ) {
+                        Text(
+                            stringResource(R.string.exit_sheet_cancel),
+                            color = ButtonStyle.Secondary.content,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FredokaFamily,
+                            maxLines = 1,
+                        )
+                    }
                 }
                 Button3D(
                     onClick = onExit,

@@ -435,6 +435,7 @@
     <string name="level_sheet_resume">続ける</string>
     <string name="exit_sheet_message">本当に終了しますか？</string>
     <string name="exit_sheet_cancel">キャンセル</string>
+    <string name="exit_remove_ads">広告を削除</string>
     <string name="exit_sheet_exit">終了</string>
     <string name="sudoku_entry_title">CATTY SUDOKU</string>
     <string name="sudoku_back">戻る</string>

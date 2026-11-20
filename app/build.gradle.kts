@@ -23,17 +23,16 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // ---- Ads / UMP (phase 9). ----
-        // ALL builds (debug, release, nonMinifiedRelease, benchmarkRelease) = REAL IDs, defined ONCE here.
+        // ALL builds (debug, release, nonMinifiedRelease, benchmarkRelease) currently = REAL IDs (pub-4314093941046206). Defined ONCE here.
         // Edit ONLY the ids below (single place). No per-buildType ad ids exist.
-        // REAL IDs (pub-4314093941046206):
-        //   app        ca-app-pub-4314093941046206~9747457418
-        //   interstitial ca-app-pub-4314093941046206/9472125240
-        //   native     ca-app-pub-4314093941046206/4495130734
-        //   app open   ca-app-pub-4314093941046206/4609671647
-        //   (banner unit 7814419481 retired: game screens now use the native unit above)
-        //   rewarded   ca-app-pub-4314093941046206/9921708076
-        // Placeholder guard (PLACEHOLDER_MARK contains-check) passes for real IDs, so ads stay enabled.
-        // No setTestDeviceIds is set: with REAL IDs do NOT run the release build on a dev device (invalid-traffic / policy risk).
+        // SWAP TO TEST IDs for dev (Google test pub-3940256099942544):
+        //   app          ca-app-pub-3940256099942544~3347511713
+        //   interstitial ca-app-pub-3940256099942544/1033173712
+        //   native       ca-app-pub-3940256099942544/2247696110
+        //   app open     ca-app-pub-3940256099942544/9257395921
+        //   rewarded     ca-app-pub-3940256099942544/5224354917
+        // (banner unit 7814419481 retired: game screens now use the native unit)
+        // Placeholder guard (PLACEHOLDER_MARK = 16 zeros contains-check): passes for real + test IDs so ads stay enabled.
         val admobAppId = "ca-app-pub-4314093941046206~9747457418"
         val admobInterstitialId = "ca-app-pub-4314093941046206/9472125240"
         val admobNativeId = "ca-app-pub-4314093941046206/4495130734"
@@ -86,7 +85,7 @@ android {
     androidResources {
         // App ships these 11 languages (see AppLanguages / res/xml/locales_config.xml): drop every other library translation
         // (Material, Play Services, Firebase, ...) from the APK/AAB. zh-rTW = Traditional Chinese.
-        localeFilters += listOf("en", "ja", "zh-rTW", "nl", "de", "ko", "it", "es", "fr", "ru", "tr")
+        localeFilters += listOf("en", "ja", "zh-rTW", "nl", "de", "ko", "it", "es", "fr", "ru", "tr", "pt")
     }
 
     packaging {

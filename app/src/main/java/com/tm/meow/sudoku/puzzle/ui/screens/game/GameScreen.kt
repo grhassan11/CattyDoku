@@ -123,6 +123,8 @@ fun GameScreen(
     onNextLevel: () -> Unit,
     onLoseRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Lose-screen HOME; defaults to the same pop-to-Home as [onBack]. GameRoute routes it through the interstitial. */
+    onLoseHome: () -> Unit = onBack,
     /** Level Complete HOME icon; defaults to the same pop-to-Home as [onBack]. */
     onWinHome: () -> Unit = onBack,
     ads: GameAdsUi = GameAdsUi(),
@@ -190,6 +192,7 @@ fun GameScreen(
                 onMouseBooster = onMouseBooster,
                 onNextLevel = onNextLevel,
                 onLoseRetry = onLoseRetry,
+                onLoseHome = onLoseHome,
                 ads = ads,
                 boosterDialog = boosterDialog,
                 onEmptyBoosterTap = onEmptyBoosterTap,
@@ -247,6 +250,7 @@ private fun GameContent(
     onMouseBooster: () -> Unit,
     onNextLevel: () -> Unit,
     onLoseRetry: () -> Unit,
+    onLoseHome: () -> Unit,
     ads: GameAdsUi,
     boosterDialog: Booster?,
     onEmptyBoosterTap: (Booster) -> Unit,
@@ -425,7 +429,7 @@ private fun GameContent(
             maxHearts = content.maxHearts,
             onNextLevel = onNextLevel, // Daily: GameRoute routes to Home after the win ad
             onRetry = onLoseRetry,
-            onHome = onBack, // same pop-to-Home as the top-bar back
+            onHome = onLoseHome, // Home: interstitial first (GameRoute), then pop-to-Home
             onWinHome = onWinHome,
             daily = content.isDaily,
             pieceSkin = content.pieceSkin,

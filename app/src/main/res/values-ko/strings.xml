@@ -435,6 +435,7 @@
     <string name="level_sheet_resume">이어하기</string>
     <string name="exit_sheet_message">정말 종료하시겠어요?</string>
     <string name="exit_sheet_cancel">취소</string>
+    <string name="exit_remove_ads">광고 제거</string>
     <string name="exit_sheet_exit">종료</string>
     <string name="sudoku_entry_title">CATTY SUDOKU</string>
     <string name="sudoku_back">뒤로</string>

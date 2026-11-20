@@ -121,6 +121,37 @@ fun GameRoute(
         }
     }
 
+    // Lose-screen Home interstitial, exactly once per lose screen, for Home tap AND system back (same pattern as the win ad):
+    // 0 = not yet, 1 = ad in flight (further taps ignored), 2 = done. Reset when the lose dialog goes (retry / revive).
+    val loseShown = content?.outcome is OutcomeUi.Lost
+    var loseAdState by remember { mutableIntStateOf(0) }
+    LaunchedEffect(loseShown) { if (!loseShown) loseAdState = 0 }
+    val loseHome: () -> Unit = {
+        val leave = {
+            viewModel.onUserLeft(QuitReason.TOP_BAR_BACK)
+            onBack()
+        }
+        when (loseAdState) {
+            1 -> Unit
+            2 -> leave()
+            else -> {
+                loseAdState = 1
+                val started = adsViewModel.beforeLoseHome(adLevel, adIsDaily) {
+                    loseAdState = 2
+                    scope.launch {
+                        // Back from a full-screen ad: wait for RESUMED so popBackStack (popIfResumed) is not dropped.
+                        snapshotFlow { resumed }.first { it }
+                        withFrameNanos { }
+                        leave()
+                    }
+                }
+                if (!started) loseAdState = 0 // another ad action in flight: let the player tap again
+            }
+        }
+    }
+    // System back on the Lose screen = Home button (interstitial first). Disabled while rewarded revive is in flight.
+    BackHandler(enabled = loseShown && !rewardedBusy) { loseHome() }
+
     // App-wide audio (music + SFX, silenced during full-screen ads): provided in MainActivity.
     val audio = LocalAudioController.current
     // Idle meow: same eligibility as the nudge, minus a running mouse flight. Sound toggle + ad silence live in the controller.
@@ -306,6 +337,7 @@ fun GameRoute(
         },
         // Retry boundary: interstitial gated by levels_game_restarted_interstitial_ad_show (default on) + the pacing guards.
         // Revive is a separate rewarded CTA.
+        onLoseHome = loseHome,
         onLoseRetry = { adsViewModel.beforeRetry(adLevel, adIsDaily, onDone = viewModel::onRestart) },
         modifier = Modifier.fillMaxSize(),
         ads = adsUi,

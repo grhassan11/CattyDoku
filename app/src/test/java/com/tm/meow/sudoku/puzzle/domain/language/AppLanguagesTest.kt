@@ -21,7 +21,7 @@ class AppLanguagesTest {
     @Test
     fun listOrderAndShape() {
         assertEquals(
-            listOf("en", "ja", "zh-TW", "nl", "de", "ko", "it", "es", "fr", "ru", "tr"),
+            listOf("en", "ja", "zh-TW", "nl", "de", "ko", "it", "es", "fr", "ru", "tr", "pt"),
             AppLanguages.ALL.map { it.tag },
         )
         assertEquals(AppLanguages.ENGLISH, AppLanguages.ALL[0])
@@ -37,7 +37,8 @@ class AppLanguagesTest {
         assertEquals("fr", AppLanguages.resolve("fr_CA")?.tag)
         assertEquals("ja", AppLanguages.resolve("JA")?.tag)
         assertEquals("en", AppLanguages.resolve("en-GB")?.tag)
-        assertNull(AppLanguages.resolve("pt-BR"))
+        assertEquals("pt", AppLanguages.resolve("pt-BR")?.tag)
+        assertNull(AppLanguages.resolve("sv-SE"))
         assertNull(AppLanguages.resolve(""))
         assertNull(AppLanguages.resolve(null))
     }
@@ -57,7 +58,8 @@ class AppLanguagesTest {
     fun effectivePrefersAppThenSystemThenEnglish() {
         assertEquals("ko", AppLanguages.effective("ko", "de").tag)
         assertEquals("de", AppLanguages.effective(null, "de-DE").tag)
-        assertEquals("en", AppLanguages.effective(null, "pt-BR").tag)
+        assertEquals("pt", AppLanguages.effective(null, "pt-BR").tag)
+        assertEquals("en", AppLanguages.effective(null, "sv-SE").tag)
         assertEquals("en", AppLanguages.effective(null, null).tag)
         assertEquals("en", AppLanguages.effective("en", "es").tag) // explicit English wins over a Spanish device
     }

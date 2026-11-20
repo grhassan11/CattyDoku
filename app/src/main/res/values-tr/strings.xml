@@ -439,6 +439,7 @@
     <string name="level_sheet_resume">Devam Et</string>
     <string name="exit_sheet_message">Çıkmak istediğine emin misin?</string>
     <string name="exit_sheet_cancel">İptal</string>
+    <string name="exit_remove_ads">Reklamları kaldır</string>
     <string name="exit_sheet_exit">Çık</string>
     <string name="sudoku_entry_title">CATTY SUDOKU</string>
     <string name="sudoku_back">Geri</string>

@@ -17,6 +17,9 @@ enum class AdTrigger {
     /** User tapped Retry on the lose dialog (remote `levels_game_restarted_interstitial_ad_show`, default on). Shows from Level 1 (no ad-free gate). */
     LOSE_RETRY,
 
+    /** User tapped Home (or system back) on the Levels lose screen. Same gating as [LOSE_RETRY] (same remote switch); own name for analytics. */
+    LOSE_HOME,
+
     // Never boundaries: listed so callers state intent and tests pin the rule.
     DAILY_START,
     APP_LAUNCH,
@@ -75,7 +78,7 @@ object InterstitialPolicy {
         if (!switchOn(ctx.trigger, config)) return skip(AdSkipReason.DISABLED)
         if (AdFreePolicy.isSuppressedByPurchase(AdFormat.INTERSTITIAL, ctx.adsRemoved)) return skip(AdSkipReason.ADS_REMOVED)
         val sudoku = ctx.trigger == AdTrigger.SUDOKU_WON_CONTINUE || ctx.trigger == AdTrigger.SUDOKU_RESTART
-        if (ctx.trigger != AdTrigger.LEVEL_WON_CONTINUE && ctx.trigger != AdTrigger.LOSE_RETRY && !sudoku) {
+        if (ctx.trigger != AdTrigger.LEVEL_WON_CONTINUE && ctx.trigger != AdTrigger.LOSE_RETRY && ctx.trigger != AdTrigger.LOSE_HOME && !sudoku) {
             return if (ctx.trigger == AdTrigger.TUTORIAL) skip(AdSkipReason.TUTORIAL) else skip(AdSkipReason.NOT_A_BOUNDARY)
         }
         if (ctx.inTutorial) return skip(AdSkipReason.TUTORIAL)
@@ -106,7 +109,7 @@ object InterstitialPolicy {
     /** Per-surface remote switch of [trigger]. Non-boundary triggers pass here and are rejected as NOT_A_BOUNDARY / TUTORIAL. */
     private fun switchOn(trigger: AdTrigger, config: AdPolicyConfig): Boolean = when (trigger) {
         AdTrigger.LEVEL_WON_CONTINUE -> config.levelsWinInterstitialShow
-        AdTrigger.LOSE_RETRY -> config.levelsRestartInterstitialShow
+        AdTrigger.LOSE_RETRY, AdTrigger.LOSE_HOME -> config.levelsRestartInterstitialShow
         AdTrigger.SUDOKU_WON_CONTINUE -> config.sudokuWinInterstitialShow
         AdTrigger.SUDOKU_RESTART -> config.sudokuRestartInterstitialShow
         else -> true

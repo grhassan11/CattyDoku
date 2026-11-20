@@ -443,6 +443,7 @@
     <string name="level_sheet_resume">Reprendre</string>
     <string name="exit_sheet_message">Veux-tu vraiment quitter ?</string>
     <string name="exit_sheet_cancel">Annuler</string>
+    <string name="exit_remove_ads">Supprimer les pubs</string>
     <string name="exit_sheet_exit">Quitter</string>
     <string name="sudoku_entry_title">CATTY SUDOKU</string>
     <string name="sudoku_back">Retour</string>

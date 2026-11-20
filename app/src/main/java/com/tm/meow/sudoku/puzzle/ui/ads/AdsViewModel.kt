@@ -146,6 +146,10 @@ class AdsViewModel @Inject constructor(
     fun beforeRetry(level: Int, isDaily: Boolean, onDone: () -> Unit): Boolean =
         run(AdTrigger.LOSE_RETRY, level, isDaily, onDone)
 
+    /** Lose screen Home / system back: same gating + RC switch as [beforeRetry], BEFORE [onDone] (navigates Home). */
+    fun beforeLoseHome(level: Int, isDaily: Boolean, onDone: () -> Unit): Boolean =
+        run(AdTrigger.LOSE_HOME, level, isDaily, onDone)
+
     /** Returns false (and never calls [onDone]) when another full-screen ad action is in flight. */
     private fun run(trigger: AdTrigger, level: Int, isDaily: Boolean, onDone: () -> Unit): Boolean {
         if (!busy.compareAndSet(false, true)) return false
