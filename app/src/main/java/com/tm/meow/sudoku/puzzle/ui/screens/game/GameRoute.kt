@@ -143,6 +143,39 @@ fun GameRoute(
     // System back on the Lose screen = Home button (interstitial first). Disabled while rewarded revive is in flight.
     BackHandler(enabled = loseShown && !rewardedBusy) { loseHome() }
 
+    // Gameplay BACK (top-bar icon AND system back while playing): the preloaded interstitial first, then leave. Ad only when the
+    // player made progress (move / hint / lost heart) and levels_gameplay_back_button_native_ad_show + the policy cool-down allow it;
+    // every other case leaves at once. 0 = idle, 1 = ad in flight (further taps ignored). Win / lose dialogs never come here.
+    var backAdInFlight by remember { mutableStateOf(false) }
+    val gameBack: (String) -> Unit = { reason ->
+        if (!backAdInFlight) {
+            val leave = {
+                viewModel.onUserLeft(reason)
+                onBack()
+            }
+            if (!viewModel.hasProgress()) {
+                leave()
+            } else {
+                backAdInFlight = true
+                val started = adsViewModel.beforeGameBack(adLevel, adIsDaily) {
+                    scope.launch {
+                        // Back from a full-screen ad: wait for RESUMED so popBackStack (popIfResumed) is not dropped.
+                        snapshotFlow { resumed }.first { it }
+                        withFrameNanos { }
+                        backAdInFlight = false
+                        leave()
+                    }
+                }
+                if (!started) { // another ad action in flight: no back ad, just leave
+                    backAdInFlight = false
+                    leave()
+                }
+            }
+        }
+    }
+    val playing = content != null && content.outcome == null
+    BackHandler(enabled = playing && !rewardedBusy) { gameBack(QuitReason.SYSTEM_BACK) }
+
     // App-wide audio (music + SFX, silenced during full-screen ads): provided in MainActivity.
     val audio = LocalAudioController.current
     // Idle meow: same eligibility as the nudge, minus a running mouse flight. Sound toggle + ad silence live in the controller.
@@ -288,11 +321,8 @@ fun GameRoute(
     GameScreen(
         state = state,
         snackbarHostState = snackbarHostState,
-        // Top-bar back / dialog home: log a quit if an attempt is still open, then leave (system back is caught by onCleared).
-        onBack = {
-            viewModel.onUserLeft(QuitReason.TOP_BAR_BACK)
-            onBack()
-        },
+        // Top-bar back: back interstitial (if eligible) then leave; logs a quit if an attempt is still open.
+        onBack = { gameBack(QuitReason.TOP_BAR_BACK) },
         onWinHome = {
             audio?.stopSfx() // silence the win / award cue before leaving
             onBack()

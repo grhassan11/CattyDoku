@@ -7,6 +7,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -69,8 +74,16 @@ fun SudokuGameRoute(
     val onBackLatest by rememberUpdatedState(onBack)
 
     // PAUSE / RESUME (not STOP / START): a full-screen ad pauses the Activity without stopping it, so the clock holds then too.
-    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { viewModel.onAppStopped() }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onAppStarted() }
+    // `resumed` lets the exit wait for RESUMED after the back interstitial, so popBackStack (popIfResumed) is not dropped.
+    var resumed by remember { mutableStateOf(true) }
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) {
+        resumed = false
+        viewModel.onAppStopped()
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        resumed = true
+        viewModel.onAppStarted()
+    }
 
     // Keep an interstitial loaded for the win / restart boundary (no level gate). Idempotent; re-kicks when consent / SDK state changes.
     LaunchedEffect(surfaces, state.loading) { if (!state.loading) adsViewModel.preloadInterstitialAd(isSudoku = true) }
@@ -153,6 +166,9 @@ fun SudokuGameRoute(
                         SudokuExitReason.FAILED -> Toast.makeText(context, failedText, Toast.LENGTH_SHORT).show()
                         SudokuExitReason.NONE -> Unit
                     }
+                    // Back from a full-screen ad: wait for RESUMED (+ one frame) so the pop is not dropped.
+                    snapshotFlow { resumed }.first { it }
+                    withFrameNanos { }
                     onBackLatest()
                 }
             }

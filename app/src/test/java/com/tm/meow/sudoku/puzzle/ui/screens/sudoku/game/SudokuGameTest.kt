@@ -34,6 +34,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -332,10 +333,44 @@ class SudokuGameTest {
         coVerify(exactly = 1) { r.ads.onWin(any(), any()) }
     }
 
+    @Test
+    fun backAfterAMoveShowsBackAdOnceThenExits() = vmTest { r ->
+        val gate = kotlinx.coroutines.CompletableDeferred<Boolean>()
+        io.mockk.coEvery { r.ads.onBack() } coAnswers { gate.await() }
+        val exits = mutableListOf<SudokuGameEvent>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) { r.vm.events.collect { exits += it } }
+        r.vm.onCellTap(0)
+        r.vm.onDigit(1)
+        r.vm.onBack()
+        r.vm.onBack() // re-entry ignored: still one ad
+        coVerify(exactly = 1) { r.ads.onBack() }
+        assertTrue(exits.none { it is SudokuGameEvent.Exit }) // held until the ad returns
+        gate.complete(true)
+        assertEquals(1, exits.count { it is SudokuGameEvent.Exit })
+        job.cancel()
+    }
+
+    @Test
+    fun backWithoutAnyMoveNeverShowsBackAd() = vmTest { r ->
+        r.vm.onBack()
+        coVerify(exactly = 0) { r.ads.onBack() }
+    }
+
+    @Test
+    fun backOverWinDialogNeverShowsBackAd() = vmTest { r ->
+        r.vm.onCellTap(0)
+        r.vm.onDigit(1)
+        r.vm.onCellTap(15)
+        r.vm.onDigit(1)
+        assertTrue(r.vm.state.value.dialog is SudokuDialogUi.Won)
+        r.vm.onBack()
+        coVerify(exactly = 0) { r.ads.onBack() }
+    }
+
     // ---- analytics ----
 
     @Test
-    fun resumedSaveLogsResumeNotStart() = vmTest { r ->
+    fun resumedSaveLogsResumeNotStart()= vmTest { r ->
         assertEquals(listOf("level_resume"), r.analytics.names)
         assertEquals(1L, r.analytics.first("level_resume").params["resumed"])
         r.vm.onAppStopped()

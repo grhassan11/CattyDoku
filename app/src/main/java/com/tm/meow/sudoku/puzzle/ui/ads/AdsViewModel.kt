@@ -150,6 +150,13 @@ class AdsViewModel @Inject constructor(
     fun beforeLoseHome(level: Int, isDaily: Boolean, onDone: () -> Unit): Boolean =
         run(AdTrigger.LOSE_HOME, level, isDaily, onDone)
 
+    /**
+     * Levels / Daily gameplay BACK (top-bar icon or system back): maybe the preloaded interstitial (remote
+     * `levels_gameplay_back_button_native_ad_show`) BEFORE [onDone] (navigates). Caller must check progress first. No load wait.
+     */
+    fun beforeGameBack(level: Int, isDaily: Boolean, onDone: () -> Unit): Boolean =
+        run(AdTrigger.LEVELS_GAME_BACK, level, isDaily, onDone)
+
     /** Returns false (and never calls [onDone]) when another full-screen ad action is in flight. */
     private fun run(trigger: AdTrigger, level: Int, isDaily: Boolean, onDone: () -> Unit): Boolean {
         if (!busy.compareAndSet(false, true)) return false

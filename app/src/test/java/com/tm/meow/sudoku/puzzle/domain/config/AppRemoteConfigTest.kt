@@ -21,9 +21,10 @@ class AppRemoteConfigTest {
         RemoteConfigKeys.LEVELS_GAME_COMPLETED_NATIVE_AD_SHOW to "levels_game_completed_native_ad_show",
         RemoteConfigKeys.SUDOKU_GAME_COMPLETED_NATIVE_AD_SHOW to "sudoku_game_completed_native_ad_show",
         RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to "sudoku_game_completed_interstitial_ad_show",
-        RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to "levels_game_completed_interstitial_ad_show",
         RemoteConfigKeys.SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW to "sudoku_game_restarted_interstitial_ad_show",
         RemoteConfigKeys.LEVELS_GAME_RESTARTED_INTERSTITIAL_AD_SHOW to "levels_game_restarted_interstitial_ad_show",
+        RemoteConfigKeys.LEVELS_GAMEPLAY_BACK_BUTTON_NATIVE_AD_SHOW to "levels_gameplay_back_button_native_ad_show",
+        RemoteConfigKeys.SUDOKU_GAME_BACK_INTERSTITIAL_AD_SHOW to "sudoku_game_back_interstitial_ad_show",
         RemoteConfigKeys.SUDOKU_GAME_BOOSTERS_REWARDED_AD_SHOW to "sudoku_game_boosters_rewarded_ad_show",
         RemoteConfigKeys.LEVELS_GAME_BOOSTERS_REWARDED_AD_SHOW to "levels_game_boosters_rewarded_ad_show",
         RemoteConfigKeys.LEVELS_GAME_REVIVE_REWARDED_AD_SHOW to "levels_game_revive_rewarded_ad_show",
@@ -76,9 +77,19 @@ class AppRemoteConfigTest {
         val k = RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY
         assertEquals(10, parse(k to "10").toAdPolicyConfig().sudokuWinInterstitialFrequency)
         assertEquals(50, parse(k to "50").sudokuGameCompletedInterstitialAdFrequency)
-        for (bad in listOf("0", "-3", "51", "abc", "")) {
+        assertEquals(0, parse(k to "0").sudokuGameCompletedInterstitialAdFrequency)
+        for (bad in listOf("-3", "51", "abc", "")) {
             assertEquals(bad, 1, parse(k to bad).sudokuGameCompletedInterstitialAdFrequency)
         }
+    }
+
+    @Test
+    fun sudokuWinFrequencyIsMasterSwitchAndedWithBool() {
+        val k = RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY
+        val b = RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW
+        assertFalse(parse(k to "0").toAdPolicyConfig().sudokuWinInterstitialShow)
+        assertTrue(parse(k to "5").toAdPolicyConfig().sudokuWinInterstitialShow)
+        assertFalse(parse(k to "5", b to "false").toAdPolicyConfig().sudokuWinInterstitialShow)
     }
 
     @Test
@@ -96,8 +107,9 @@ class AppRemoteConfigTest {
             val c = parse(key to "false")
             val offCount = listOf(
                 c.levelHomeNativeAdShow, c.sudokuHomeNativeAdShow, c.levelsGameNativeAdShow,
-                c.sudokuGameNativeAdShow, c.levelsCompleteNativeAdShow, c.sudokuCompleteNativeAdShow, c.sudokuGameCompletedInterstitialAdShow, c.levelsGameCompletedInterstitialAdShow,
+                c.sudokuGameNativeAdShow, c.levelsCompleteNativeAdShow, c.sudokuCompleteNativeAdShow, c.sudokuGameCompletedInterstitialAdShow,
                 c.sudokuGameRestartedInterstitialAdShow, c.levelsGameRestartedInterstitialAdShow,
+                c.levelsGameplayBackButtonNativeAdShow, c.sudokuGameBackInterstitialAdShow,
                 c.sudokuGameBoostersRewardedAdShow, c.levelsGameBoostersRewardedAdShow,
                 c.levelsGameReviveRewardedAdShow, c.sudokuGameReviveRewardedAdShow,
             ).count { !it }
@@ -124,9 +136,10 @@ class AppRemoteConfigTest {
     @Test
     fun frequencyBoundsInclusiveAndOutOfRangeFallsBackToDefault() {
         val k = RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY
+        assertEquals(0, parse(k to "0").levelsGameCompletedInterstitialAdFrequency)
         assertEquals(1, parse(k to "1").levelsGameCompletedInterstitialAdFrequency)
         assertEquals(50, parse(k to "50").levelsGameCompletedInterstitialAdFrequency)
-        for (bad in listOf("0", "-3", "51", "9999", "abc", "2.5", "")) {
+        for (bad in listOf("-3", "51", "9999", "abc", "2.5", "")) {
             assertEquals(bad, 1, parse(k to bad).levelsGameCompletedInterstitialAdFrequency)
         }
     }
@@ -163,7 +176,7 @@ class AppRemoteConfigTest {
     fun malformedAndOutOfRangeFallBackToDefault() {
         val c = parse(
             RemoteConfigKeys.AD_FREE_THROUGH_LEVEL to "9999",
-            RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY to "0",
+            RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY to "51",
         )
         assertEquals(AppRemoteConfig(), c)
     }
@@ -200,9 +213,10 @@ class AppRemoteConfigTest {
         assertEquals(d.copy(levelsCompleteNativeShow = false), p(RemoteConfigKeys.LEVELS_GAME_COMPLETED_NATIVE_AD_SHOW))
         assertEquals(d.copy(sudokuCompleteNativeShow = false), p(RemoteConfigKeys.SUDOKU_GAME_COMPLETED_NATIVE_AD_SHOW))
         assertEquals(d.copy(sudokuWinInterstitialShow = false), p(RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW))
-        assertEquals(d.copy(levelsWinInterstitialShow = false), p(RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW))
         assertEquals(d.copy(sudokuRestartInterstitialShow = false), p(RemoteConfigKeys.SUDOKU_GAME_RESTARTED_INTERSTITIAL_AD_SHOW))
         assertEquals(d.copy(levelsRestartInterstitialShow = false), p(RemoteConfigKeys.LEVELS_GAME_RESTARTED_INTERSTITIAL_AD_SHOW))
+        assertEquals(d.copy(levelsBackInterstitialShow = false), p(RemoteConfigKeys.LEVELS_GAMEPLAY_BACK_BUTTON_NATIVE_AD_SHOW))
+        assertEquals(d.copy(sudokuBackInterstitialShow = false), p(RemoteConfigKeys.SUDOKU_GAME_BACK_INTERSTITIAL_AD_SHOW))
         assertEquals(d.copy(sudokuBoostersRewardedShow = false), p(RemoteConfigKeys.SUDOKU_GAME_BOOSTERS_REWARDED_AD_SHOW))
         assertEquals(d.copy(levelsBoostersRewardedShow = false), p(RemoteConfigKeys.LEVELS_GAME_BOOSTERS_REWARDED_AD_SHOW))
         assertEquals(d.copy(levelsReviveRewardedShow = false), p(RemoteConfigKeys.LEVELS_GAME_REVIVE_REWARDED_AD_SHOW))
@@ -217,6 +231,27 @@ class AppRemoteConfigTest {
         ).toAdPolicyConfig()
         assertEquals(12, p.adFreeThroughLevel)
         assertEquals(4, p.levelsInterstitialFrequency)
+    }
+
+    @Test
+    fun levelsWinFrequencyIsMasterSwitch() {
+        val k = RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY
+        assertTrue(parse().toAdPolicyConfig().levelsWinInterstitialShow)
+        val off = parse(k to "0").toAdPolicyConfig()
+        assertFalse(off.levelsWinInterstitialShow)
+        assertEquals(AdPolicyConfig().copy(levelsInterstitialFrequency = 0, levelsWinInterstitialShow = false), off)
+        val on = parse(k to "5").toAdPolicyConfig()
+        assertTrue(on.levelsWinInterstitialShow)
+        assertEquals(5, on.levelsInterstitialFrequency)
+    }
+
+    @Test
+    fun removedLevelsWinBoolKeyAndOldBackKeyAreGone() {
+        val keys = RemoteConfigParser.defaults().keys
+        assertFalse("levels_game_completed_interstitial_ad_show" in keys)
+        assertFalse("levels_game_back_interstitial_ad_show" in keys)
+        assertEquals("levels_gameplay_back_button_native_ad_show", RemoteConfigKeys.LEVELS_GAMEPLAY_BACK_BUTTON_NATIVE_AD_SHOW)
+        assertEquals("true", RemoteConfigParser.defaults()[RemoteConfigKeys.LEVELS_GAMEPLAY_BACK_BUTTON_NATIVE_AD_SHOW])
     }
 
     @Test

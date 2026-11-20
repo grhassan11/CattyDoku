@@ -272,6 +272,20 @@ class AdsViewModelTest {
         assertEquals("daily win shows too", 3, rig.interstitial.showCalls)
     }
 
+    @Test
+    fun beforeGameBackAlwaysContinuesShowsOnceThenCoolsDown() = adsTest { rig, vm ->
+        rig.time.now += 200_000L
+        var done = 0
+        vm.beforeGameBack(level = 12, isDaily = false) { done++ }
+        advanceUntilIdle()
+        assertEquals(1, done)
+        assertEquals(1, rig.interstitial.showCalls)
+        vm.beforeGameBack(level = 12, isDaily = false) { done++ } // inside the cool-down: no ad, still continues
+        advanceUntilIdle()
+        assertEquals(2, done)
+        assertEquals(1, rig.interstitial.showCalls)
+    }
+
     // ---------------------------------------------------------------- game native slot
 
     @Test

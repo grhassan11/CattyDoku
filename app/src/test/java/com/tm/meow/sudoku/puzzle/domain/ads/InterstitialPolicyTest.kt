@@ -102,8 +102,9 @@ class InterstitialPolicyTest {
         val off = cfg.copy(
             levelsWinInterstitialShow = false, sudokuWinInterstitialShow = false,
             levelsRestartInterstitialShow = false, sudokuRestartInterstitialShow = false,
+            levelsBackInterstitialShow = false, sudokuBackInterstitialShow = false,
         )
-        for (t in listOf(AdTrigger.LEVEL_WON_CONTINUE, AdTrigger.SUDOKU_WON_CONTINUE, AdTrigger.SUDOKU_RESTART, AdTrigger.LOSE_RETRY)) {
+        for (t in listOf(AdTrigger.LEVEL_WON_CONTINUE, AdTrigger.SUDOKU_WON_CONTINUE, AdTrigger.SUDOKU_RESTART, AdTrigger.LOSE_RETRY, AdTrigger.LEVELS_GAME_BACK, AdTrigger.SUDOKU_GAME_BACK)) {
             assertEquals("$t", skip(AdSkipReason.DISABLED), InterstitialPolicy.decide(ok(trigger = t), off))
         }
         assertEquals(false, off.anyInterstitialShow)
@@ -115,6 +116,80 @@ class InterstitialPolicyTest {
             sudokuReviveRewardedShow = false, levelsGameNativeShow = false, levelsHomeNativeShow = false, sudokuHomeNativeShow = false,
         )
         assertEquals(AdDecision.Show, InterstitialPolicy.decide(ok(), others))
+    }
+
+    private fun back(
+        trigger: AdTrigger = AdTrigger.LEVELS_GAME_BACK,
+        level: Int = 20,
+        isDaily: Boolean = false,
+        canRequestAds: Boolean = true,
+        online: Boolean = true,
+        adsRemoved: Boolean = false,
+        msSinceLastAd: Long? = null,
+        msSinceLastBackAd: Long? = null,
+    ) = InterstitialContext(
+        trigger = trigger, canRequestAds = canRequestAds, level = level, isDaily = isDaily, lastInterstitialLevel = 0,
+        adsRemoved = adsRemoved, online = online, msSinceLastAd = msSinceLastAd, msSinceLastBackAd = msSinceLastBackAd,
+    )
+
+    @Test
+    fun backDefaultsOnAndShowsWhenAllGatesPass() {
+        assertTrue(cfg.levelsBackInterstitialShow && cfg.sudokuBackInterstitialShow)
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(back(), cfg))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(back(AdTrigger.SUDOKU_GAME_BACK, level = 0), cfg))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(back(level = 0, isDaily = true), cfg))
+    }
+
+    @Test
+    fun backSwitchesAreIndependent() {
+        val levelsOff = cfg.copy(levelsBackInterstitialShow = false)
+        assertEquals(skip(AdSkipReason.DISABLED), InterstitialPolicy.decide(back(), levelsOff))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(back(AdTrigger.SUDOKU_GAME_BACK), levelsOff))
+        val sudokuOff = cfg.copy(sudokuBackInterstitialShow = false)
+        assertEquals(skip(AdSkipReason.DISABLED), InterstitialPolicy.decide(back(AdTrigger.SUDOKU_GAME_BACK), sudokuOff))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(back(), sudokuOff))
+        assertEquals(true, cfg.copy(
+            levelsWinInterstitialShow = false, sudokuWinInterstitialShow = false,
+            levelsRestartInterstitialShow = false, sudokuRestartInterstitialShow = false,
+        ).anyInterstitialShow)
+    }
+
+    @Test
+    fun backKeepsRemoveAdsOfflineConsentGates() {
+        assertEquals(skip(AdSkipReason.ADS_REMOVED), InterstitialPolicy.decide(back(adsRemoved = true), cfg))
+        assertEquals(skip(AdSkipReason.OFFLINE), InterstitialPolicy.decide(back(online = false), cfg))
+        assertEquals(skip(AdSkipReason.NO_CONSENT), InterstitialPolicy.decide(back(canRequestAds = false), cfg))
+    }
+
+    @Test
+    fun backCooldownSinceAnyFullScreenAd() {
+        val c = InterstitialPolicy.BACK_COOLDOWN_MS
+        assertEquals(skip(AdSkipReason.COOLDOWN), InterstitialPolicy.decide(back(msSinceLastAd = 0L), cfg))
+        assertEquals(skip(AdSkipReason.COOLDOWN), InterstitialPolicy.decide(back(msSinceLastAd = c - 1), cfg))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(back(msSinceLastAd = c), cfg))
+        assertEquals(skip(AdSkipReason.COOLDOWN), InterstitialPolicy.decide(back(AdTrigger.SUDOKU_GAME_BACK, msSinceLastAd = 1_000L), cfg))
+    }
+
+    @Test
+    fun backExemptsLevelsLevelOneOnly() {
+        assertEquals(skip(AdSkipReason.FIRST_LEVEL), InterstitialPolicy.decide(back(level = 1), cfg))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(back(level = 2), cfg))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(back(AdTrigger.SUDOKU_GAME_BACK, level = 0), cfg))
+    }
+
+    @Test
+    fun winAdAfterRecentBackAdIsSkippedButNormalWinUnchanged() {
+        val c = InterstitialPolicy.BACK_COOLDOWN_MS
+        fun win(t: AdTrigger, sinceBack: Long?) = InterstitialContext(
+            trigger = t, canRequestAds = true, level = 20, lastInterstitialLevel = 0, msSinceLastBackAd = sinceBack,
+            msSinceLastAd = sinceBack, // any recent ad must NOT gate a win ad on its own
+        )
+        assertEquals(skip(AdSkipReason.COOLDOWN), InterstitialPolicy.decide(win(AdTrigger.LEVEL_WON_CONTINUE, 5_000L), cfg))
+        assertEquals(skip(AdSkipReason.COOLDOWN), InterstitialPolicy.decide(win(AdTrigger.SUDOKU_WON_CONTINUE, c - 1), cfg))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(win(AdTrigger.LEVEL_WON_CONTINUE, c), cfg))
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(win(AdTrigger.LEVEL_WON_CONTINUE, null), cfg))
+        // retry / lose-home are not affected by a back ad
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(win(AdTrigger.LOSE_RETRY, 1_000L), cfg))
     }
 
     @Test

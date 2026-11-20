@@ -363,6 +363,32 @@ class AdsUseCasesTest {
     }
 
     @Test
+    fun backAdUsesReadyAdOnlyAndStartsCooldownThatBlocksBackAndWin() = runTest {
+        val r = rig()
+        assertTrue(r.show(AdTrigger.LEVELS_GAME_BACK, level = 20))
+        assertEquals("no load wait on back", 0L, r.ads.lastWait)
+        r.time.now += 30_000L
+        assertFalse("second back inside cool-down", r.show(AdTrigger.LEVELS_GAME_BACK, level = 20))
+        assertFalse("win right after a back ad", r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
+        assertFalse(r.show(AdTrigger.SUDOKU_WON_CONTINUE, level = 0, persistLevel = false))
+        r.time.now += 120_000L
+        assertTrue("cool-down over", r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
+        assertEquals("win ad still waits for a loading ad", AdPolicyConfig().loadWaitTimeoutMs, r.ads.lastWait)
+    }
+
+    @Test
+    fun backAdSkippedRightAfterAnyOtherFullScreenAdAndWhenOffOrFailed() = runTest {
+        val afterWin = rig()
+        assertTrue(afterWin.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
+        assertFalse("back right after a win ad", afterWin.show(AdTrigger.LEVELS_GAME_BACK, level = 20))
+        afterWin.tracker.recordRewardedShown()
+        assertFalse(afterWin.show(AdTrigger.SUDOKU_GAME_BACK, level = 0, persistLevel = false))
+        assertFalse(rig(config = AdPolicyConfig(levelsBackInterstitialShow = false)).show(AdTrigger.LEVELS_GAME_BACK, level = 20))
+        assertFalse(rig(adResult = AdShowResult.NOT_READY).show(AdTrigger.LEVELS_GAME_BACK, level = 20))
+        assertFalse(rig(consentState = ConsentState(canRequestAds = false)).show(AdTrigger.LEVELS_GAME_BACK, level = 20))
+    }
+
+    @Test
     fun preloadInterstitialRespectsGates() {
         fun preloads(playerLevel: Int?, consent: ConsentState = ConsentState(canRequestAds = true), config: AdPolicyConfig = AdPolicyConfig()): Int {
             val log = CallLog()
@@ -374,11 +400,13 @@ class AdsUseCasesTest {
         assertEquals("levels past ad-free", 1, preloads(10))
         assertEquals("levels ad-free, win interstitial on", 1, preloads(9))
         assertEquals("levels ad-free, only retry on", 1, preloads(9, config = AdPolicyConfig(levelsWinInterstitialShow = false)))
-        assertEquals("levels ad-free, only sudoku on", 0, preloads(9, config = AdPolicyConfig(levelsWinInterstitialShow = false, levelsRestartInterstitialShow = false)))
+        assertEquals("levels ad-free, only sudoku on", 0, preloads(9, config = AdPolicyConfig(levelsWinInterstitialShow = false, levelsRestartInterstitialShow = false, levelsBackInterstitialShow = false)))
+        assertEquals("levels ad-free, only back on", 1, preloads(9, config = AdPolicyConfig(levelsWinInterstitialShow = false, levelsRestartInterstitialShow = false)))
         assertEquals("no consent", 0, preloads(10, ConsentState(canRequestAds = false)))
         assertEquals("all switches off", 0, preloads(10, config = AdPolicyConfig(
             levelsWinInterstitialShow = false, sudokuWinInterstitialShow = false,
             levelsRestartInterstitialShow = false, sudokuRestartInterstitialShow = false,
+            levelsBackInterstitialShow = false, sudokuBackInterstitialShow = false,
         )))
     }
 }

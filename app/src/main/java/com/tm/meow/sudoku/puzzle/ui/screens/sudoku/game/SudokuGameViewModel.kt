@@ -24,6 +24,7 @@ import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SaveOrDiscardSudokuGame
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SaveSudokuGame
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.ShowSudokuInterstitialIfAllowed
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.StartOrResumeSudoku
+import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SudokuIdleExit
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SudokuCompletion
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SudokuHintResult
 import com.tm.meow.sudoku.puzzle.domain.sudoku.usecase.SudokuStartResult
@@ -632,12 +633,32 @@ class SudokuGameViewModel @Inject constructor(
     private fun leave() {
         if (leaving) return
         leaving = true
+        // Back ad only for a live game with at least one move / hint / mistake (not open-then-back), never over a win / loss
+        // (those flows have their own ad rules). Decided before the holds change anything.
+        val backAd = canShowBackAd()
         logPendingLoss()
         maybeLogQuit(QuitReason.SYSTEM_BACK)
         applyHolds()
         viewModelScope.launch {
             persist(idleExit = true) // idle (no moves, < 5 s): clears the save, so no CONTINUE
+            if (backAd) showBackAd() // preloaded ad, no load wait; always falls through to exit
             exit(SudokuExitReason.NONE)
+        }
+    }
+
+    private fun canShowBackAd(): Boolean {
+        val g = game ?: return false
+        return !completed && !winAdHeld && g.status == SudokuStatus.PLAYING && SudokuIdleExit.hasMoves(g)
+    }
+
+    /** Back interstitial (rules + cool-down in the policy). Hard-capped; every outcome falls through to the exit. */
+    private suspend fun showBackAd() {
+        try {
+            withTimeoutOrNull(WIN_AD_MAX_HOLD_MS) { showInterstitial.onBack() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // fail open
         }
     }
 

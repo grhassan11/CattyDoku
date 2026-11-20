@@ -115,6 +115,15 @@ class AdSessionTracker(private val time: TimeProvider) {
         sudokuWinsSinceLastAd = 0
     }
 
+    /** When a gameplay-BACK interstitial was last shown this process (null = none). Read by the win-after-back guard. */
+    @Volatile var lastBackAdShownMs: Long? = null
+        private set
+
+    /** Call after [recordShown] when the shown ad was a gameplay-BACK interstitial. */
+    fun recordBackAdShown() {
+        lastBackAdShownMs = time.monotonicMillis()
+    }
+
     fun now(): Long = time.monotonicMillis()
 
     private companion object {

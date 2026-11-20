@@ -139,7 +139,7 @@ class PreloadInterstitialAd(
                 AdFreePolicy.isSuppressedByPurchase(AdFormat.INTERSTITIAL, adsRemoved.adsRemoved.value) -> "ads removed"
                 // Levels win and lose-retry interstitials both ignore ad-free levels, so preload there whenever either is
                 // on; the level gate only still applies when neither Levels interstitial is on.
-                playerLevel != null && !cfg.levelsWinInterstitialShow && !cfg.levelsRestartInterstitialShow &&
+                playerLevel != null && !cfg.levelsWinInterstitialShow && !cfg.levelsRestartInterstitialShow && !cfg.levelsBackInterstitialShow &&
                     AdFreePolicy.isAdFree(playerLevel, cfg.adFreeThroughLevel) -> "ad-free level $playerLevel"
                 !connectivity.isOnline.value -> "offline"
                 !consent.state.value.canRequestAds -> "no consent"
@@ -191,7 +191,10 @@ class ShowInterstitialIfAllowed(
                 lastInterstitialLevel = f.lastInterstitialLevel,
                 adsRemoved = adsRemoved.adsRemoved.value,
                 online = connectivity.isOnline.value,
+                msSinceLastAd = tracker.lastAdShownMs?.let { tracker.now() - it },
+                msSinceLastBackAd = tracker.lastBackAdShownMs?.let { tracker.now() - it },
             )
+            val back = trigger == AdTrigger.LEVELS_GAME_BACK || trigger == AdTrigger.SUDOKU_GAME_BACK
             val decision = InterstitialPolicy.decide(ctx, cfg)
             val inputs = "trigger=${ctx.trigger} level=${ctx.level} daily=${ctx.isDaily} wins=${ctx.winsSinceLastAd} " +
                 "lastInterstitialLevel=${ctx.lastInterstitialLevel} " +
@@ -204,7 +207,8 @@ class ShowInterstitialIfAllowed(
             // Blocks app-open while the interstitial (and its load wait) is in flight.
             tracker.fullScreenAdShowing = true
             val result = try {
-                ads.showIfReady(cfg.loadWaitTimeoutMs)
+                // Back ad: only a READY preloaded ad (no load wait: the player is leaving, never delay the exit).
+                ads.showIfReady(if (back) 0L else cfg.loadWaitTimeoutMs)
             } finally {
                 tracker.fullScreenAdShowing = false
             }
@@ -212,6 +216,7 @@ class ShowInterstitialIfAllowed(
             analytics.log(AnalyticsEvent.AdInterstitial(if (result == AdShowResult.SHOWN) "shown" else "failed", trigger.name.lowercase()))
             if (result == AdShowResult.SHOWN) {
                 tracker.recordShown()
+                if (back) tracker.recordBackAdShown()
                 safely {
                     flags.update {
                         it.copy(

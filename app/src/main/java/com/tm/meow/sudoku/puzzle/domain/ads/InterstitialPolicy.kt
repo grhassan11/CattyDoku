@@ -20,6 +20,15 @@ enum class AdTrigger {
     /** User tapped Home (or system back) on the Levels lose screen. Same gating as [LOSE_RETRY] (same remote switch); own name for analytics. */
     LOSE_HOME,
 
+    /**
+     * User tapped the top-bar BACK icon (or system back) mid-game on Levels / Daily. Remote `levels_gameplay_back_button_native_ad_show`.
+     * Needs progress (caller checks) + cool-down since any full-screen ad; never stacks with a win ad.
+     */
+    LEVELS_GAME_BACK,
+
+    /** Same as [LEVELS_GAME_BACK] for Sudoku (remote `sudoku_game_back_interstitial_ad_show`). */
+    SUDOKU_GAME_BACK,
+
     // Never boundaries: listed so callers state intent and tests pin the rule.
     DAILY_START,
     APP_LAUNCH,
@@ -44,6 +53,12 @@ enum class AdSkipReason {
 
     /** No validated internet connection: no ad can load, never wait for one. */
     OFFLINE,
+
+    /** Back ad: a full-screen ad was shown too recently. Win ad: a back ad was shown too recently (no stacking). */
+    COOLDOWN,
+
+    /** Back ad on Levels level 1 (new-player exemption). */
+    FIRST_LEVEL,
 }
 
 sealed interface AdDecision {
@@ -67,10 +82,16 @@ data class InterstitialContext(
     val adsRemoved: Boolean = false,
     /** Validated internet connection present. Default true (callers that do not track connectivity). */
     val online: Boolean = true,
+    /** Ms since ANY full-screen ad (interstitial / app-open / rewarded) was shown this process; null = none yet. */
+    val msSinceLastAd: Long? = null,
+    /** Ms since a GAME_BACK interstitial was shown this process; null = none yet. */
+    val msSinceLastBackAd: Long? = null,
 )
 
 /** Pure show/skip decision. Ad readiness is NOT decided here (that is the AdsRepository's job). */
 object InterstitialPolicy {
+    /** Min spacing (monotonic ms) for a back ad after any full-screen ad, and for a win ad after a back ad. Hardcoded, conservative. */
+    const val BACK_COOLDOWN_MS = 120_000L
 
     fun decide(ctx: InterstitialContext, config: AdPolicyConfig = AdPolicyConfig()): AdDecision {
         fun skip(r: AdSkipReason) = AdDecision.Skip(r)
@@ -78,12 +99,25 @@ object InterstitialPolicy {
         if (!switchOn(ctx.trigger, config)) return skip(AdSkipReason.DISABLED)
         if (AdFreePolicy.isSuppressedByPurchase(AdFormat.INTERSTITIAL, ctx.adsRemoved)) return skip(AdSkipReason.ADS_REMOVED)
         val sudoku = ctx.trigger == AdTrigger.SUDOKU_WON_CONTINUE || ctx.trigger == AdTrigger.SUDOKU_RESTART
-        if (ctx.trigger != AdTrigger.LEVEL_WON_CONTINUE && ctx.trigger != AdTrigger.LOSE_RETRY && ctx.trigger != AdTrigger.LOSE_HOME && !sudoku) {
+        val back = ctx.trigger == AdTrigger.LEVELS_GAME_BACK || ctx.trigger == AdTrigger.SUDOKU_GAME_BACK
+        if (ctx.trigger != AdTrigger.LEVEL_WON_CONTINUE && ctx.trigger != AdTrigger.LOSE_RETRY && ctx.trigger != AdTrigger.LOSE_HOME && !sudoku && !back) {
             return if (ctx.trigger == AdTrigger.TUTORIAL) skip(AdSkipReason.TUTORIAL) else skip(AdSkipReason.NOT_A_BOUNDARY)
         }
         if (ctx.inTutorial) return skip(AdSkipReason.TUTORIAL)
         if (!ctx.online) return skip(AdSkipReason.OFFLINE)
         if (!ctx.canRequestAds) return skip(AdSkipReason.NO_CONSENT)
+        // Back ad: cool-down since ANY full-screen ad (win / app-open / rewarded / previous back), Levels level 1 exempt.
+        if (back) {
+            if (ctx.trigger == AdTrigger.LEVELS_GAME_BACK && !ctx.isDaily && ctx.level <= 1) return skip(AdSkipReason.FIRST_LEVEL)
+            val since = ctx.msSinceLastAd
+            if (since != null && since < BACK_COOLDOWN_MS) return skip(AdSkipReason.COOLDOWN)
+            return AdDecision.Show
+        }
+        // Win ad right after a back ad (leave + re-enter + fast win): no stacking. Win cadence is otherwise unchanged.
+        if (ctx.trigger == AdTrigger.LEVEL_WON_CONTINUE || ctx.trigger == AdTrigger.SUDOKU_WON_CONTINUE) {
+            val sinceBack = ctx.msSinceLastBackAd
+            if (sinceBack != null && sinceBack < BACK_COOLDOWN_MS) return skip(AdSkipReason.COOLDOWN)
+        }
         // Sudoku: product rule (tier + win count, see SudokuAdRules) decides upstream; no Queens pacing applies.
         if (sudoku) return AdDecision.Show
         // Ad-free levels no longer gate any Levels interstitial: the win ad starts at Level 1 (first-10 list / frequency rule below) and
@@ -112,6 +146,8 @@ object InterstitialPolicy {
         AdTrigger.LOSE_RETRY, AdTrigger.LOSE_HOME -> config.levelsRestartInterstitialShow
         AdTrigger.SUDOKU_WON_CONTINUE -> config.sudokuWinInterstitialShow
         AdTrigger.SUDOKU_RESTART -> config.sudokuRestartInterstitialShow
+        AdTrigger.LEVELS_GAME_BACK -> config.levelsBackInterstitialShow
+        AdTrigger.SUDOKU_GAME_BACK -> config.sudokuBackInterstitialShow
         else -> true
     }
 }
