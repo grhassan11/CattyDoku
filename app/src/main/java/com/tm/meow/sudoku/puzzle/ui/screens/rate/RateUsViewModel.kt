@@ -121,12 +121,12 @@ class RateUsViewModel @Inject constructor(
             }
             when (action) {
                 RateAction.SUBMITTED_LOW -> {
-                    analytics.log(AnalyticsEvent.RatePrompt("submitted_low"))
+                    analytics.log(AnalyticsEvent.RatePrompt("submitted_low", s))
                     externalLaunch.mark() // email app opens next: its return may show an app-open ad
                     _events.trySend(RateUsEvent.OpenFeedbackEmail(s))
                 }
                 RateAction.STORE_LISTING -> {
-                    analytics.log(AnalyticsEvent.RatePrompt("store_listing"))
+                    analytics.log(AnalyticsEvent.RatePrompt("store_listing", s))
                     externalLaunch.mark() // Play Store opens next: its return may show an app-open ad
                     _events.trySend(RateUsEvent.OpenStoreListing)
                 }

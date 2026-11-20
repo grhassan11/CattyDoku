@@ -78,6 +78,7 @@ class AttemptTracker {
     private val counts = HashMap<String, Int>()
     private var active = false
     private var quitLogged = false
+    private var firstMoveLogged = false
 
     var attemptNo: Int = 0
         private set
@@ -95,6 +96,7 @@ class AttemptTracker {
         boostersUsed = 0
         active = true
         quitLogged = false
+        firstMoveLogged = false
         return attemptNo
     }
 
@@ -111,6 +113,13 @@ class AttemptTracker {
     fun revive() {
         active = true
         quitLogged = false
+    }
+
+    /** True AT MOST ONCE per attempt (and only while open): callers log `first_move` then. A revive does not re-arm it. */
+    fun consumeFirstMove(): Boolean {
+        if (!active || firstMoveLogged) return false
+        firstMoveLogged = true
+        return true
     }
 
     fun consumeQuit(): Boolean {

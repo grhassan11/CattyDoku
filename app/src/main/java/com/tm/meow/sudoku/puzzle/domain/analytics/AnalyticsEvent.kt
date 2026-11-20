@@ -91,6 +91,9 @@ sealed class AnalyticsEvent(val name: String, val params: Map<String, Any> = emp
     data class LevelRevive(val ctx: LevelContext, val stats: AttemptStats) :
         AnalyticsEvent("level_revive", ctx.toParams() + stats.toParams())
 
+    /** First board-changing player action of an attempt (funnel step between `level_start` and `level_end`). Once per attempt. */
+    data class FirstMove(val ctx: LevelContext) : AnalyticsEvent("first_move", ctx.toParams())
+
     data class UndoUsed(val ctx: LevelContext) : AnalyticsEvent("undo_used", ctx.toParams())
 
     data class HintUsed(val ctx: LevelContext) : AnalyticsEvent("hint_used", ctx.toParams())
@@ -252,7 +255,14 @@ sealed class AnalyticsEvent(val name: String, val params: Map<String, Any> = emp
         AnalyticsEvent("settings_open", mapOf("entry_point" to entryPoint))
 
     /** [action]: "shown", "dismissed", "store_listing" (4-5 stars) or "submitted_low" (1-3 stars). */
-    data class RatePrompt(val action: String) : AnalyticsEvent("rate_prompt", mapOf("action" to action))
+    data class RatePrompt(val action: String, val stars: Int? = null) :
+        AnalyticsEvent(
+            "rate_prompt",
+            buildMap<String, Any> {
+                put("action", action)
+                stars?.let { put("stars", it.toLong()) }
+            },
+        )
 
     // ---- reminder notifications. [type] = [NotificationType] ----
 

@@ -31,7 +31,8 @@ fun RateUsHost(
 ) {
     val visible by viewModel.visible.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val feedbackSubject = stringResource(R.string.settings_feedback_subject, stringResource(R.string.app_name))
+    // Fixed (not localized) so the inbox can filter it: "Catty Sudoku Rating - 1★".
+    val ratingSubject = stringResource(R.string.app_name) + " Rating - "
     val noEmailApp = stringResource(R.string.settings_feedback_no_app)
     val linkFailed = stringResource(R.string.shop_link_failed)
     val latestOnClosed by rememberUpdatedState(onClosed)
@@ -46,7 +47,7 @@ fun RateUsHost(
         viewModel.events.collect { event ->
             when (event) {
                 is RateUsEvent.OpenFeedbackEmail ->
-                    if (!FeedbackEmail.open(context, "$feedbackSubject ${event.stars}★")) {
+                    if (!FeedbackEmail.open(context, "$ratingSubject${event.stars}★")) {
                         Toast.makeText(context, noEmailApp, Toast.LENGTH_SHORT).show()
                     }
                 RateUsEvent.OpenStoreListing ->

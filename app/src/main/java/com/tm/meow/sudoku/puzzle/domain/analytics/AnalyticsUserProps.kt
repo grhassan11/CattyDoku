@@ -1,7 +1,7 @@
 package com.tm.meow.sudoku.puzzle.domain.analytics
 
 /**
- * GA4 user property names. Max 25 custom dimensions per property: this set is 15. Names <= 24 chars, values <= 36.
+ * GA4 user property names. Max 25 custom dimensions per property: this set is 18. Names <= 24 chars, values <= 36.
  * Win counters are intentionally absent (derivable from level_end / level progress).
  */
 object AnalyticsUserProps {
@@ -20,11 +20,14 @@ object AnalyticsUserProps {
     const val TUTORIAL_DONE = "tutorial_done"
     const val NOTIF_ENABLED = "notif_enabled"
     const val APP_LANGUAGE = "app_language"
+    const val CONSENT_STATE = "consent_state"
+    const val LEVELS_BUCKET = "levels_bucket"
+    const val INSTALL_DAYS = "install_days"
 
     val ALL = listOf(
         MAX_LEVEL, LEVELS_WON, SDK_EASY_PLAYS, SDK_MEDIUM_PLAYS, SDK_HARD_PLAYS, SDK_EXPERT_PLAYS, SDK_MASTER_PLAYS,
         SDK_EXTREME_PLAYS,
         SUDOKU_UNLOCKED, ADS_REMOVED, STREAK_DAYS, PAYER, TUTORIAL_DONE, NOTIF_ENABLED,
-        APP_LANGUAGE,
+        APP_LANGUAGE, CONSENT_STATE, LEVELS_BUCKET, INSTALL_DAYS,
     )
 }

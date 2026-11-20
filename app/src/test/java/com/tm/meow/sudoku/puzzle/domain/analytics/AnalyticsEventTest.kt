@@ -29,6 +29,7 @@ class AnalyticsEventTest {
         AnalyticsEvent.LevelRestart(ctx, stats),
         AnalyticsEvent.LevelRevive(ctx, stats),
         AnalyticsEvent.UndoUsed(ctx),
+        AnalyticsEvent.FirstMove(ctx),
         AnalyticsEvent.HintUsed(ctx),
         AnalyticsEvent.BoosterUsed("cat", ctx),
         AnalyticsEvent.GamePause(ctx, stats),

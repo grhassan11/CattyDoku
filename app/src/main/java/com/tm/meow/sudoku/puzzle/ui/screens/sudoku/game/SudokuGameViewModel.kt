@@ -206,7 +206,11 @@ class SudokuGameViewModel @Inject constructor(
 
     fun onCellTap(cell: Int) = act(save = false, cue = Cue.SELECT) { g, _ -> SudokuGameEngine.select(g, cell) }
 
-    fun onDigit(digit: Int) = act(cue = Cue.DIGIT) { g, el -> SudokuGameEngine.enterDigit(g, digit, el) }
+    fun onDigit(digit: Int) = act(cue = Cue.DIGIT) { g, el ->
+        SudokuGameEngine.enterDigit(g, digit, el).also {
+            if (it !== g && attempt.consumeFirstMove()) analytics.log(AnalyticsEvent.FirstMove(levelContext(g)))
+        }
+    }
 
     fun onUndo() = act(cue = Cue.REMOVE) { g, _ ->
         SudokuGameEngine.undo(g).also { if (it !== g) analytics.log(AnalyticsEvent.UndoUsed(levelContext(g))) }

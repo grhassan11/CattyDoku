@@ -559,6 +559,7 @@ class GameViewModel @Inject constructor(
 
     private fun applyStep(before: Session, step: StepResult, defaultHaptic: HapticKind, cell: Pos?, crossSfx: Boolean = true, haptic: Boolean = true, clearWrongX: Set<Int> = emptySet(), fromBooster: Boolean = false) {
         if (step.state === before.state) return // engine no-op
+        if (!fromBooster && attempt.consumeFirstMove()) analytics.log(AnalyticsEvent.FirstMove(levelContext(before.puzzle)))
 
         var hapticKind = defaultHaptic
         if (cell != null && defaultHaptic == HapticKind.TICK &&

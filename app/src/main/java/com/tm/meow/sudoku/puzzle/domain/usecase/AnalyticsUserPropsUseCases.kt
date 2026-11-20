@@ -4,6 +4,7 @@ import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsUserProps
 import com.tm.meow.sudoku.puzzle.domain.billing.AdsRemovedRepository
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
+import com.tm.meow.sudoku.puzzle.domain.consent.TelemetryConsentPolicy
 import com.tm.meow.sudoku.puzzle.domain.engine.StreakCalculator
 import com.tm.meow.sudoku.puzzle.domain.model.StreakInfo
 import com.tm.meow.sudoku.puzzle.domain.notification.NotificationStatus
@@ -27,7 +28,7 @@ object NoopUserPropsSync : UserPropsSync {
 }
 
 /**
- * Snapshot of player state pushed to GA4 as user properties (15 of the 25 custom dimensions). Skipped entirely unless
+ * Snapshot of player state pushed to GA4 as user properties (18 of the 25 custom dimensions). Skipped entirely unless
  * analytics consent allows it. `payer` comes from the persisted flag that
  * [com.tm.meow.sudoku.puzzle.domain.billing.PurchaseProcessor] writes on a fresh purchase (set only when true; GA4 keeps it). Never throws (except cancellation).
  */
@@ -68,6 +69,9 @@ class SyncAnalyticsUserProperties(
             set(AnalyticsUserProps.TUTORIAL_DONE, flag(f.tutorialDone))
             set(AnalyticsUserProps.NOTIF_ENABLED, flag(notifications.areEnabled()))
             set(AnalyticsUserProps.APP_LANGUAGE, language().tag)
+            set(AnalyticsUserProps.CONSENT_STATE, TelemetryConsentPolicy.statusLabel(consent.state.value))
+            set(AnalyticsUserProps.LEVELS_BUCKET, levelsBucket(won))
+            f.installDateEpochDay?.let { set(AnalyticsUserProps.INSTALL_DAYS, installBucket(time.todayEpochDay() - it)) }
             if (f.payer) set(AnalyticsUserProps.PAYER, "1") // sticky: only ever set, never cleared
         } catch (e: CancellationException) {
             throw e
@@ -77,6 +81,28 @@ class SyncAnalyticsUserProperties(
     }
 
     private fun set(name: String, value: String) = analytics.setUserProperty(name, value)
+
+    /** Levels cleared, bucketed so the user property stays low-cardinality. */
+    private fun levelsBucket(n: Int): String = when {
+        n <= 0 -> "0"
+        n <= 5 -> "1-5"
+        n <= 10 -> "6-10"
+        n <= 25 -> "11-25"
+        n <= 50 -> "26-50"
+        n <= 100 -> "51-100"
+        else -> "100+"
+    }
+
+    /** Days since install, bucketed. */
+    private fun installBucket(days: Long): String = when {
+        days <= 0 -> "d0"
+        days <= 1 -> "d1"
+        days <= 3 -> "d2-3"
+        days <= 7 -> "d4-7"
+        days <= 14 -> "d8-14"
+        days <= 30 -> "d15-30"
+        else -> "d31+"
+    }
 
     private fun flag(value: Boolean) = if (value) "1" else "0"
 }
