@@ -13,11 +13,6 @@ enum class AdShowResult {
 
 /** Ads SDK boundary. Domain stays free of Android / SDK types; impl lives in data/ads. */
 interface AdsRepository {
-    // TEMP-TOAST: remove before release
-    val interstitialLoadedEvents: kotlinx.coroutines.flow.Flow<Unit> get() = kotlinx.coroutines.flow.emptyFlow() // TEMP-TOAST: remove before release
-    val debugNotes: kotlinx.coroutines.flow.Flow<String> get() = kotlinx.coroutines.flow.emptyFlow() // TEMP-TOAST: remove before release
-    fun debugNote(msg: String) = Unit // TEMP-TOAST: remove before release
-
     /** Idempotent, once per process, off the main thread. Call ONLY when consent allows ads. */
     suspend fun initialize()
 

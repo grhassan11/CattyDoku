@@ -22,7 +22,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CatPuzzle">
 
-        <!-- AdMob app ID (required by the SDK and UMP; missing = crash). All build types currently use the Google TEST app id, see app/build.gradle.kts (swap to REAL before release). -->
+        <!-- AdMob app ID (required by the SDK and UMP; missing = crash). All build types currently use the REAL app id, see app/build.gradle.kts (swap to Google TEST id for dev). -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="${admobAppId}" />

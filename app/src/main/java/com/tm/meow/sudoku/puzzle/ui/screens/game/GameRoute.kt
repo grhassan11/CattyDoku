@@ -62,17 +62,6 @@ fun GameRoute(
     val adIsDaily = content?.isDaily ?: false
     // First composition: re-try a failed ads SDK init (no-op when up / no consent).
     LaunchedEffect(Unit) { adsViewModel.retryAdsInitOnEntry() }
-    // TEMP-TOAST: remove before release
-    val tempInterVm: com.tm.meow.sudoku.puzzle.ui.ads.TempInterLoadedToastViewModel = androidx.hilt.navigation.compose.hiltViewModel()
-    val tempToastCtx = androidx.compose.ui.platform.LocalContext.current
-    LaunchedEffect(Unit) {
-        if (com.tm.meow.sudoku.puzzle.BuildConfig.DEBUG) tempInterVm.loaded.collect {
-            android.widget.Toast.makeText(tempToastCtx, "Inter Ad Loaded", android.widget.Toast.LENGTH_SHORT).show()
-        }
-    } // TEMP-TOAST: remove before release
-    LaunchedEffect(Unit) { // TEMP-TOAST: remove before release
-        if (com.tm.meow.sudoku.puzzle.BuildConfig.DEBUG) tempInterVm.notes.collect { android.widget.Toast.makeText(tempToastCtx, it, android.widget.Toast.LENGTH_SHORT).show() } // TEMP-TOAST: remove before release
-    } // TEMP-TOAST: remove before release
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
@@ -158,7 +147,6 @@ fun GameRoute(
     // requirement; levels_gameplay_back_button_native_ad_show + the policy gates / cool-down decide. 0 = idle, 1 = ad in flight (further taps ignored). Win / lose dialogs never come here.
     var backAdInFlight by remember { mutableStateOf(false) }
     val gameBack: (String) -> Unit = { reason ->
-        if (com.tm.meow.sudoku.puzzle.BuildConfig.DEBUG) android.widget.Toast.makeText(tempToastCtx, "BackAd: tap $reason lvl=$adLevel daily=$adIsDaily inFlight=$backAdInFlight", android.widget.Toast.LENGTH_SHORT).show() // TEMP-TOAST: remove before release
         android.util.Log.d("BackAdTrace", "tap source=$reason level=$adLevel daily=$adIsDaily playing=${content != null && content.outcome == null} backAdInFlight=$backAdInFlight rewardedBusy=$rewardedBusy") // TEMP-LOG: remove before release
         if (!backAdInFlight) {
             val leave = {
@@ -179,7 +167,6 @@ fun GameRoute(
                 }
             }
             if (!started) { // another ad action in flight: no back ad, just leave
-                if (com.tm.meow.sudoku.puzzle.BuildConfig.DEBUG) android.widget.Toast.makeText(tempToastCtx, "BackAd: busy (another ad in flight)", android.widget.Toast.LENGTH_SHORT).show() // TEMP-TOAST: remove before release
                 android.util.Log.d("BackAdTrace", "gameBack beforeGameBack started=false (busy) -> leave without ad") // TEMP-LOG: remove before release
                 backAdInFlight = false
                 leave()
