@@ -53,6 +53,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Sudoku game. Owns the [SudokuGameState] (pure reducer: [SudokuGameEngine]) and the clock.
@@ -98,6 +99,9 @@ class SudokuGameViewModel @Inject constructor(
     private var hinting = false
     private var winBusy = false
     private var restartBusy = false
+
+    /** True from the winning move until the win interstitial closed / failed / was skipped / timed out. Hides the win dialog; back + buttons are ignored. */
+    private var winAdHeld = false
 
     /** Lost state whose `level_end` (lose) is held back: the rewarded continue can still revive it. Logged when the loss truly ends. */
     private var pendingLoss: SudokuGameState? = null
@@ -197,7 +201,7 @@ class SudokuGameViewModel @Inject constructor(
         if (state.status == SudokuStatus.PLAYING) {
             applyHolds()
         } else {
-            finish(state) // healed restore: already solved / out of hearts
+            finish(state, showWinAd = false) // healed restore: already solved / out of hearts (no win ad: not a winning move)
             render()
         }
     }
@@ -492,7 +496,7 @@ class SudokuGameViewModel @Inject constructor(
 
     // ------------------------------------------------------------------ finish
 
-    private fun finish(state: SudokuGameState) {
+    private fun finish(state: SudokuGameState, showWinAd: Boolean = true) {
         if (completed) return
         completed = true
         attempt.end() // a finished attempt can never be logged as a quit
@@ -521,19 +525,42 @@ class SudokuGameViewModel @Inject constructor(
                 pendingLoss = state // `level_end` (lose) waits: a rewarded continue may still revive this game
             }
             if (won) for (t in result.justUnlocked) analytics.log(AnalyticsEvent.SudokuTierUnlock(t.analyticsId()))
-            try {
-                userProps.sync()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Throwable) {
-                // best effort
+            // Best effort, off the win path: it must not delay the win interstitial / dialog.
+            viewModelScope.launch {
+                try {
+                    userProps.sync()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    // best effort
+                }
             }
-            winCount = if (state.status == SudokuStatus.SOLVED) result.progress?.wins else null
-            dialog = if (state.status == SudokuStatus.SOLVED) {
+            winCount = if (won) result.progress?.wins else null
+            // The win is already persisted ([CompleteSudoku] above). Win ad fires NOW (winning move), eligibility rules unchanged;
+            // the win dialog stays hidden until it closes / fails / is skipped. Always released (fail open).
+            val holdForAd = won && showWinAd
+            winAdHeld = holdForAd
+            dialog = if (won) {
                 SudokuDialogUi.Won(SudokuGameUiMapper.win(state, result))
             } else {
                 SudokuDialogUi.GameOver(state.mistakes)
             }
+            render()
+            if (holdForAd) showWinAd(state.tier)
+        }
+    }
+
+    /** Win interstitial at the winning move (once per win: [finish] runs once per [completed] cycle). Always releases the hold. */
+    private suspend fun showWinAd(tier: SudokuTier) {
+        try {
+            // Hard cap so a hung ad can never strand the win screen; normal path returns when the ad closes / fails.
+            withTimeoutOrNull(WIN_AD_MAX_HOLD_MS) { showInterstitial.onWin(tier, winCount) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // fail open
+        } finally {
+            winAdHeld = false
             render()
         }
     }
@@ -561,41 +588,33 @@ class SudokuGameViewModel @Inject constructor(
         applyHolds() // PLAYING again: clock restarts unless something else holds it
     }
 
-    /** Win dialog "Next puzzle": interstitial if allowed (fail open), then a fresh puzzle of the same tier. */
-    fun onWinNext() = afterWin {
-        game = null
-        dialog = SudokuDialogUi.None
-        render()
-        loadGame()
-    }
-
-    /** Win dialog "Back": interstitial if allowed (fail open), then back to the entry. */
-    fun onWinDone() = afterWin { exit(SudokuExitReason.NONE) }
-
-    private fun afterWin(next: suspend () -> Unit) {
-        if (winBusy) return
+    /** Win dialog "Next puzzle": a fresh puzzle of the same tier. No ad here (the win ad already ran at the winning move). Ignored while that ad is pending. */
+    fun onWinNext() {
+        if (winAdHeld || winBusy) return
         winBusy = true
         viewModelScope.launch {
             try {
-                try {
-                    game?.let { showInterstitial.onWin(it.tier, winCount) }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Throwable) {
-                    // fail open
-                }
-                next()
+                game = null
+                dialog = SudokuDialogUi.None
+                render()
+                loadGame()
             } finally {
                 winBusy = false
             }
         }
     }
 
+    /** Win dialog "Back": straight to the entry, no ad. Ignored while the win ad is pending. */
+    fun onWinDone() {
+        if (winAdHeld) return
+        exit(SudokuExitReason.NONE)
+    }
+
     // ------------------------------------------------------------------ leave
 
     /** System / top-bar back. Closes a dialog first; otherwise pauses, saves, leaves. */
     fun onBack() {
-        // Win dialog: system back == its Back button (win interstitial first, then the entry).
+        // Win dialog: system back == its Back button (no ad; ignored while the win ad is still pending).
         if (dialog is SudokuDialogUi.Won) {
             onWinDone()
             return
@@ -668,11 +687,13 @@ class SudokuGameViewModel @Inject constructor(
             SudokuGameUiState(loading = true, tier = tier ?: SudokuTier.EASY, hintCharges = hintCharges)
         } else {
             SudokuGameUiMapper.map(g, hintCharges, userPaused, dialog, introEpoch)
+                .copy(winAdHeld = winAdHeld && dialog is SudokuDialogUi.Won)
         }
     }
 
     private companion object {
         const val TICK_MS = 1_000L
         const val SAVE_DEBOUNCE_MS = 1_000L
+        const val WIN_AD_MAX_HOLD_MS = 120_000L
     }
 }

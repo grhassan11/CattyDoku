@@ -97,7 +97,23 @@ fun SudokuGameRoute(
             else -> adsViewModel.showGameNativeSkeleton()
         }
     }
-    DisposableEffect(adsViewModel) { onDispose { adsViewModel.releaseGameNative() } }
+    DisposableEffect(adsViewModel) {
+        onDispose {
+            adsViewModel.releaseGameNative()
+            adsViewModel.releaseCompleteNative()
+        }
+    }
+
+    // Puzzle solved sticky native (sudoku_game_completed_native_ad_show, Home-style 112dp). Warm the cache while playing; request at
+    // win time (the dialog is Won from the winning move, while the win interstitial may still be up); fresh per win; released on leave.
+    val completeNative by adsViewModel.completeNative.collectAsStateWithLifecycle()
+    val wonShown = state.dialog is SudokuDialogUi.Won
+    LaunchedEffect(surfaces.sudokuCompleteNative, state.loading) {
+        if (surfaces.sudokuCompleteNative && !state.loading) adsViewModel.preloadCompleteNative(AdPlacement.SUDOKU_COMPLETE)
+    }
+    LaunchedEffect(wonShown) {
+        if (wonShown) adsViewModel.requestCompleteNative(AdPlacement.SUDOKU_COMPLETE) else adsViewModel.releaseCompleteNative()
+    }
     // No native ad under dialogs (restart / win / game over / out of hints): slot stays reserved, ad view detaches. Pause does NOT affect it.
     val nativeVisible = state.dialog == SudokuDialogUi.None && !state.loading
 
@@ -189,5 +205,7 @@ fun SudokuGameRoute(
         modifier = modifier,
         nativeReserved = surfaces.sudokuGameNativeSlot,
         nativeSlot = if (nativeVisible) gameNative else NativeAdSlotState.Hidden,
+        completeNativeReserved = surfaces.sudokuCompleteNativeSlot,
+        completeNativeSlot = completeNative,
     )
 }

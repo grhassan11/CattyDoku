@@ -96,29 +96,20 @@ fun GameRoute(
     )
     val nudging = rememberIdleNudge(nudgeEligible, interactionClock)
 
-    // Win interstitial, exactly once per win, whatever exit the player picks (Next / Home icon / system back / Daily CTA):
-    // 0 = not yet, 1 = ad in flight (further taps ignored), 2 = done (later exits navigate at once). Reset when the dialog goes.
+    // Win interstitial fires at WIN TIME (LevelWon event below), not on Home / Next taps. The win is already persisted by the
+    // ViewModel; this flag only holds the Level Complete dialog back until the ad is dismissed / failed / skipped (always released).
     val wonShown = content?.outcome is OutcomeUi.Won
-    var winAdState by remember { mutableIntStateOf(0) }
-    LaunchedEffect(wonShown) { if (!wonShown) winAdState = 0 }
-    val winAdThen: (() -> Unit) -> Unit = { navigate ->
-        when (winAdState) {
-            1 -> Unit
-            2 -> navigate()
-            else -> {
-                winAdState = 1
-                val started = adsViewModel.afterWin(adLevel, adIsDaily) {
-                    winAdState = 2
-                    scope.launch {
-                        // Back from a full-screen ad: wait for RESUMED so popBackStack (popIfResumed) is not dropped.
-                        snapshotFlow { resumed }.first { it }
-                        withFrameNanos { }
-                        navigate()
-                    }
-                }
-                if (!started) winAdState = 0 // another ad action in flight: let the player tap again
-            }
+    var winDialogHeld by remember { mutableStateOf(false) }
+    LaunchedEffect(wonShown) {
+        if (!wonShown) {
+            winDialogHeld = false
+            adsViewModel.releaseCompleteNative() // leaving the win screen: next win requests a fresh completion native
         }
+    }
+    val completeNative by adsViewModel.completeNative.collectAsStateWithLifecycle()
+    // Warm the completion-screen native while playing, so it binds instantly when the screen appears after the win ad.
+    LaunchedEffect(adLevel, surfaces.levelsCompleteNative) {
+        if (surfaces.levelsCompleteNative) adsViewModel.preloadCompleteNative()
     }
 
     // Lose-screen Home interstitial, exactly once per lose screen, for Home tap AND system back (same pattern as the win ad):
@@ -194,6 +185,8 @@ fun GameRoute(
         rewardedBusy = rewardedBusy,
         nativeReserved = surfaces.levelsGameNativeSlot,
         nativeSlot = if (nativeVisible) gameNative else NativeAdSlotState.Hidden,
+        completeNativeReserved = surfaces.levelsCompleteNativeSlot,
+        completeNativeSlot = completeNative,
     )
 
     LaunchedEffect(adsViewModel) {
@@ -240,9 +233,16 @@ fun GameRoute(
                     snackbarHostState.currentSnackbarData?.dismiss()
                     snackbarHostState.showSnackbar(mouseNoTargetText)
                 }
-                // Win counts toward the every-Nth-win ad rule (daily ignored: its key is <= 0). The ad itself
-                // only ever shows later, when the user taps "Level N+1".
-                is GameUiEvent.LevelWon -> adsViewModel.onLevelWon(isDaily = event.level <= 0)
+                // Win: count it once, then run the (unchanged) eligibility rules right now. Eligible = ad shows at once and the
+                // Level Complete dialog waits for its close; not eligible / offline / not ready / failed = dialog at once.
+                is GameUiEvent.LevelWon -> {
+                    val daily = event.level <= 0
+                    adsViewModel.onLevelWon(isDaily = daily)
+                    winDialogHeld = true
+                    adsViewModel.requestCompleteNative() // preloaded one binds at once; gated / off = nothing reserved on screen
+                    val started = adsViewModel.afterWin(if (daily) 0 else event.level, daily) { winDialogHeld = false }
+                    if (!started) winDialogHeld = false // another ad action in flight: no win ad, show the dialog
+                }
                 is GameUiEvent.LevelLost -> Unit // dialogs render from state.outcome
                 // Visual-only: hand the transient cue to the board (it plays once per token, skips if animations are off).
                 // Touching violation: cats in the 8-neighbourhood of the wrong cell (read from the board the UI already shows) shake
@@ -276,10 +276,13 @@ fun GameRoute(
         }
     }
 
-    // System back on the Win dialog = Home icon (interstitial first). Rate-us dialog has its own BackHandler on top.
+    // System back on the Win dialog = Home icon (no ad here any more). Ignored while the win ad is still pending (dialog hidden).
+    // Rate-us dialog has its own BackHandler on top.
     BackHandler(enabled = wonShown) {
-        audio?.stopSfx()
-        winAdThen { onBack() }
+        if (!winDialogHeld) {
+            audio?.stopSfx()
+            onBack()
+        }
     }
     Box(modifier.fillMaxSize().trackInteractions(interactionClock)) {
     GameScreen(
@@ -292,8 +295,9 @@ fun GameRoute(
         },
         onWinHome = {
             audio?.stopSfx() // silence the win / award cue before leaving
-            winAdThen { onBack() }
+            onBack()
         },
+        winDialogHeld = winDialogHeld,
         settingsVisible = settingsVisible,
         onOpenSettings = {
             // Toggle: pause + save while the dialog is open, resume on close.
@@ -326,15 +330,13 @@ fun GameRoute(
         onMouseAnimDone = viewModel::onMouseAnimDone,
         wrongMove = wrongMove,
         onRetryLoad = viewModel::onRetryLoad,
-        // User-initiated boundary: maybe an interstitial BEFORE navigating (ad-free through Lv 9), then ALWAYS
-        // continue (fail open).
-        // The one-time Rate us dialog (after Lv 5 is won) goes FIRST, then the normal ad boundary + next level.
+        // No interstitial here (it ran at win time). The one-time Rate us dialog (after Lv 5 is won) goes FIRST, then next level.
         onNextLevel = {
-            audio?.stopSfx() // silence the win / award cue now, before the rate dialog, ad or next level starts
+            audio?.stopSfx() // silence the win / award cue now, before the rate dialog or next level starts
             if (adIsDaily) {
-                winAdThen { onBack() } // Daily "Back to Home": interstitial first, then leave
+                onBack() // Daily "Back to Home"
             } else {
-                val proceed = { winAdThen { viewModel.onNextLevel() } }
+                val proceed = { viewModel.onNextLevel() }
                 scope.launch {
                     if (rateUsViewModel.tryShow()) pendingNextLevel = proceed else proceed()
                 }

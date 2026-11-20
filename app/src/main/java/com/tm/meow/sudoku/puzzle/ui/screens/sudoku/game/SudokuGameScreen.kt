@@ -98,6 +98,9 @@ fun SudokuGameScreen(
     nativeReserved: Boolean = false,
     /** Native slot content: Loading = skeleton, Loaded = ad, Hidden / Failed = blank (also under a dialog: the slot stays reserved, the view detaches). */
     nativeSlot: NativeAdSlotState = NativeAdSlotState.Hidden,
+    /** Puzzle solved screen sticky bottom native (remote `sudoku_game_completed_native_ad_show`): slot reserved + its content. */
+    completeNativeReserved: Boolean = false,
+    completeNativeSlot: NativeAdSlotState = NativeAdSlotState.Hidden,
 ) {
     BackHandler(onBack = onBack)
     val theme = remember(state.tier) { sudokuTierTheme(state.tier) }
@@ -213,7 +216,18 @@ fun SudokuGameScreen(
                 onStore = onOpenStore,
                 onDismiss = onDismissDialog,
             )
-            is SudokuDialogUi.Won -> SudokuWinDialog(dialog.win, onNext = onWinNext, onDone = onWinDone)
+            // Win ad pending (it fires at the winning move): dialog stays hidden until it closes / fails; the win is already saved.
+            is SudokuDialogUi.Won -> if (!state.winAdHeld) {
+                SudokuWinDialog(
+                    dialog.win,
+                    onNext = onWinNext,
+                    onDone = onWinDone,
+                    nativeReserved = completeNativeReserved,
+                    nativeSlot = completeNativeSlot,
+                )
+            } else {
+                Unit
+            }
             is SudokuDialogUi.GameOver -> SudokuGameOverDialog(
                 dialog.mistakes,
                 onRestart = onRestart,

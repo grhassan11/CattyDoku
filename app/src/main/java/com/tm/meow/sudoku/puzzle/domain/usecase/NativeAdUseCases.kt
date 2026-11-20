@@ -26,7 +26,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * switch (remote keys `levels_game_native_ad_show` / `sudoku_game_native_ad_show` -> AdPolicyConfig.levelsGameNativeShow /
  * sudokuGameNativeShow). Neither has a level gate ([LEVELS_GAME] shows from Level 1).
  */
-enum class AdPlacement { LEVELS_HOME, SUDOKU_HOME, LEVELS_GAME, SUDOKU_GAME }
+enum class AdPlacement { LEVELS_HOME, SUDOKU_HOME, LEVELS_GAME, SUDOKU_GAME, LEVELS_COMPLETE, SUDOKU_COMPLETE }
 
 /** Load the native ad for an [AdPlacement] if policy + consent allow. Null = show nothing. Never throws. */
 class LoadNativeAd(
@@ -47,11 +47,14 @@ class LoadNativeAd(
             AdPlacement.SUDOKU_HOME -> cfg.sudokuHomeNativeShow
             AdPlacement.LEVELS_GAME -> cfg.levelsGameNativeShow
             AdPlacement.SUDOKU_GAME -> cfg.sudokuGameNativeShow
+            AdPlacement.LEVELS_COMPLETE -> cfg.levelsCompleteNativeShow
+            AdPlacement.SUDOKU_COMPLETE -> cfg.sudokuCompleteNativeShow
         }
         if (!unitOn) return false
         val format = when (placement) {
             AdPlacement.LEVELS_HOME, AdPlacement.SUDOKU_HOME -> AdFormat.NATIVE_HOME
-            AdPlacement.LEVELS_GAME, AdPlacement.SUDOKU_GAME -> AdFormat.NATIVE_GAME
+            AdPlacement.LEVELS_GAME, AdPlacement.SUDOKU_GAME,
+            AdPlacement.LEVELS_COMPLETE, AdPlacement.SUDOKU_COMPLETE -> AdFormat.NATIVE_GAME
         }
         return !AdFreePolicy.isSuppressedByPurchase(format, adsRemoved.adsRemoved.value)
     }

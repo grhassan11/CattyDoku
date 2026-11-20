@@ -28,7 +28,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -68,9 +73,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tm.meow.sudoku.puzzle.R
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState
 import com.tm.meow.sudoku.puzzle.domain.model.AnimalSet
 import com.tm.meow.sudoku.puzzle.domain.model.PieceSkin
+import com.tm.meow.sudoku.puzzle.ui.ads.NativeAdSlot
 import com.tm.meow.sudoku.puzzle.ui.components.Button3D
 import com.tm.meow.sudoku.puzzle.ui.components.Button3DHeight
 import com.tm.meow.sudoku.puzzle.ui.components.ButtonStyle
@@ -117,6 +124,9 @@ internal fun OutcomeOverlay(
     rewardedLoad: RewardedLoadState = RewardedLoadState.IDLE,
     rewardedBusy: Boolean = false,
     onRetryRewardedLoad: () -> Unit = {},
+    /** Level Completed sticky bottom native (remote `levels_game_completed_native_ad_show`): slot reserved + its content. */
+    nativeReserved: Boolean = false,
+    nativeSlot: NativeAdSlotState = NativeAdSlotState.Hidden,
 ) {
     val last = remember { LastOutcome() }
     if (outcome != null) last.value = outcome
@@ -134,6 +144,8 @@ internal fun OutcomeOverlay(
                 pieceSkin = if (daily) PieceSkin.cats() else pieceSkin,
                 onNextLevel = onNextLevel,
                 onWinHome = onWinHome,
+                nativeReserved = nativeReserved,
+                nativeSlot = nativeSlot,
             )
             is OutcomeUi.Lost -> LoseDialog(
                 onRetry = onRetry,
@@ -177,6 +189,8 @@ private fun WinDialog(
     pieceSkin: PieceSkin,
     onNextLevel: () -> Unit,
     onWinHome: () -> Unit,
+    nativeReserved: Boolean,
+    nativeSlot: NativeAdSlotState,
 ) {
     val animalSet = pieceSkin.set
     val headline = stringResource(OutcomeLogic.headline(level, daily).res())
@@ -239,6 +253,7 @@ private fun WinDialog(
         onCta = onNextLevel,
         showHome = !daily,
         onHome = onWinHome,
+        bottomAd = if (nativeReserved && nativeSlot.reservesSlot) ({ NativeAdSlot(nativeSlot) }) else null,
     )
 }
 
@@ -262,16 +277,28 @@ internal fun WinScreenLayout(
     homeDescription: String = stringResource(R.string.win_home),
     confetti: Boolean = true,
     inputArmed: Boolean = true,
+    /**
+     * Sticky Home-style native ad (112dp, [NativeAdSlot]) pinned to the bottom, below the scrolling content. It owns the
+     * navigation-bar inset itself (its background runs behind the bar), so this layout then only applies the top / side insets.
+     * null = none (full system-bars padding).
+     */
+    bottomAd: (@Composable () -> Unit)? = null,
 ) {
     DialogScrim(Modifier.semantics { paneTitle = headline }, scrimColor = GameColors.OutcomeScrim) {
         StatusBarIconsEffect()
         if (confetti) Confetti()
+        val insets = if (bottomAd != null) {
+            WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+        } else {
+            WindowInsets.systemBars
+        }
+        Column(Modifier.fillMaxSize().windowInsetsPadding(insets), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
         Column(
             Modifier
                 .fillMaxSize()
-                .systemBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 24.dp, vertical = if (bottomAd != null) 8.dp else 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -302,7 +329,7 @@ internal fun WinScreenLayout(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 content = stats,
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(if (bottomAd != null) 32.dp else 40.dp))
 
             Row(
                 Modifier.fillMaxWidth().widthIn(max = 360.dp),
@@ -326,8 +353,18 @@ internal fun WinScreenLayout(
                 )
             }
         }
+        }
+        if (bottomAd != null) {
+            // AdMob accidental-click policy: clear space between the Home / CTA buttons and the ad (same 48dp as the game screen). The ad is 112dp tall (Home layout), the scrolling content above shrinks and scrolls.
+            Spacer(Modifier.height(WIN_NATIVE_AD_CLEARANCE))
+            bottomAd()
+        }
+        }
     }
 }
+
+/** Gap between the win buttons (scroll viewport edge) and the sticky native ad; matches the game screen's NATIVE_AD_CLEARANCE. The ad below it is the 112dp Home native. */
+private val WIN_NATIVE_AD_CLEARANCE = 48.dp
 
 /**
  * Headline inside a folded ribbon banner: main band, swallowtail tails in a darker shade, fold
@@ -444,10 +481,11 @@ private fun MascotStage(mascotRes: Int, description: String) {
     } else {
         null
     }
-    Box(Modifier.size(260.dp), contentAlignment = Alignment.Center) {
-        Sunburst(Modifier.requiredSize(340.dp))
+    // Sizes = previous 260 / 340 / 220 dp x 0.85.
+    Box(Modifier.size(221.dp), contentAlignment = Alignment.Center) {
+        Sunburst(Modifier.requiredSize(289.dp))
         val popMod = Modifier
-            .size(220.dp)
+            .size(187.dp)
             .graphicsLayer {
                 scaleX = pop.value
                 scaleY = pop.value
@@ -490,7 +528,7 @@ private fun ScoreCountUp(score: Int) {
         Text(
             OutcomeLogic.countUpValue(score, progress.value).toString(),
             color = Color.White,
-            fontSize = 48.sp,
+            fontSize = 36.sp,
             fontWeight = FontWeight.ExtraBold,
         )
     }

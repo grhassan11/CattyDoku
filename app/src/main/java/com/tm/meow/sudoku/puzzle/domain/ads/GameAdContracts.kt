@@ -76,6 +76,12 @@ data class AdSurfaces(
      */
     val levelsGameNativeSlot: Boolean = false,
     val sudokuGameNativeSlot: Boolean = false,
+    /** Level Completed screen bottom native may be requested / is reserved. Remote `levels_game_completed_native_ad_show`; Remove Ads folds both to false. */
+    val levelsCompleteNative: Boolean = false,
+    val levelsCompleteNativeSlot: Boolean = false,
+    /** Sudoku Puzzle solved screen bottom native may be requested / is reserved. Remote `sudoku_game_completed_native_ad_show`; Remove Ads folds both to false. */
+    val sudokuCompleteNative: Boolean = false,
+    val sudokuCompleteNativeSlot: Boolean = false,
     /** Remove Ads owned. The game native slots are already folded to false; rewarded is unaffected. Informational for the UI. */
     val adsRemoved: Boolean = false,
     /** Validated internet connection present. Rewarded CTAs stay visible but show a helper text and are disabled while false. */

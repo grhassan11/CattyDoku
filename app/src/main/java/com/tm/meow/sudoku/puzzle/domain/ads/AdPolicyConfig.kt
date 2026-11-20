@@ -53,6 +53,10 @@ data class AdPolicyConfig(
     val levelsGameNativeShow: Boolean = DEFAULT_SHOW,
     /** Sudoku game-screen compact native slot (remote `sudoku_game_native_ad_show`). */
     val sudokuGameNativeShow: Boolean = DEFAULT_SHOW,
+    /** Levels Level Completed (win) screen sticky bottom native (remote `levels_game_completed_native_ad_show`). */
+    val levelsCompleteNativeShow: Boolean = DEFAULT_SHOW,
+    /** Sudoku Puzzle solved (win) screen sticky bottom native (remote `sudoku_game_completed_native_ad_show`). */
+    val sudokuCompleteNativeShow: Boolean = DEFAULT_SHOW,
     /** Interstitial on Levels win (remote `levels_game_completed_interstitial_ad_show`). */
     val levelsWinInterstitialShow: Boolean = DEFAULT_SHOW,
     /** Interstitial on Sudoku win (remote `sudoku_game_completed_interstitial_ad_show`), ANDed with [SudokuAdRules]. */

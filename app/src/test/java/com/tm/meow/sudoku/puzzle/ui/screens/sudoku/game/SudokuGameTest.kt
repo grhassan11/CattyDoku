@@ -308,9 +308,28 @@ class SudokuGameTest {
         r.vm.onCellTap(15)
         r.vm.onDigit(1)
         assertTrue(r.vm.state.value.dialog is SudokuDialogUi.Won)
-        coVerify(exactly = 0) { r.ads.onWin(any(), any()) } // no ad while the dialog is shown
+        coVerify(exactly = 1) { r.ads.onWin(SudokuTier.EASY, 5) } // 5th win: ad fires at the winning move
+        assertFalse(r.vm.state.value.winAdHeld) // relaxed mock returns at once: dialog released
         r.vm.onWinDone()
-        coVerify(exactly = 1) { r.ads.onWin(SudokuTier.EASY, 5) } // 5th win
+        coVerify(exactly = 1) { r.ads.onWin(any(), any()) } // Back button: no second ad
+    }
+
+    @Test
+    fun winDialogHeldUntilAdReturnsAndBackIgnoredMeanwhile() = vmTest { r ->
+        val gate = kotlinx.coroutines.CompletableDeferred<Boolean>()
+        io.mockk.coEvery { r.ads.onWin(any(), any()) } coAnswers { gate.await() }
+        r.vm.onCellTap(0)
+        r.vm.onDigit(1)
+        r.vm.onCellTap(15)
+        r.vm.onDigit(1)
+        assertTrue(r.vm.state.value.dialog is SudokuDialogUi.Won)
+        assertTrue(r.vm.state.value.winAdHeld)
+        r.vm.onBack() // ignored while the ad is pending
+        r.vm.onWinNext()
+        assertTrue(r.vm.state.value.dialog is SudokuDialogUi.Won)
+        gate.complete(true)
+        assertFalse(r.vm.state.value.winAdHeld)
+        coVerify(exactly = 1) { r.ads.onWin(any(), any()) }
     }
 
     // ---- analytics ----

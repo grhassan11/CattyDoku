@@ -127,6 +127,8 @@ fun GameScreen(
     onLoseHome: () -> Unit = onBack,
     /** Level Complete HOME icon; defaults to the same pop-to-Home as [onBack]. */
     onWinHome: () -> Unit = onBack,
+    /** Win interstitial pending (shown at win time): Level Complete dialog stays hidden until it closes / fails. */
+    winDialogHeld: Boolean = false,
     ads: GameAdsUi = GameAdsUi(),
     /** Booster whose "Need one?" rewarded dialog is open (null = closed). */
     boosterDialog: Booster? = null,
@@ -181,6 +183,7 @@ fun GameScreen(
                 content = state.content,
                 onBack = onBack,
                 onWinHome = onWinHome,
+                winDialogHeld = winDialogHeld,
                 onOpenSettings = onOpenSettings,
                 onCellTap = onCellTap,
                 onCellDoubleTap = onCellDoubleTap,
@@ -239,6 +242,7 @@ private fun GameContent(
     content: GameContentUi,
     onBack: () -> Unit,
     onWinHome: () -> Unit,
+    winDialogHeld: Boolean,
     onOpenSettings: () -> Unit,
     onCellTap: (Pos) -> Unit,
     onCellDoubleTap: (Pos) -> Unit,
@@ -424,13 +428,15 @@ private fun GameContent(
         }
 
         OutcomeOverlay(
-            outcome = content.outcome,
+            outcome = if (winDialogHeld && content.outcome is OutcomeUi.Won) null else content.outcome,
             level = content.levelNumber,
             maxHearts = content.maxHearts,
             onNextLevel = onNextLevel, // Daily: GameRoute routes to Home after the win ad
             onRetry = onLoseRetry,
             onHome = onLoseHome, // Home: interstitial first (GameRoute), then pop-to-Home
             onWinHome = onWinHome,
+            nativeReserved = ads.completeNativeReserved,
+            nativeSlot = ads.completeNativeSlot,
             daily = content.isDaily,
             pieceSkin = content.pieceSkin,
             onWatchRevive = if (ads.reviveSurface) onWatchReviveAd else null,

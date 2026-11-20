@@ -256,6 +256,9 @@ data class GameAdsUi(
     val nativeReserved: Boolean = false,
     /** Native slot content: Loading = skeleton, Loaded = ad, Hidden / Failed = blank (also while a dialog is open). */
     val nativeSlot: com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState = com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState.Hidden,
+    /** Level Completed screen sticky native reserved (remote `levels_game_completed_native_ad_show`; Remove Ads folds it to false). */
+    val completeNativeReserved: Boolean = false,
+    val completeNativeSlot: com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState = com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState.Hidden,
 )
 
 /** Marks the given cell indices as red wrong-cat X's (UI-only flag). Returns this when empty. */

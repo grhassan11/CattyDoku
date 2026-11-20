@@ -37,7 +37,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tm.meow.sudoku.puzzle.R
+import com.tm.meow.sudoku.puzzle.domain.ads.NativeAdSlotState
 import com.tm.meow.sudoku.puzzle.domain.ads.RewardedLoadState
+import com.tm.meow.sudoku.puzzle.ui.ads.NativeAdSlot
 import com.tm.meow.sudoku.puzzle.ui.components.ButtonStyle
 import com.tm.meow.sudoku.puzzle.ui.components.Confetti
 import com.tm.meow.sudoku.puzzle.ui.components.DialogScrim
@@ -158,6 +160,8 @@ internal fun SudokuWinDialog(
     win: SudokuWinUi,
     onNext: () -> Unit,
     onDone: () -> Unit,
+    nativeReserved: Boolean = false,
+    nativeSlot: NativeAdSlotState = NativeAdSlotState.Hidden,
 ) {
     val title = stringResource(R.string.sudoku_win_title)
     val armed = rememberInputArmed()
@@ -209,6 +213,7 @@ internal fun SudokuWinDialog(
             homeDescription = stringResource(R.string.sudoku_win_done),
             confetti = rememberAnimationsEnabled(null),
             inputArmed = armed,
+            bottomAd = if (nativeReserved && nativeSlot.reservesSlot) ({ NativeAdSlot(nativeSlot) }) else null,
         )
     }
 }

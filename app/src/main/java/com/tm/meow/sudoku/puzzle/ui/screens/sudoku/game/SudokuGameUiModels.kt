@@ -69,6 +69,8 @@ data class SudokuGameUiState(
     val dialog: SudokuDialogUi = SudokuDialogUi.None,
     /** Bumped for every fresh board (new puzzle, restart, first load): a new non-zero value plays the board intro wave once. 0 = none. */
     val introKey: Long = 0L,
+    /** Win is persisted and [dialog] is Won, but the win interstitial is still pending: the screen keeps the win dialog hidden until it closes / fails. */
+    val winAdHeld: Boolean = false,
 )
 
 enum class SudokuExitReason { NONE, LOCKED, FAILED }

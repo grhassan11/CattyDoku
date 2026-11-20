@@ -11,6 +11,8 @@ object RemoteConfigKeys {
     const val SUDOKU_HOME_NATIVE_AD_SHOW = "sudoku_home_native_ad_show"
     const val LEVELS_GAME_NATIVE_AD_SHOW = "levels_game_native_ad_show"
     const val SUDOKU_GAME_NATIVE_AD_SHOW = "sudoku_game_native_ad_show"
+    const val LEVELS_GAME_COMPLETED_NATIVE_AD_SHOW = "levels_game_completed_native_ad_show"
+    const val SUDOKU_GAME_COMPLETED_NATIVE_AD_SHOW = "sudoku_game_completed_native_ad_show"
     const val SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW = "sudoku_game_completed_interstitial_ad_show"
     const val LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW = "levels_game_completed_interstitial_ad_show"
     const val LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY = "levels_game_completed_interstitial_ad_frequency"
@@ -51,6 +53,8 @@ data class AppRemoteConfig(
     val sudokuHomeNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val levelsGameNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val sudokuGameNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    val levelsCompleteNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
+    val sudokuCompleteNativeAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val sudokuGameCompletedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     val levelsGameCompletedInterstitialAdShow: Boolean = AdPolicyConfig.DEFAULT_SHOW,
     /** Levels win ad on every Nth completed level ABOVE 10 (level % N == 0), 1..50. Levels 1..10 use the list below. */
@@ -85,6 +89,8 @@ data class AppRemoteConfig(
         sudokuHomeNativeShow = sudokuHomeNativeAdShow,
         levelsGameNativeShow = levelsGameNativeAdShow,
         sudokuGameNativeShow = sudokuGameNativeAdShow,
+        levelsCompleteNativeShow = levelsCompleteNativeAdShow,
+        sudokuCompleteNativeShow = sudokuCompleteNativeAdShow,
         levelsWinInterstitialShow = levelsGameCompletedInterstitialAdShow,
         sudokuWinInterstitialShow = sudokuGameCompletedInterstitialAdShow,
         levelsRestartInterstitialShow = levelsGameRestartedInterstitialAdShow,
@@ -115,6 +121,8 @@ object RemoteConfigParser {
             sudokuHomeNativeAdShow = bool(read(RemoteConfigKeys.SUDOKU_HOME_NATIVE_AD_SHOW), d.sudokuHomeNativeAdShow),
             levelsGameNativeAdShow = bool(read(RemoteConfigKeys.LEVELS_GAME_NATIVE_AD_SHOW), d.levelsGameNativeAdShow),
             sudokuGameNativeAdShow = bool(read(RemoteConfigKeys.SUDOKU_GAME_NATIVE_AD_SHOW), d.sudokuGameNativeAdShow),
+            levelsCompleteNativeAdShow = bool(read(RemoteConfigKeys.LEVELS_GAME_COMPLETED_NATIVE_AD_SHOW), d.levelsCompleteNativeAdShow),
+            sudokuCompleteNativeAdShow = bool(read(RemoteConfigKeys.SUDOKU_GAME_COMPLETED_NATIVE_AD_SHOW), d.sudokuCompleteNativeAdShow),
             sudokuGameCompletedInterstitialAdShow = bool(
                 read(RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW), d.sudokuGameCompletedInterstitialAdShow,
             ),
@@ -173,6 +181,8 @@ object RemoteConfigParser {
             RemoteConfigKeys.SUDOKU_HOME_NATIVE_AD_SHOW to d.sudokuHomeNativeAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_NATIVE_AD_SHOW to d.levelsGameNativeAdShow.toString(),
             RemoteConfigKeys.SUDOKU_GAME_NATIVE_AD_SHOW to d.sudokuGameNativeAdShow.toString(),
+            RemoteConfigKeys.LEVELS_GAME_COMPLETED_NATIVE_AD_SHOW to d.levelsCompleteNativeAdShow.toString(),
+            RemoteConfigKeys.SUDOKU_GAME_COMPLETED_NATIVE_AD_SHOW to d.sudokuCompleteNativeAdShow.toString(),
             RemoteConfigKeys.SUDOKU_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to d.sudokuGameCompletedInterstitialAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_SHOW to d.levelsGameCompletedInterstitialAdShow.toString(),
             RemoteConfigKeys.LEVELS_GAME_COMPLETED_INTERSTITIAL_AD_FREQUENCY to d.levelsGameCompletedInterstitialAdFrequency.toString(),

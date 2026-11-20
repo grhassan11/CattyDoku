@@ -307,7 +307,54 @@ class AdsViewModel @Inject constructor(
         _gameNative.value = NativeAdSlotState.Hidden
     }
 
+    // ------------------------------------------------------------ Level Completed native (levels_game_completed_native_ad_show)
+
+    private val _completeNative = MutableStateFlow<NativeAdSlotState>(NativeAdSlotState.Hidden)
+
+    /** Native for the Level Completed / Puzzle solved screen's sticky bottom slot (placement per caller). Separate from [gameNative] (a native view binds once). */
+    val completeNative: StateFlow<NativeAdSlotState> = _completeNative.asStateFlow()
+
+    private var completeNativeJob: Job? = null
+
+    /** Warm the cache while the level is played so the win screen binds instantly. No-op when gated (use case checks every gate). */
+    fun preloadCompleteNative(placement: AdPlacement = AdPlacement.LEVELS_COMPLETE) {
+        preloadGameNative(placement)
+    }
+
+    /**
+     * Win time: take the preloaded ad (or load live) for the completion screen. No-op when one is held / loading. Gated or no
+     * fill = Failed (UI keeps the skeleton only if the slot is reserved; Remove Ads / switch off reserve nothing).
+     */
+    fun requestCompleteNative(placement: AdPlacement = AdPlacement.LEVELS_COMPLETE) {
+        if (_completeNative.value is NativeAdSlotState.Loaded || completeNativeJob?.isActive == true) return
+        _completeNative.value = NativeAdSlotState.Loading
+        completeNativeJob = viewModelScope.launch {
+            val level = surfaces.value.playerLevel.coerceAtLeast(screenLevel.value)
+            val handle = try {
+                takeGameNative(placement, level) ?: loadNative(placement, level)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                null
+            }
+            if (!isActive) {
+                handle?.destroy()
+                return@launch
+            }
+            _completeNative.value = if (handle == null) NativeAdSlotState.Failed else NativeAdSlotState.Loaded(handle)
+        }
+    }
+
+    /** Next level / leaving the win screen: destroy the held ad and cancel a load; next win requests a fresh one. */
+    fun releaseCompleteNative() {
+        completeNativeJob?.cancel()
+        completeNativeJob = null
+        (_completeNative.value as? NativeAdSlotState.Loaded)?.ad?.destroy()
+        _completeNative.value = NativeAdSlotState.Hidden
+    }
+
     override fun onCleared() {
+        releaseCompleteNative()
         releaseGameNative()
     }
 
