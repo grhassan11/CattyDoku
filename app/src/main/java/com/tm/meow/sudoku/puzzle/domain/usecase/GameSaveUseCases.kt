@@ -45,3 +45,8 @@ class RestoreGame(
         return RestoredGame(puzzle, game)
     }
 }
+
+/** Discard the autosave for [levelIndex] so the next load of that level starts fresh (Home sheet "Restart"). */
+class DiscardSavedGame(private val repo: SavedGameRepository) {
+    suspend operator fun invoke(levelIndex: Int) = repo.clear(levelIndex)
+}

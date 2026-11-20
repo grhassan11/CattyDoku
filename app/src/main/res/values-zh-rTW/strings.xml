@@ -433,6 +433,7 @@
     <string name="level_sheet_play">開始</string>
     <string name="level_sheet_replay">重玩</string>
     <string name="level_sheet_resume">繼續</string>
+    <string name="level_sheet_restart">重新開始</string>
     <string name="exit_sheet_message">確定要離開嗎？</string>
     <string name="exit_sheet_cancel">取消</string>
     <string name="exit_remove_ads">移除廣告</string>

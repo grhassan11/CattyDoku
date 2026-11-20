@@ -159,17 +159,24 @@ class AdsViewModel @Inject constructor(
 
     /** Returns false (and never calls [onDone]) when another full-screen ad action is in flight. */
     private fun run(trigger: AdTrigger, level: Int, isDaily: Boolean, onDone: () -> Unit): Boolean {
-        if (!busy.compareAndSet(false, true)) return false
+        android.util.Log.d("BackAdTrace", "run entry trigger=$trigger level=$level daily=$isDaily busy=${busy.get()}") // TEMP-LOG: remove before release
+        if (!busy.compareAndSet(false, true)) {
+            android.util.Log.d("BackAdTrace", "run EARLY_RETURN reason=BUSY trigger=$trigger -> started=false") // TEMP-LOG: remove before release
+            return false
+        }
         viewModelScope.launch {
             try {
-                showInterstitial(trigger, level, isDaily)
+                val shown = showInterstitial(trigger, level, isDaily)
+                android.util.Log.d("BackAdTrace", "run result trigger=$trigger shown=$shown") // TEMP-LOG: remove before release
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
+                android.util.Log.d("BackAdTrace", "run EXCEPTION trigger=$trigger t=$t") // TEMP-LOG: remove before release
                 // fail open
             } finally {
                 busy.set(false)
             }
+            android.util.Log.d("BackAdTrace", "run onDone() trigger=$trigger") // TEMP-LOG: remove before release
             onDone()
         }
         return true

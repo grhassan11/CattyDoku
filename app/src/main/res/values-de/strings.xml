@@ -437,6 +437,7 @@
     <string name="level_sheet_play">Spielen</string>
     <string name="level_sheet_replay">Wiederholen</string>
     <string name="level_sheet_resume">Fortsetzen</string>
+    <string name="level_sheet_restart">Neu starten</string>
     <string name="exit_sheet_message">Möchtest du die App wirklich beenden?</string>
     <string name="exit_sheet_cancel">Abbrechen</string>
     <string name="exit_remove_ads">Werbung entfernen</string>

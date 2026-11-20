@@ -433,6 +433,7 @@
     <string name="level_sheet_play">플레이</string>
     <string name="level_sheet_replay">다시 하기</string>
     <string name="level_sheet_resume">이어하기</string>
+    <string name="level_sheet_restart">다시 시작</string>
     <string name="exit_sheet_message">정말 종료하시겠어요?</string>
     <string name="exit_sheet_cancel">취소</string>
     <string name="exit_remove_ads">광고 제거</string>

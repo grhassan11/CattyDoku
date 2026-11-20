@@ -433,6 +433,7 @@
     <string name="level_sheet_play">プレイ</string>
     <string name="level_sheet_replay">もう一度</string>
     <string name="level_sheet_resume">続ける</string>
+    <string name="level_sheet_restart">やり直す</string>
     <string name="exit_sheet_message">本当に終了しますか？</string>
     <string name="exit_sheet_cancel">キャンセル</string>
     <string name="exit_remove_ads">広告を削除</string>

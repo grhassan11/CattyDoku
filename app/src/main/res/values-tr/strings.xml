@@ -437,6 +437,7 @@
     <string name="level_sheet_play">Oyna</string>
     <string name="level_sheet_replay">Tekrar Oyna</string>
     <string name="level_sheet_resume">Devam Et</string>
+    <string name="level_sheet_restart">Yeniden Başlat</string>
     <string name="exit_sheet_message">Çıkmak istediğine emin misin?</string>
     <string name="exit_sheet_cancel">İptal</string>
     <string name="exit_remove_ads">Reklamları kaldır</string>

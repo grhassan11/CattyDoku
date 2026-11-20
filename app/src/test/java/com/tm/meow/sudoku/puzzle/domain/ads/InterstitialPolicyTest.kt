@@ -171,8 +171,8 @@ class InterstitialPolicyTest {
     }
 
     @Test
-    fun backExemptsLevelsLevelOneOnly() {
-        assertEquals(skip(AdSkipReason.FIRST_LEVEL), InterstitialPolicy.decide(back(level = 1), cfg))
+    fun backHasNoLevelExemption() {
+        assertEquals(AdDecision.Show, InterstitialPolicy.decide(back(level = 1), cfg))
         assertEquals(AdDecision.Show, InterstitialPolicy.decide(back(level = 2), cfg))
         assertEquals(AdDecision.Show, InterstitialPolicy.decide(back(AdTrigger.SUDOKU_GAME_BACK, level = 0), cfg))
     }

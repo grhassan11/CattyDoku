@@ -49,6 +49,7 @@ fun LevelSheet(
     onDismiss: () -> Unit,
     onPlay: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    onRestart: (Int) -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val description = stringResource(R.string.level_sheet_description, sheet.level)
@@ -67,13 +68,13 @@ fun LevelSheet(
                 .semantics { paneTitle = description },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            LevelSheetContent(sheet, onPlay)
+            LevelSheetContent(sheet, onPlay, onRestart)
         }
     }
 }
 
 @Composable
-private fun LevelSheetContent(sheet: LevelSheetUi, onPlay: (Int) -> Unit) {
+private fun LevelSheetContent(sheet: LevelSheetUi, onPlay: (Int) -> Unit, onRestart: (Int) -> Unit) {
     val worldName = WorldThemes.forLevel(sheet.level).name
     Text(
         stringResource(R.string.level_sheet_title, sheet.level),
@@ -139,6 +140,24 @@ private fun LevelSheetContent(sheet: LevelSheetUi, onPlay: (Int) -> Unit) {
             style = ctaTextStyle(),
         )
     }
+    if (showsRestart(sheet)) {
+        Spacer(Modifier.height(12.dp))
+        Button3D(
+            onClick = { onRestart(sheet.level) },
+            modifier = Modifier.fillMaxWidth(),
+            style = ButtonStyle.Primary,
+        ) {
+            Text(
+                stringResource(R.string.level_sheet_restart),
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FredokaFamily,
+                maxLines = 1,
+                style = ctaTextStyle(),
+            )
+        }
+    }
 }
 
 @Composable
@@ -176,6 +195,9 @@ private fun ValueText(text: String) {
 private fun RowDivider() {
     HorizontalDivider(color = GameColors.Wordmark.copy(alpha = 0.15f))
 }
+
+/** Resume state (real in-progress save, not completed): sheet shows Resume (green) + Restart (orange). */
+internal fun showsRestart(sheet: LevelSheetUi): Boolean = !sheet.completed && sheet.resumable
 
 /** Completed = Replay (unchanged); else a real in-progress save = Resume; else Play. */
 internal fun ctaLabel(sheet: LevelSheetUi): Int = when {

@@ -112,6 +112,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     nativeAdSlot: NativeAdSlotState = NativeAdSlotState.Hidden,
     onRemoveAds: () -> Unit = {},
+    onRestartLevel: (Int) -> Unit = {},
 ) {
     // With the ad slot pinned at the bottom (skeleton while Loading, ad when Loaded), it owns the navigation-bar inset (its
     // background runs behind the bar), so the content stops at the slot and only keeps the status bar + side insets.
@@ -271,7 +272,7 @@ fun HomeScreen(
         }
 
         state.levelSheet?.let { sheet ->
-            LevelSheet(sheet = sheet, onDismiss = onSheetDismiss, onPlay = onPlayLevel)
+            LevelSheet(sheet = sheet, onDismiss = onSheetDismiss, onPlay = onPlayLevel, onRestart = onRestartLevel)
         }
 
         SnackbarHost(

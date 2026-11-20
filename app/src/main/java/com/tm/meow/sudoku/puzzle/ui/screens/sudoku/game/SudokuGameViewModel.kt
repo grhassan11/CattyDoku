@@ -633,28 +633,31 @@ class SudokuGameViewModel @Inject constructor(
     private fun leave() {
         if (leaving) return
         leaving = true
-        // Back ad only for a live game with at least one move / hint / mistake (not open-then-back), never over a win / loss
+        // Back ad for any live game (no progress requirement), never over a win / loss
         // (those flows have their own ad rules). Decided before the holds change anything.
         val backAd = canShowBackAd()
+        android.util.Log.d("BackAdTrace", "sudoku leave() source=SUDOKU_BACK backAd=$backAd completed=$completed winAdHeld=$winAdHeld status=${game?.status} hasMoves=${game?.let { SudokuIdleExit.hasMoves(it) }}") // TEMP-LOG: remove before release
         logPendingLoss()
         maybeLogQuit(QuitReason.SYSTEM_BACK)
         applyHolds()
         viewModelScope.launch {
             persist(idleExit = true) // idle (no moves, < 5 s): clears the save, so no CONTINUE
             if (backAd) showBackAd() // preloaded ad, no load wait; always falls through to exit
+            android.util.Log.d("BackAdTrace", "sudoku leave() invoked afterAd=$backAd -> exit") // TEMP-LOG: remove before release
             exit(SudokuExitReason.NONE)
         }
     }
 
     private fun canShowBackAd(): Boolean {
         val g = game ?: return false
-        return !completed && !winAdHeld && g.status == SudokuStatus.PLAYING && SudokuIdleExit.hasMoves(g)
+        return !completed && !winAdHeld && g.status == SudokuStatus.PLAYING
     }
 
     /** Back interstitial (rules + cool-down in the policy). Hard-capped; every outcome falls through to the exit. */
     private suspend fun showBackAd() {
         try {
-            withTimeoutOrNull(WIN_AD_MAX_HOLD_MS) { showInterstitial.onBack() }
+            val shown = withTimeoutOrNull(WIN_AD_MAX_HOLD_MS) { showInterstitial.onBack() }
+            android.util.Log.d("BackAdTrace", "sudoku showBackAd result shown=$shown (null=timeout)") // TEMP-LOG: remove before release
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {

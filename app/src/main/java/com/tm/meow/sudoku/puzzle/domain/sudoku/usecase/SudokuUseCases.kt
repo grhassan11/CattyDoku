@@ -264,7 +264,7 @@ class ShowSudokuInterstitialIfAllowed(
         return show(AdTrigger.SUDOKU_WON_CONTINUE, level = 0, isDaily = false, persistLevel = false)
     }
 
-    /** Gameplay BACK (caller already checked the player made progress). Gates + cool-down in [InterstitialPolicy]; ready-ad only, no load wait. */
+    /** Gameplay BACK (no progress requirement). Gates + cool-down in [InterstitialPolicy]; ready-ad only, no load wait. */
     suspend fun onBack(): Boolean =
         show(AdTrigger.SUDOKU_GAME_BACK, level = 0, isDaily = false, persistLevel = false)
 

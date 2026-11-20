@@ -196,9 +196,15 @@ class ShowInterstitialIfAllowed(
             )
             val back = trigger == AdTrigger.LEVELS_GAME_BACK || trigger == AdTrigger.SUDOKU_GAME_BACK
             val decision = InterstitialPolicy.decide(ctx, cfg)
+            if (back) { // TEMP-LOG: remove before release
+                android.util.Log.d("BackAdTrace", "decide ctx trigger=${ctx.trigger} level=${ctx.level} daily=${ctx.isDaily} canRequestAds=${ctx.canRequestAds} online=${ctx.online} adsRemoved=${ctx.adsRemoved} msSinceLastAd=${ctx.msSinceLastAd} msSinceLastBackAd=${ctx.msSinceLastBackAd} cooldownMs=${InterstitialPolicy.BACK_COOLDOWN_MS}") // TEMP-LOG: remove before release
+                android.util.Log.d("BackAdTrace", "cfg levelsBackInterstitialShow=${cfg.levelsBackInterstitialShow} sudokuBackInterstitialShow=${cfg.sudokuBackInterstitialShow}") // TEMP-LOG: remove before release
+                android.util.Log.d("BackAdTrace", "decision=${if (decision == AdDecision.Show) "SHOW" else "SKIP:" + (decision as? AdDecision.Skip)?.reason}") // TEMP-LOG: remove before release
+            } // TEMP-LOG: remove before release
             val inputs = "trigger=${ctx.trigger} level=${ctx.level} daily=${ctx.isDaily} wins=${ctx.winsSinceLastAd} " +
                 "lastInterstitialLevel=${ctx.lastInterstitialLevel} " +
                 "consent=${ctx.canRequestAds} adsRemoved=${ctx.adsRemoved}"
+            if (back) ads.debugNote("BackAd: decide=${(decision as? AdDecision.Skip)?.reason ?: "SHOW"} lvl=$level daily=$isDaily sinceAdMs=${ctx.msSinceLastAd} consent=${ctx.canRequestAds} online=${ctx.online} removed=${ctx.adsRemoved}") // TEMP-TOAST: remove before release
             if (decision != AdDecision.Show) {
                 logger.log("decide -> SKIP ${(decision as? AdDecision.Skip)?.reason} | $inputs")
                 return false
@@ -213,6 +219,8 @@ class ShowInterstitialIfAllowed(
                 tracker.fullScreenAdShowing = false
             }
             logger.log("showIfReady -> $result (level=$level)")
+            if (back) android.util.Log.d("BackAdTrace", "showIfReady result=$result shown=${result == AdShowResult.SHOWN}") // TEMP-LOG: remove before release
+            if (back) ads.debugNote("BackAd: showIfReady -> $result") // TEMP-TOAST: remove before release
             analytics.log(AnalyticsEvent.AdInterstitial(if (result == AdShowResult.SHOWN) "shown" else "failed", trigger.name.lowercase()))
             if (result == AdShowResult.SHOWN) {
                 tracker.recordShown()
@@ -233,6 +241,8 @@ class ShowInterstitialIfAllowed(
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
+            if (trigger == AdTrigger.LEVELS_GAME_BACK || trigger == AdTrigger.SUDOKU_GAME_BACK) android.util.Log.d("BackAdTrace", "invoke EXCEPTION trigger=$trigger t=$t") // TEMP-LOG: remove before release
+            if (trigger == AdTrigger.LEVELS_GAME_BACK || trigger == AdTrigger.SUDOKU_GAME_BACK) ads.debugNote("BackAd: EXCEPTION $t") // TEMP-TOAST: remove before release
             false
         }
     }

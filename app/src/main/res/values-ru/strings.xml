@@ -445,6 +445,7 @@
     <string name="level_sheet_play">Играть</string>
     <string name="level_sheet_replay">Переиграть</string>
     <string name="level_sheet_resume">Продолжить</string>
+    <string name="level_sheet_restart">Заново</string>
     <string name="exit_sheet_message">Точно хочешь выйти?</string>
     <string name="exit_sheet_cancel">Отмена</string>
     <string name="exit_remove_ads">Убрать рекламу</string>

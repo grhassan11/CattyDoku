@@ -73,6 +73,13 @@ class AdsRepositoryImpl @Inject constructor(
 
     private val funnel = AdFunnelTracker(analytics, crash)
 
+    // TEMP-TOAST: remove before release
+    private val _interLoaded = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1) // TEMP-TOAST: remove before release
+    override val interstitialLoadedEvents: kotlinx.coroutines.flow.Flow<Unit> get() = _interLoaded // TEMP-TOAST: remove before release
+    private val _debugNotes = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 16) // TEMP-TOAST: remove before release
+    override val debugNotes: kotlinx.coroutines.flow.Flow<String> get() = _debugNotes // TEMP-TOAST: remove before release
+    override fun debugNote(msg: String) { _debugNotes.tryEmit(msg) } // TEMP-TOAST: remove before release
+
     private val initMutex = Mutex()
 
     private val _initialized = MutableStateFlow(false)
@@ -215,6 +222,7 @@ class AdsRepositoryImpl @Inject constructor(
         bufferedSinceMs = 0L
         lastRequestMs = tracker.now()
         funnel.requested(AdFormat.INTERSTITIAL)
+        android.util.Log.d("BackAdTrace", "preload start") // TEMP-LOG: remove before release
         val request = AdRequest.Builder(unitId).build()
         val config = PreloadConfiguration(request)
         try {
@@ -231,6 +239,8 @@ class AdsRepositoryImpl @Inject constructor(
                             if (bufferedSinceMs == 0L) bufferedSinceMs = tracker.now()
                             funnel.loaded(AdFormat.INTERSTITIAL, tracker.now() - lastRequestMs)
                             dbg("interstitial loaded")
+                            android.util.Log.d("BackAdTrace", "preload loaded") // TEMP-LOG: remove before release
+                            _interLoaded.tryEmit(Unit) // TEMP-TOAST: remove before release
                         }
                     }
 
@@ -238,6 +248,7 @@ class AdsRepositoryImpl @Inject constructor(
                         lastPreloadFailed = true
                         funnel.failed(AdFormat.INTERSTITIAL, adError.code.toString(), tracker.now() - lastRequestMs)
                         dbg("interstitial load failed: $adError")
+                        android.util.Log.d("BackAdTrace", "preload failed code=${adError.code} msg=${adError.message}") // TEMP-LOG: remove before release
                         scope.launch { scheduleRetry() }
                     }
 
@@ -284,7 +295,10 @@ class AdsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun showIfReady(loadWaitTimeoutMs: Long): AdShowResult {
+        android.util.Log.d("BackAdTrace", "showIfReady entry sdkInit=${_initialized.value} isAdAvailable=${runCatching { InterstitialAdPreloader.isAdAvailable(unitId) }.getOrNull()} waitMs=$loadWaitTimeoutMs lastPreloadFailed=$lastPreloadFailed preloading=$preloading") // TEMP-LOG: remove before release
         if (!_initialized.value) {
+            android.util.Log.d("BackAdTrace", "showIfReady NOT_READY reason=SDK_NOT_INIT") // TEMP-LOG: remove before release
+            debugNote("Ad: NOT_READY sdk not initialized") // TEMP-TOAST: remove before release
             dbg("showIfReady NOT_READY: SDK not initialized (idsConfigured=$idsConfigured)")
             return AdShowResult.NOT_READY
         }
@@ -294,23 +308,30 @@ class AdsRepositoryImpl @Inject constructor(
                 preloadInterstitial()
             }
             if (!awaitAvailable(loadWaitTimeoutMs)) {
+                android.util.Log.d("BackAdTrace", "showIfReady NOT_READY reason=NO_BUFFERED_AD failed=$lastPreloadFailed preloading=$preloading") // TEMP-LOG: remove before release
+                debugNote("Ad: NOT_READY no buffered ad failed=$lastPreloadFailed preloading=$preloading") // TEMP-TOAST: remove before release
                 dbg("showIfReady NOT_READY: no buffered ad (lastPreloadFailed=$lastPreloadFailed, preloading=$preloading, waitMs=$loadWaitTimeoutMs)")
                 return AdShowResult.NOT_READY
             }
             withContext(main) {
+                android.util.Log.d("BackAdTrace", "showIfReady activityNull=${activities.current() == null}") // TEMP-LOG: remove before release
                 val activity = activities.current() ?: run {
+                    android.util.Log.d("BackAdTrace", "showIfReady NOT_READY reason=NO_ACTIVITY") // TEMP-LOG: remove before release
+                    debugNote("Ad: NOT_READY no current activity") // TEMP-TOAST: remove before release
                     dbg("showIfReady NOT_READY: no current activity")
                     return@withContext AdShowResult.NOT_READY
                 }
                 // Do not store the ad: poll at the placement. The preloader refills its buffer after a poll,
                 // which is the "preload next after dismissal" requirement.
                 val ad = InterstitialAdPreloader.pollAd(unitId) ?: run {
+                    android.util.Log.d("BackAdTrace", "showIfReady NOT_READY reason=POLL_NULL") // TEMP-LOG: remove before release
+                    debugNote("Ad: NOT_READY pollAd null (buffer consumed?)") // TEMP-TOAST: remove before release
                     dbg("showIfReady NOT_READY: pollAd returned null")
                     return@withContext AdShowResult.NOT_READY
                 }
                 suspendCancellableCoroutine { cont ->
                     ad.adEventCallback = object : InterstitialAdEventCallback {
-                        override fun onAdShowedFullScreenContent() = funnel.shown(AdFormat.INTERSTITIAL, unitId)
+                        override fun onAdShowedFullScreenContent() { funnel.shown(AdFormat.INTERSTITIAL, unitId); android.util.Log.d("BackAdTrace", "showIfReady onAdShowedFullScreenContent") } // TEMP-LOG: remove before release
                         override fun onAdImpression() = Unit
                         // Click-out (browser / store): the matching foreground must not trigger an app-open ad.
                         override fun onAdClicked() {
@@ -320,6 +341,7 @@ class AdsRepositoryImpl @Inject constructor(
 
                         override fun onAdDismissedFullScreenContent() {
                             funnel.dismissed(AdFormat.INTERSTITIAL)
+                            android.util.Log.d("BackAdTrace", "showIfReady dismissed -> re-preload") // TEMP-LOG: remove before release
                             bufferedSinceMs = 0L
                             if (cont.isActive) cont.resume(AdShowResult.SHOWN)
                             preloadInterstitial() // next one (the preloader also refills after pollAd; idempotent)
@@ -327,6 +349,8 @@ class AdsRepositoryImpl @Inject constructor(
 
                         override fun onAdFailedToShowFullScreenContent(fullScreenContentError: FullScreenContentError) {
                             funnel.showFailed()
+                            android.util.Log.d("BackAdTrace", "showIfReady FAILED reason=onAdFailedToShow err=$fullScreenContentError -> re-preload") // TEMP-LOG: remove before release
+                            debugNote("Ad: FAILED onAdFailedToShow $fullScreenContentError") // TEMP-TOAST: remove before release
                             dbg("showIfReady FAILED: onAdFailedToShowFullScreenContent $fullScreenContentError")
                             bufferedSinceMs = 0L
                             preloadInterstitial()
@@ -339,6 +363,8 @@ class AdsRepositoryImpl @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
+            android.util.Log.d("BackAdTrace", "showIfReady FAILED reason=EXCEPTION t=$t") // TEMP-LOG: remove before release
+            debugNote("Ad: FAILED exception $t") // TEMP-TOAST: remove before release
             dbg("showIfReady FAILED: $t")
             crash.recordNonFatal(t, "interstitial.show")
             AdShowResult.FAILED

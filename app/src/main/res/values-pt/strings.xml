@@ -441,6 +441,7 @@
     <string name="level_sheet_play">Jogar</string>
     <string name="level_sheet_replay">Jogar de Novo</string>
     <string name="level_sheet_resume">Continuar</string>
+    <string name="level_sheet_restart">Reiniciar</string>
     <string name="exit_sheet_message">Tem certeza de que deseja sair?</string>
     <string name="exit_sheet_cancel">Cancelar</string>
     <string name="exit_sheet_exit">Sair</string>

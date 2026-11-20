@@ -22,7 +22,8 @@ enum class AdTrigger {
 
     /**
      * User tapped the top-bar BACK icon (or system back) mid-game on Levels / Daily. Remote `levels_gameplay_back_button_native_ad_show`.
-     * Needs progress (caller checks) + cool-down since any full-screen ad; never stacks with a win ad.
+     * No progress requirement (any tap on a live game). Cool-down since any full-screen ad; never stacks with a win ad.
+     * Ad shows only if already loaded (no wait).
      */
     LEVELS_GAME_BACK,
 
@@ -56,9 +57,6 @@ enum class AdSkipReason {
 
     /** Back ad: a full-screen ad was shown too recently. Win ad: a back ad was shown too recently (no stacking). */
     COOLDOWN,
-
-    /** Back ad on Levels level 1 (new-player exemption). */
-    FIRST_LEVEL,
 }
 
 sealed interface AdDecision {
@@ -91,7 +89,7 @@ data class InterstitialContext(
 /** Pure show/skip decision. Ad readiness is NOT decided here (that is the AdsRepository's job). */
 object InterstitialPolicy {
     /** Min spacing (monotonic ms) for a back ad after any full-screen ad, and for a win ad after a back ad. Hardcoded, conservative. */
-    const val BACK_COOLDOWN_MS = 120_000L
+    const val BACK_COOLDOWN_MS = 10_000L
 
     fun decide(ctx: InterstitialContext, config: AdPolicyConfig = AdPolicyConfig()): AdDecision {
         fun skip(r: AdSkipReason) = AdDecision.Skip(r)
@@ -106,9 +104,8 @@ object InterstitialPolicy {
         if (ctx.inTutorial) return skip(AdSkipReason.TUTORIAL)
         if (!ctx.online) return skip(AdSkipReason.OFFLINE)
         if (!ctx.canRequestAds) return skip(AdSkipReason.NO_CONSENT)
-        // Back ad: cool-down since ANY full-screen ad (win / app-open / rewarded / previous back), Levels level 1 exempt.
+        // Back ad: cool-down since ANY full-screen ad (win / app-open / rewarded / previous back). No level exemption.
         if (back) {
-            if (ctx.trigger == AdTrigger.LEVELS_GAME_BACK && !ctx.isDaily && ctx.level <= 1) return skip(AdSkipReason.FIRST_LEVEL)
             val since = ctx.msSinceLastAd
             if (since != null && since < BACK_COOLDOWN_MS) return skip(AdSkipReason.COOLDOWN)
             return AdDecision.Show

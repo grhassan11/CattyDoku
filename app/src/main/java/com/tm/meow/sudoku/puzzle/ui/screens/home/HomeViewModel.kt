@@ -18,6 +18,7 @@ import com.tm.meow.sudoku.puzzle.domain.model.DailyStatus
 import com.tm.meow.sudoku.puzzle.domain.model.Settings
 import com.tm.meow.sudoku.puzzle.domain.model.StreakCalendar
 import com.tm.meow.sudoku.puzzle.domain.model.StreakRewardState
+import com.tm.meow.sudoku.puzzle.domain.usecase.DiscardSavedGame
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveDailyStatus
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveLevelDetail
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveLevelResumable
@@ -67,6 +68,7 @@ class HomeViewModel @Inject constructor(
     private val observeWorldMap: ObserveWorldMap,
     private val observeLevelDetail: ObserveLevelDetail,
     private val observeLevelResumable: ObserveLevelResumable,
+    private val discardSavedGame: DiscardSavedGame,
     observeSettings: ObserveSettings,
     private val updateSettings: UpdateSettings,
     observeAdsRemoved: ObserveAdsRemoved,
@@ -203,6 +205,20 @@ class HomeViewModel @Inject constructor(
 
     fun onSheetDismissed() {
         selectedLevel.value = null
+    }
+
+    /** Sheet "Restart": drop the saved game, then [onReady] (navigate; the game loads the level fresh). Best effort on failure. */
+    fun onRestartLevel(level: Int, onReady: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                discardSavedGame(level)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                // a stale save would just resume; still navigate
+            }
+            onReady()
+        }
     }
 
     fun onSettingChanged(toggle: SettingToggle, enabled: Boolean) {

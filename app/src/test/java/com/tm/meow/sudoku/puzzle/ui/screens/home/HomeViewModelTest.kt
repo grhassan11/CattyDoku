@@ -109,6 +109,7 @@ class HomeViewModelTest {
             observeWorldMap = ObserveWorldMap(progress),
             observeLevelDetail = ObserveLevelDetail(progress),
             observeLevelResumable = ObserveLevelResumable(saved),
+            discardSavedGame = com.tm.meow.sudoku.puzzle.domain.usecase.DiscardSavedGame(saved),
             observeSettings = ObserveSettings(settingsRepo),
             updateSettings = UpdateSettings(settingsRepo),
             observeAdsRemoved = ObserveAdsRemoved(ads),

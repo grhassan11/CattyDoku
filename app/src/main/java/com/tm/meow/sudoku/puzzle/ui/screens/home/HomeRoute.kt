@@ -130,6 +130,10 @@ fun HomeRoute(
             viewModel.onSheetDismissed()
             onPlayLevel(lvl)
         },
+        onRestartLevel = { lvl ->
+            viewModel.onSheetDismissed()
+            viewModel.onRestartLevel(lvl) { onPlayLevel(lvl) }
+        },
         onDailyChallenge = {
             when (state.daily) {
                 DailyUi.Available -> onPlayDaily()

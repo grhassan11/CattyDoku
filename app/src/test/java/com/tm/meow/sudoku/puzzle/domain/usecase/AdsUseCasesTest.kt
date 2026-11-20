@@ -5,6 +5,7 @@ import com.tm.meow.sudoku.puzzle.domain.ads.AdSessionTracker
 import com.tm.meow.sudoku.puzzle.domain.ads.AdShowResult
 import com.tm.meow.sudoku.puzzle.domain.ads.AdTrigger
 import com.tm.meow.sudoku.puzzle.domain.ads.AdsRepository
+import com.tm.meow.sudoku.puzzle.domain.ads.InterstitialPolicy
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentRepository
 import com.tm.meow.sudoku.puzzle.domain.consent.ConsentState
 import com.tm.meow.sudoku.puzzle.domain.model.AppFlags
@@ -367,11 +368,11 @@ class AdsUseCasesTest {
         val r = rig()
         assertTrue(r.show(AdTrigger.LEVELS_GAME_BACK, level = 20))
         assertEquals("no load wait on back", 0L, r.ads.lastWait)
-        r.time.now += 30_000L
+        r.time.now += InterstitialPolicy.BACK_COOLDOWN_MS - 5_000L
         assertFalse("second back inside cool-down", r.show(AdTrigger.LEVELS_GAME_BACK, level = 20))
         assertFalse("win right after a back ad", r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
         assertFalse(r.show(AdTrigger.SUDOKU_WON_CONTINUE, level = 0, persistLevel = false))
-        r.time.now += 120_000L
+        r.time.now += InterstitialPolicy.BACK_COOLDOWN_MS
         assertTrue("cool-down over", r.show(AdTrigger.LEVEL_WON_CONTINUE, level = 20))
         assertEquals("win ad still waits for a loading ad", AdPolicyConfig().loadWaitTimeoutMs, r.ads.lastWait)
     }

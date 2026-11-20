@@ -468,6 +468,7 @@
     <string name="level_sheet_play">Play</string>
     <string name="level_sheet_replay">Replay</string>
     <string name="level_sheet_resume">Resume</string>
+    <string name="level_sheet_restart">Restart</string>
     <string name="exit_sheet_message">Are you sure you want to exit?</string>
     <string name="exit_sheet_cancel">Cancel</string>
     <string name="exit_remove_ads">Remove Ads</string>

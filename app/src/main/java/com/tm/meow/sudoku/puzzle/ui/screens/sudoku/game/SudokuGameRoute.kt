@@ -58,6 +58,17 @@ fun SudokuGameRoute(
     val gameNative by adsViewModel.gameNative.collectAsStateWithLifecycle()
     // First composition: re-try a failed ads SDK init (no-op when up / no consent).
     LaunchedEffect(Unit) { adsViewModel.retryAdsInitOnEntry() }
+    // TEMP-TOAST: remove before release
+    val tempInterVm: com.tm.meow.sudoku.puzzle.ui.ads.TempInterLoadedToastViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    val tempToastCtx = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        if (com.tm.meow.sudoku.puzzle.BuildConfig.DEBUG) tempInterVm.loaded.collect {
+            android.widget.Toast.makeText(tempToastCtx, "Inter Ad Loaded", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    } // TEMP-TOAST: remove before release
+    LaunchedEffect(Unit) { // TEMP-TOAST: remove before release
+        if (com.tm.meow.sudoku.puzzle.BuildConfig.DEBUG) tempInterVm.notes.collect { android.widget.Toast.makeText(tempToastCtx, it, android.widget.Toast.LENGTH_SHORT).show() } // TEMP-TOAST: remove before release
+    } // TEMP-TOAST: remove before release
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current

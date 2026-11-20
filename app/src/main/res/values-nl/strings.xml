@@ -437,6 +437,7 @@
     <string name="level_sheet_play">Spelen</string>
     <string name="level_sheet_replay">Opnieuw spelen</string>
     <string name="level_sheet_resume">Hervatten</string>
+    <string name="level_sheet_restart">Opnieuw starten</string>
     <string name="exit_sheet_message">Weet je zeker dat je wilt afsluiten?</string>
     <string name="exit_sheet_cancel">Annuleren</string>
     <string name="exit_remove_ads">Advertenties verwijderen</string>

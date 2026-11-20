@@ -749,16 +749,6 @@ class GameViewModel @Inject constructor(
         analytics.log(AnalyticsEvent.LevelQuit(levelContext(s.puzzle), attemptStats(s), reason))
     }
 
-    /**
-     * Back-ad gate: a live (not won / lost) attempt where the player did something (a move, a hint or a lost heart).
-     * False on open-then-back, on a loading screen and over win / lose dialogs (they have their own ad rules).
-     */
-    fun hasProgress(): Boolean {
-        val s = playing() ?: return false
-        val g = s.state
-        return g.undoStack.isNotEmpty() || g.correctPlacements > 0 || g.hintsUsed > 0 || g.heartsLost > 0
-    }
-
     /** Player left the game screen through an explicit back action. */
     fun onUserLeft(reason: String) {
         logPendingLoss()

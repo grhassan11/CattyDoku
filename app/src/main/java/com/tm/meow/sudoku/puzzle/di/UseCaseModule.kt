@@ -31,6 +31,7 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveCompletedDays
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveDailyStatus
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveStreakCalendar
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveLevelDetail
+import com.tm.meow.sudoku.puzzle.domain.usecase.DiscardSavedGame
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveLevelResumable
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveWorldMap
 import com.tm.meow.sudoku.puzzle.domain.usecase.ResolveDaily
@@ -169,6 +170,9 @@ object UseCaseModule {
 
     @Provides
     fun provideSaveGame(repo: SavedGameRepository, time: TimeProvider): SaveGame = SaveGame(repo, time)
+
+    @Provides
+    fun provideDiscardSavedGame(repo: SavedGameRepository): DiscardSavedGame = DiscardSavedGame(repo)
 
     @Provides
     fun provideRestoreGame(saved: SavedGameRepository, puzzles: PuzzleRepository): RestoreGame =
