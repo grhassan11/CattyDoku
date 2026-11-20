@@ -90,6 +90,8 @@ class ConsentRepositoryImpl @Inject constructor(
     override suspend fun showPrivacyOptions() {
         try {
             val activity = activities.current() ?: return
+            // Region gate: privacy options form only where UMP requires an entry point.
+            if (info.privacyOptionsRequirementStatus != ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED) return
             withContext(Dispatchers.Main.immediate) {
                 // Blocks app-open while the form is up.
                 tracker.consentFormShowing = true
@@ -162,6 +164,9 @@ class ConsentRepositoryImpl @Inject constructor(
     }
 
     private suspend fun loadAndShowFormIfRequired(activity: Activity) {
+        // Region gate: only when UMP says consent is REQUIRED here and a form is configured/available. Not required
+        // (non-regulated region, already answered, no message published) = never load or show anything.
+        if (info.consentStatus != ConsentInformation.ConsentStatus.REQUIRED || !info.isConsentFormAvailable) return
         tracker.consentFormShowing = true
         try {
             suspendCancellableCoroutine { cont ->
