@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -271,7 +272,10 @@ fun AppNavHost(
             )
         }
         composable(Routes.SETTINGS) {
+            // "How to Play" (Levels tutorial) is shown only when Settings was opened from Levels Home, not from Sudoku Home.
+            val fromSudoku = remember { navController.previousBackStackEntry?.destination?.route == Routes.SUDOKU }
             SettingsRoute(
+                showHowToPlay = !fromSudoku,
                 onBack = { navController.popIfResumed() },
                 onHowToPlay = { navController.navigate(Routes.TUTORIAL) { launchSingleTop = true } },
                 onAbout = { navController.navigate(Routes.ABOUT) { launchSingleTop = true } },

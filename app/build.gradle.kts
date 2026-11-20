@@ -88,6 +88,14 @@ android {
         localeFilters += listOf("en", "ja", "zh-rTW", "nl", "de", "ko", "it", "es", "fr", "ru", "tr", "pt")
     }
 
+    bundle {
+        // Per-app language: keep ALL language resources in the base split. With language splits (default) Play installs only
+        // the device-language split, so an in-app language pick (e.g. device = Japanese, pick German) finds no resources.
+        language {
+            enableSplit = false
+        }
+    }
+
     packaging {
         resources {
             // License/notice duplicates + coroutines debug probes: dead weight in the APK.

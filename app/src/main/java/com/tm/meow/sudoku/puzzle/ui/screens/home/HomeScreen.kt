@@ -40,6 +40,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -138,7 +139,9 @@ fun HomeScreen(
     // of the bottom spacer (= where the Daily pill's bottom edge would be when the pill is hidden).
     var mapBottomPx by remember { mutableFloatStateOf(0f) }
     var dailyTopPx by remember { mutableFloatStateOf(0f) }
-    var spacerTopPx by remember { mutableFloatStateOf(0f) }
+    var tabsTopPx by remember { mutableFloatStateOf(0f) }
+    // Daily pill leaves composition when Done: forget its stale position so the pill never anchors to it.
+    LaunchedEffect(state.daily) { if (state.daily == DailyUi.Done) dailyTopPx = 0f }
     val jumpGapPx = with(density) { 12.dp.toPx() }
 
     BoxWithConstraints(
@@ -169,7 +172,8 @@ fun HomeScreen(
                     onWorldChange = { worldIndex = it },
                     jumpPill = { direction, onJump ->
                         val dailyShown = state.daily != DailyUi.Done && dailyTopPx > 0f
-                        val anchorPx = if (dailyShown) dailyTopPx - jumpGapPx else spacerTopPx
+                        // Daily hidden: anchor to the always-present tabs row (stable), not the spacer that moves with the pill's collapse.
+                        val anchorPx = if (dailyShown) dailyTopPx - jumpGapPx else tabsTopPx - jumpGapPx
                         JumpToCurrentPill(
                             direction = direction,
                             worldIndex = { worldIndex },
@@ -236,7 +240,7 @@ fun HomeScreen(
                             )
                         }
                     }
-                    Spacer(Modifier.height(if (compact) 8.dp else 12.dp).onGloballyPositioned { spacerTopPx = it.boundsInRoot().top })
+                    Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
                 }
                 // Floating remove-ads badge: top-right directly under the Settings button, clear of the streak chip.
                 // gap (8 dp, 4 compact) + top bar (64 dp, 56 compact) + gap = 80 dp (64 compact) from the content top. Box is 80 dp wide and the
@@ -257,7 +261,9 @@ fun HomeScreen(
                     selected = HomeMode.Levels,
                     onLevels = {},
                     onSudoku = onSudokuTab,
-                    modifier = Modifier.windowInsetsPadding(tabsInsets),
+                    modifier = Modifier
+                        .windowInsetsPadding(tabsInsets)
+                        .onGloballyPositioned { tabsTopPx = it.boundsInRoot().top },
                 )
                 }
             }

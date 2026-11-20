@@ -45,7 +45,7 @@ class RateUsViewModelTest {
         vm.showManually()
         vm.onSubmit(2)
         assertFalse(vm.visible.value)
-        assertEquals(RateUsEvent.OpenFeedbackEmail, vm.events.first())
+        assertEquals(RateUsEvent.OpenFeedbackEmail(2), vm.events.first())
         assertFalse(flags.flags.first().rateUsRated)
     }
 
@@ -63,7 +63,7 @@ class RateUsViewModelTest {
     fun exitSheetLowStarEmitsEmailWithoutTouchingFlags() = withMain {
         val vm = vm()
         vm.onExitSheetStar(3)
-        assertEquals(RateUsEvent.OpenFeedbackEmail, vm.events.first())
+        assertEquals(RateUsEvent.OpenFeedbackEmail(3), vm.events.first())
         val f = flags.flags.first()
         assertFalse(f.rateUsRated)
         assertFalse(f.rateUsShown)

@@ -137,6 +137,18 @@ class SetAppOpenScreenSuppressed(private val tracker: AdSessionTracker) {
     }
 }
 
+/**
+ * The app is about to open an external target on purpose (feedback / rate-us email, privacy policy, store listing). The
+ * return to the app may then show an app-open ad even on Settings. Default no-op for tests / previews.
+ */
+fun interface ExternalLaunchMarker {
+    fun mark()
+
+    companion object {
+        val Noop = ExternalLaunchMarker { }
+    }
+}
+
 /** Home reached: the start flow (Splash with consent, Tutorial) is over, app-open may now fire. */
 class MarkStartFlowComplete(private val tracker: AdSessionTracker) {
     operator fun invoke() {

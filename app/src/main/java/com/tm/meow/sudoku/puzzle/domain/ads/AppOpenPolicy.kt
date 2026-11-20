@@ -65,6 +65,8 @@ data class AppOpenContext(
     val returnFromAdClick: Boolean = false,
     /** Current screen is Settings (or a sub-screen): no app-open here. Evaluated at the foreground moment only. */
     val suppressedScreen: Boolean = false,
+    /** This foreground is the return from an app-initiated external launch (email, privacy link, store): lifts [suppressedScreen]. */
+    val returnFromExternalLaunch: Boolean = false,
 )
 
 /** Pure show/skip decision. */
@@ -76,7 +78,7 @@ object AppOpenPolicy {
         if (AdFreePolicy.isSuppressedByPurchase(AdFormat.APP_OPEN, ctx.adsRemoved)) return skip(AppOpenSkipReason.ADS_REMOVED)
         if (ctx.coldStart && !ctx.fromSplash) return skip(AppOpenSkipReason.COLD_START)
         if (ctx.returnFromAdClick) return skip(AppOpenSkipReason.AD_CLICK_RETURN)
-        if (ctx.suppressedScreen) return skip(AppOpenSkipReason.SUPPRESSED_SCREEN)
+        if (ctx.suppressedScreen && !ctx.returnFromExternalLaunch) return skip(AppOpenSkipReason.SUPPRESSED_SCREEN)
         if (!ctx.online) return skip(AppOpenSkipReason.OFFLINE)
         if (!ctx.canRequestAds) return skip(AppOpenSkipReason.NO_CONSENT)
         if (!ctx.sdkInitialized) return skip(AppOpenSkipReason.SDK_NOT_READY)

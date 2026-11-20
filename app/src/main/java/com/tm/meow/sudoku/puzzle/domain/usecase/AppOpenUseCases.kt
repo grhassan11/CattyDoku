@@ -83,9 +83,11 @@ class ShowAppOpenIfAllowed(
 ) {
     suspend operator fun invoke(coldStart: Boolean, fromSplash: Boolean = false): Boolean {
         return try {
+            val externalReturn = !fromSplash && tracker.consumeExternalLaunch()
             val ctx = AppOpenContext(
                 coldStart = coldStart,
                 fromSplash = fromSplash,
+                returnFromExternalLaunch = externalReturn,
                 canRequestAds = consent.state.value.canRequestAds,
                 sdkInitialized = sdk.isInitialized.value,
                 fullScreenAdShowing = tracker.fullScreenAdShowing,

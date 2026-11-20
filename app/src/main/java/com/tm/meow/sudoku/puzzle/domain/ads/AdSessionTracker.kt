@@ -40,6 +40,23 @@ class AdSessionTracker(private val time: TimeProvider) {
     /** Current screen is one where app-open must not show (Settings + its sub-screens). Set by navigation, read on each foreground. */
     @Volatile var appOpenSuppressedScreen: Boolean = false
 
+    @Volatile private var externalLaunchPending: Boolean = false
+
+    /**
+     * App sent the user out on purpose (feedback / rate-us email, privacy policy link, store listing). The matching
+     * foreground return is an app-open moment even on a suppressed screen (Settings). One-shot, see [consumeExternalLaunch].
+     */
+    fun markExternalLaunch() {
+        externalLaunchPending = true
+    }
+
+    /** True once per [markExternalLaunch] (clears it). Consumed on every foreground so the flag cannot stick. */
+    fun consumeExternalLaunch(): Boolean {
+        val was = externalLaunchPending
+        externalLaunchPending = false
+        return was
+    }
+
     /** The consent gather + ads init startup step has begun this process (in-app splash, or the restored-back-stack fallback). */
     @Volatile var startupGatherStarted: Boolean = false
 

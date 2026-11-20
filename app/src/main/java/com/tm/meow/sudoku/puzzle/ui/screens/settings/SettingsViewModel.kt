@@ -6,6 +6,7 @@ import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsEvent
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsUserProps
 import com.tm.meow.sudoku.puzzle.domain.model.Settings
+import com.tm.meow.sudoku.puzzle.domain.usecase.ExternalLaunchMarker
 import com.tm.meow.sudoku.puzzle.domain.usecase.GetAppLanguage
 import com.tm.meow.sudoku.puzzle.domain.usecase.ObserveSettings
 import com.tm.meow.sudoku.puzzle.domain.usecase.SetAppLanguage
@@ -38,6 +39,7 @@ class SettingsViewModel @Inject constructor(
     private val analytics: AnalyticsLogger,
     private val getAppLanguage: GetAppLanguage,
     private val setAppLanguage: SetAppLanguage,
+    private val externalLaunch: ExternalLaunchMarker = ExternalLaunchMarker.Noop,
 ) : ViewModel() {
 
     init {
@@ -55,6 +57,9 @@ class SettingsViewModel @Inject constructor(
 
     /** BCP-47 tag of the language in effect (see AppLanguages.effective). Plain String so the dialog state can be saved. */
     val languageTag: StateFlow<String> = _languageTag.asStateFlow()
+
+    /** Feedback email / privacy policy opens next: the return to the app may show an app-open ad (even on Settings). */
+    fun onExternalLaunch() = externalLaunch.mark()
 
     /** Re-read the language (the system per-app language picker can change it while this ViewModel lives on). */
     fun refreshLanguage() {

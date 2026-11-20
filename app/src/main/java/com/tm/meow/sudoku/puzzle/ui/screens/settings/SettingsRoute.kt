@@ -54,6 +54,7 @@ fun SettingsRoute(
     onHowToPlay: () -> Unit,
     onAbout: () -> Unit,
     modifier: Modifier = Modifier,
+    showHowToPlay: Boolean = true,
     viewModel: SettingsViewModel = hiltViewModel(),
     privacyViewModel: PrivacyOptionsViewModel = hiltViewModel(),
     rateUsViewModel: RateUsViewModel = hiltViewModel(),
@@ -138,9 +139,16 @@ fun SettingsRoute(
             snackbarHostState = snackbarHostState,
             onBack = onBack,
             onSettingChanged = ::onSettingChanged,
-            onFeedback = { if (!FeedbackEmail.open(context, feedbackSubject)) toast(noEmailApp) },
-            onPrivacyPolicy = { if (!LegalLinks.open(context, LegalLinks.PRIVACY_URL)) toast(linkFailed) },
+            onFeedback = {
+                viewModel.onExternalLaunch()
+                if (!FeedbackEmail.open(context, feedbackSubject)) toast(noEmailApp)
+            },
+            onPrivacyPolicy = {
+                viewModel.onExternalLaunch()
+                if (!LegalLinks.open(context, LegalLinks.PRIVACY_URL)) toast(linkFailed)
+            },
             onHowToPlay = onHowToPlay,
+            showHowToPlay = showHowToPlay,
             onAbout = onAbout,
             onRateUs = rateUsViewModel::showManually,
             languageName = language.nativeName,

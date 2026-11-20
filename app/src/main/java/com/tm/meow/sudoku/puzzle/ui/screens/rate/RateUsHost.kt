@@ -45,8 +45,8 @@ fun RateUsHost(
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                RateUsEvent.OpenFeedbackEmail ->
-                    if (!FeedbackEmail.open(context, feedbackSubject)) {
+                is RateUsEvent.OpenFeedbackEmail ->
+                    if (!FeedbackEmail.open(context, "$feedbackSubject ${event.stars}★")) {
                         Toast.makeText(context, noEmailApp, Toast.LENGTH_SHORT).show()
                     }
                 RateUsEvent.OpenStoreListing ->

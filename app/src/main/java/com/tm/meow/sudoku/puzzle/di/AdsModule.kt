@@ -38,6 +38,7 @@ import com.tm.meow.sudoku.puzzle.domain.usecase.RetryAdsInit
 import com.tm.meow.sudoku.puzzle.domain.usecase.IsConsentFormShowing
 import com.tm.meow.sudoku.puzzle.domain.usecase.LoadNativeAd
 import com.tm.meow.sudoku.puzzle.domain.usecase.MarkStartFlowComplete
+import com.tm.meow.sudoku.puzzle.domain.usecase.ExternalLaunchMarker
 import com.tm.meow.sudoku.puzzle.domain.usecase.SetAppOpenScreenSuppressed
 import com.tm.meow.sudoku.puzzle.domain.usecase.PreloadAppOpenAd
 import com.tm.meow.sudoku.puzzle.domain.startup.SplashTiming
@@ -213,6 +214,10 @@ object AdsModule {
 
     @Provides
     fun provideMarkStartFlowComplete(tracker: AdSessionTracker): MarkStartFlowComplete = MarkStartFlowComplete(tracker)
+
+    @Provides
+    fun provideExternalLaunchMarker(tracker: AdSessionTracker): ExternalLaunchMarker =
+        ExternalLaunchMarker { tracker.markExternalLaunch() }
 
     @Provides
     fun provideSetAppOpenScreenSuppressed(tracker: AdSessionTracker): SetAppOpenScreenSuppressed =

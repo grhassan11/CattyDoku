@@ -7,6 +7,7 @@ import com.tm.meow.sudoku.puzzle.domain.analytics.AnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.analytics.NoopAnalyticsLogger
 import com.tm.meow.sudoku.puzzle.domain.rating.RateAction
 import com.tm.meow.sudoku.puzzle.domain.usecase.DismissRateUs
+import com.tm.meow.sudoku.puzzle.domain.usecase.ExternalLaunchMarker
 import com.tm.meow.sudoku.puzzle.domain.usecase.SubmitRateUs
 import com.tm.meow.sudoku.puzzle.domain.usecase.TryShowRateUs
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,8 +23,8 @@ import kotlinx.coroutines.launch
 
 /** One-shot follow-ups the route performs (needs a Context, so not done here). */
 sealed interface RateUsEvent {
-    /** 1-3 stars: open the user's email app with the feedback draft. */
-    data object OpenFeedbackEmail : RateUsEvent
+    /** 1-3 stars: open the user's email app with the feedback draft; [stars] is appended to the subject ("1★"). */
+    data class OpenFeedbackEmail(val stars: Int) : RateUsEvent
 
     /** 4-5 stars: open the Play Store listing. */
     data object OpenStoreListing : RateUsEvent
@@ -39,6 +40,7 @@ class RateUsViewModel @Inject constructor(
     private val dismissRateUs: DismissRateUs,
     private val submitRateUs: SubmitRateUs,
     private val analytics: AnalyticsLogger = NoopAnalyticsLogger,
+    private val externalLaunch: ExternalLaunchMarker = ExternalLaunchMarker.Noop,
 ) : ViewModel() {
 
     private val _visible = MutableStateFlow(false)
@@ -120,10 +122,12 @@ class RateUsViewModel @Inject constructor(
             when (action) {
                 RateAction.SUBMITTED_LOW -> {
                     analytics.log(AnalyticsEvent.RatePrompt("submitted_low"))
-                    _events.trySend(RateUsEvent.OpenFeedbackEmail)
+                    externalLaunch.mark() // email app opens next: its return may show an app-open ad
+                    _events.trySend(RateUsEvent.OpenFeedbackEmail(s))
                 }
                 RateAction.STORE_LISTING -> {
                     analytics.log(AnalyticsEvent.RatePrompt("store_listing"))
+                    externalLaunch.mark() // Play Store opens next: its return may show an app-open ad
                     _events.trySend(RateUsEvent.OpenStoreListing)
                 }
             }

@@ -75,6 +75,7 @@ fun SettingsScreen(
     onLanguage: () -> Unit,
     modifier: Modifier = Modifier,
     onPrivacyOptions: (() -> Unit)? = null,
+    showHowToPlay: Boolean = true,
 ) {
     Box(modifier.fillMaxSize().homeBackground()) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
@@ -91,7 +92,11 @@ fun SettingsScreen(
                 SoundAndGameplayGroups(
                     settings,
                     onSettingChanged,
-                    gameplayExtra = { LinkRow(stringResource(R.string.settings_how_to_play), onHowToPlay, R.drawable.ic_game_tutorials, showChevron = true, hint = stringResource(R.string.settings_how_to_play_hint)) },
+                    gameplayExtra = if (showHowToPlay) {
+                        { LinkRow(stringResource(R.string.settings_how_to_play), onHowToPlay, R.drawable.ic_game_tutorials, showChevron = true, hint = stringResource(R.string.settings_how_to_play_hint)) }
+                    } else {
+                        null
+                    },
                 )
 
                 Group(stringResource(R.string.settings_group_general)) {
