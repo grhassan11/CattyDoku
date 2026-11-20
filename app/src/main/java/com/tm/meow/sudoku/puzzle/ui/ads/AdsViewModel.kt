@@ -241,8 +241,8 @@ class AdsViewModel @Inject constructor(
 
     /**
      * Compact game-screen native slot. [NativeAdSlotState.Loading] while a request is in flight (UI shows the skeleton),
-     * [NativeAdSlotState.Loaded] when ready, [NativeAdSlotState.Failed] on no fill / timeout (UI keeps the slot height,
-     * blank), [NativeAdSlotState.Hidden] before the first request / after [releaseGameNative].
+     * [NativeAdSlotState.Loaded] when ready, [NativeAdSlotState.Failed] on no fill / timeout (UI keeps the skeleton),
+     * [NativeAdSlotState.Hidden] before the first request / after [releaseGameNative] (UI: blank, same height).
      */
     val gameNative: StateFlow<NativeAdSlotState> = _gameNative.asStateFlow()
 
@@ -256,7 +256,11 @@ class AdsViewModel @Inject constructor(
     fun requestGameNative(placement: AdPlacement) {
         if (_gameNative.value is NativeAdSlotState.Loaded || gameNativeJob?.isActive == true) return
         val failedAt = gameNativeFailedAtMs
-        if (failedAt != null && time.monotonicMillis() - failedAt < NATIVE_RETRY_AFTER_FAIL_MS) return
+        if (failedAt != null && time.monotonicMillis() - failedAt < NATIVE_RETRY_AFTER_FAIL_MS) {
+            // Throttled: no request, but the slot stays a skeleton (never blank / Hidden while the surface is on).
+            if (_gameNative.value is NativeAdSlotState.Hidden) _gameNative.value = NativeAdSlotState.Failed
+            return
+        }
         _gameNative.value = NativeAdSlotState.Loading
         gameNativeJob = viewModelScope.launch {
             val level = surfaces.value.playerLevel.coerceAtLeast(screenLevel.value)
@@ -281,6 +285,18 @@ class AdsViewModel @Inject constructor(
                 preloadGameNative(placement) // next game of this mode (no-op when gated / already cached / loading)
             }
         }
+    }
+
+    /**
+     * Slot is on but a request is not allowed (offline / no consent / SDK not ready): cancel any load, drop a held ad and show
+     * the skeleton. NO request is made (no retry spent). The caller re-runs [requestGameNative] when allowed again.
+     */
+    fun showGameNativeSkeleton() {
+        gameNativeJob?.cancel()
+        gameNativeJob = null
+        (_gameNative.value as? NativeAdSlotState.Loaded)?.ad?.destroy()
+        gameNativeFailedAtMs = null // offline is not a failed load: the reconnect request must not be throttled
+        _gameNative.value = NativeAdSlotState.Loading
     }
 
     /** Destroy the held native ad and cancel an in-flight load (surface turned off / screen left). */

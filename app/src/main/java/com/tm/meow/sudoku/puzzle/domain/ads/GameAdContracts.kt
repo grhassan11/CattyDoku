@@ -69,6 +69,13 @@ data class AdSurfaces(
     val levelsGameNative: Boolean = false,
     /** Sudoku game-screen compact native slot may be reserved. Independent of [levelsGameNative] and of the ad-free level gate. Remote `sudoku_game_native_ad_show`. */
     val sudokuGameNative: Boolean = false,
+    /**
+     * Game-screen native slot is shown (skeleton or ad): ONLY remote `levels_game_native_ad_show` / `sudoku_game_native_ad_show`
+     * on and no Remove Ads purchase. Stays true offline / no consent / SDK not ready (skeleton stays, no request:
+     * [levelsGameNative] / [sudokuGameNative] = "may request").
+     */
+    val levelsGameNativeSlot: Boolean = false,
+    val sudokuGameNativeSlot: Boolean = false,
     /** Remove Ads owned. The game native slots are already folded to false; rewarded is unaffected. Informational for the UI. */
     val adsRemoved: Boolean = false,
     /** Validated internet connection present. Rewarded CTAs stay visible but show a helper text and are disabled while false. */

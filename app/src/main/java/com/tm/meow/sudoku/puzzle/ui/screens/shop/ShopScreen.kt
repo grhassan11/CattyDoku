@@ -599,6 +599,7 @@ private fun ShopButton(
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             softWrap = false,
+            textAlign = TextAlign.Center,
             style = androidx.compose.ui.text.TextStyle(
                 lineHeight = 22.sp,
                 platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false),

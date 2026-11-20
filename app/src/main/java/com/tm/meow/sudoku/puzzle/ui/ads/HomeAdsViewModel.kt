@@ -18,12 +18,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Ads on the Home screen: the bottom native ad. Use cases only; no SDK type is touched here (the ad is an opaque
- * NativeAdHandle). [slot] drives the screen: Hidden (ads not allowed) and Failed collapse the slot; Loading reserves it
- * (skeleton); Loaded shows the ad.
+ * NativeAdHandle). [slot] drives the screen: Hidden (kill switch / Remove Ads only) = no slot; Loading and Failed = skeleton
+ * (also offline / no consent / SDK not ready: no request, skeleton stays); Loaded shows the ad.
  *
  * Lifecycle: [onScreenStart] loads when no ad is held; an ad older than [MAX_AD_AGE_MS] (native ads expire after 1 h)
  * is replaced; a failed load is retried at most every [RETRY_AFTER_FAIL_MS]. [release] destroys the ad when Home leaves
@@ -60,10 +59,15 @@ abstract class HomeAdsViewModel(
         // SDK init / consent can finish after the screen started (slot stayed Hidden): load once allowed.
         viewModelScope.launch {
             loadNativeAd.allowedChanges(placement).collect { allowed ->
-                if (allowed && screenStarted && _slot.value !is NativeAdSlotState.Loaded && loadJob?.isActive != true) onScreenStart()
-                // Not allowed any more while Home is up (offline, consent, kill switch): collapse the slot now. screenStarted stays
-                // true so the slot comes back and loads by itself when allowed again (connectivity returns).
-                else if (!allowed && screenStarted) collapse()
+                if (!screenStarted) return@collect
+                when {
+                    // Slot switched off (kill switch / Remove Ads): the ONLY reason the slot disappears.
+                    !loadNativeAd.isSlotEnabled(placement) -> collapse()
+                    allowed -> if (_slot.value !is NativeAdSlotState.Loaded && loadJob?.isActive != true) onScreenStart()
+                    // Not allowed to REQUEST (offline, consent, SDK not ready): drop the ad / load, keep the skeleton. screenStarted
+                    // stays true so it loads by itself when allowed again (connectivity returns).
+                    else -> toSkeleton()
+                }
             }
         }
     }
@@ -79,26 +83,30 @@ abstract class HomeAdsViewModel(
             }
             release()
         }
-        if (!loadNativeAd.isAllowed(placement)) {
-            _slot.value = NativeAdSlotState.Hidden
+        if (!loadNativeAd.isSlotEnabled(placement)) {
+            _slot.value = NativeAdSlotState.Hidden // kill switch / Remove Ads: no slot at all
             preloadGameNative(gamePlacement) // the game slot has its own switch
+            return
+        }
+        if (!loadNativeAd.isAllowed(placement)) {
+            // Offline / no consent / SDK not ready: skeleton stays, NO request. allowedChanges reloads when allowed again.
+            _slot.value = NativeAdSlotState.Loading
+            preloadGameNative(gamePlacement)
             return
         }
         if (loadJob?.isActive == true) return // its completion kicks the game preload
         val failedAt = lastFailAtMs
         if (failedAt != null && now - failedAt < RETRY_AFTER_FAIL_MS) {
-            _slot.value = NativeAdSlotState.Failed
+            _slot.value = NativeAdSlotState.Failed // skeleton stays (NativeAdSlot renders Failed as the skeleton)
             preloadGameNative(gamePlacement)
             return
         }
         _slot.value = NativeAdSlotState.Loading
         loadJob = viewModelScope.launch {
-            // Bounded skeleton: past the cap the load is cancelled (a late ad is destroyed by the repo) and the slot collapses.
+            // No skeleton timeout: the skeleton stays until the ad arrives. Request time is bounded by the repo (15 s) and the preload wait.
             val handle = try {
                 // Splash-preloaded ad first (waits for an in-flight preload); else load now.
-                withTimeoutOrNull(SKELETON_TIMEOUT_MS) {
-                    takeNativeAd(placement, Int.MAX_VALUE) ?: loadNativeAd(placement)
-                }
+                takeNativeAd(placement, Int.MAX_VALUE) ?: loadNativeAd(placement)
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
@@ -110,7 +118,8 @@ abstract class HomeAdsViewModel(
             }
             if (handle == null) {
                 lastFailAtMs = time.monotonicMillis()
-                _slot.value = if (loadNativeAd.isAllowed(placement)) NativeAdSlotState.Failed else NativeAdSlotState.Hidden
+                // Skeleton stays either way; Hidden only if the slot was switched off meanwhile.
+                _slot.value = if (loadNativeAd.isSlotEnabled(placement)) NativeAdSlotState.Failed else NativeAdSlotState.Hidden
             } else {
                 lastFailAtMs = null
                 loadedAtMs = time.monotonicMillis()
@@ -121,7 +130,16 @@ abstract class HomeAdsViewModel(
         }
     }
 
-    /** Hide the slot (no layout space) and drop the held / loading ad, but keep the screen "started" so a later allow reloads. */
+    /** Request no longer allowed (offline / consent / SDK): drop the held / loading ad, show the skeleton, stay "started" so a later allow reloads. */
+    private fun toSkeleton() {
+        loadJob?.cancel()
+        loadJob = null
+        (_slot.value as? NativeAdSlotState.Loaded)?.ad?.destroy()
+        lastFailAtMs = null
+        _slot.value = NativeAdSlotState.Loading
+    }
+
+    /** Hide the slot (no layout space; kill switch / Remove Ads only) and drop the held / loading ad, but keep the screen "started". */
     private fun collapse() {
         loadJob?.cancel()
         loadJob = null
@@ -140,7 +158,7 @@ abstract class HomeAdsViewModel(
     }
 
     private fun idleState(): NativeAdSlotState =
-        if (loadNativeAd.isAllowed(placement)) NativeAdSlotState.Loading else NativeAdSlotState.Hidden
+        if (loadNativeAd.isSlotEnabled(placement)) NativeAdSlotState.Loading else NativeAdSlotState.Hidden
 
     override fun onCleared() {
         release()
@@ -150,9 +168,6 @@ abstract class HomeAdsViewModel(
         /** Native ads expire after 1 hour; replace a little earlier. */
         const val MAX_AD_AGE_MS = 50 * 60 * 1000L
         const val RETRY_AFTER_FAIL_MS = 60_000L
-
-        /** Max time the skeleton is shown before the slot collapses (Failed). */
-        const val SKELETON_TIMEOUT_MS = 6_000L
     }
 }
 

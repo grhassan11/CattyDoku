@@ -27,9 +27,9 @@ interface NativeAdRepository {
 
 /**
  * Home native slot lifecycle.
- * [Hidden] ads not allowed (consent, purchase, kill switch, SDK off): no slot at all.
- * [Loading] request in flight: the slot is reserved and the UI shows a skeleton.
- * [Loaded] ad ready. [Failed] no fill / timeout: slot collapsed, retried later by the owner.
+ * [Hidden] slot switched off (remote kill switch or Remove Ads purchase): no slot at all.
+ * [Loading] waiting for an ad (request in flight, or offline / no consent / SDK not ready): slot reserved, UI shows a skeleton.
+ * [Loaded] ad ready. [Failed] no fill / timeout: slot STAYS reserved with the skeleton (retried later by the owner).
  */
 sealed interface NativeAdSlotState {
     data object Hidden : NativeAdSlotState
@@ -37,8 +37,8 @@ sealed interface NativeAdSlotState {
     data class Loaded(val ad: NativeAdHandle) : NativeAdSlotState
     data object Failed : NativeAdSlotState
 
-    /** True while the fixed-height bottom slot occupies layout space (skeleton or real ad). */
-    val reservesSlot: Boolean get() = this is Loading || this is Loaded
+    /** True while the fixed-height bottom slot occupies layout space (skeleton or real ad): everything except [Hidden]. */
+    val reservesSlot: Boolean get() = this !is Hidden
 }
 
 /** Whether `MobileAds.initialize` has been called (after UMP allowed ads). Shared by native + app-open. */

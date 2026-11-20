@@ -2,10 +2,6 @@ package com.tm.meow.sudoku.puzzle.ui.ads
 
 import android.view.LayoutInflater
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -46,8 +42,13 @@ val GAME_NATIVE_AD_HEIGHT: Dp = 88.dp
 
 @Composable
 fun GameNativeAdSlot(state: NativeAdSlotState, modifier: Modifier = Modifier) {
-    // Loaded -> keyed on the handle (new ad = fresh view); Loading -> skeleton; Hidden / Failed -> blank, same height.
-    val phase: Any = if (state is NativeAdSlotState.Loaded) state.ad else state
+    // Loaded -> keyed on the handle (new ad = fresh view); Loading / Failed -> skeleton (also offline); Hidden -> blank, same
+    // height (the caller passes Hidden only while a dialog covers the slot; the whole slot is dropped by nativeReserved = false).
+    val phase: Any = when (state) {
+        is NativeAdSlotState.Loaded -> state.ad
+        NativeAdSlotState.Failed -> NativeAdSlotState.Loading
+        else -> state
+    }
     Crossfade(
         targetState = phase,
         modifier = modifier
@@ -85,12 +86,7 @@ private fun GameNativeAdRow(handle: GmaNativeAdHandle) {
  */
 @Composable
 private fun GameNativeAdSkeleton() {
-    val progress = rememberInfiniteTransition(label = "gameNativeAdShimmer").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(durationMillis = 1300, easing = LinearEasing)),
-        label = "gameNativeAdShimmerProgress",
-    )
+    val progress = rememberShimmerProgress("gameNativeAdShimmer")
     Box(
         Modifier
             .fillMaxSize()
@@ -102,7 +98,7 @@ private fun GameNativeAdSkeleton() {
             Modifier.fillMaxSize().padding(start = 12.dp, top = 6.dp, end = 12.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ShimmerBlock(progress, Modifier.size(56.dp), 10.dp)
+            ShimmerBlock(progress, Modifier.size(50.dp), 10.dp)
             Column(Modifier.padding(start = 10.dp).weight(1f)) {
                 Row(Modifier.fillMaxWidth().height(24.dp).padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     ShimmerBlock(progress, Modifier.size(width = 22.dp, height = 20.dp), 4.dp)

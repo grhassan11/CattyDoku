@@ -299,6 +299,7 @@ private fun MilestoneRow(m: MilestoneUi, onClaim: (Int) -> Unit) {
                     fontFamily = FredokaFamily,
                     maxLines = 1,
                     softWrap = false,
+                    textAlign = TextAlign.Center,
                     style = androidx.compose.ui.text.TextStyle(
                         lineHeight = 21.sp,
                         platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false),

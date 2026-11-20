@@ -92,6 +92,7 @@ fun ExitSheet(
                             fontWeight = FontWeight.Bold,
                             fontFamily = FredokaFamily,
                             maxLines = 1,
+                            textAlign = TextAlign.Center,
                             style = ctaTextStyle(),
                         )
                     }
@@ -109,6 +110,7 @@ fun ExitSheet(
                             fontWeight = FontWeight.Bold,
                             fontFamily = FredokaFamily,
                             maxLines = 1,
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -125,6 +127,7 @@ fun ExitSheet(
                         fontWeight = FontWeight.Bold,
                         fontFamily = FredokaFamily,
                         maxLines = 1,
+                        textAlign = TextAlign.Center,
                         style = ctaTextStyle(),
                     )
                 }

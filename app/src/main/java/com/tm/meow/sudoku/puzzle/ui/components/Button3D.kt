@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -28,6 +30,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -147,6 +151,12 @@ fun Button3D(
             .graphicsLayer { translationY = Button3DMath.faceOffset(progress, lipHeight.toPx()) },
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
-        content = content,
+        content = { CtaTextAlign { content() } },
     )
+}
+
+/** Every CTA label centers inside its button (multi-line / long translations included). */
+@Composable
+private fun CtaTextAlign(content: @Composable () -> Unit) {
+    ProvideTextStyle(LocalTextStyle.current.merge(TextStyle(textAlign = TextAlign.Center)), content)
 }

@@ -80,6 +80,7 @@ private fun ModeTab(label: String, @DrawableRes icon: Int, selected: Boolean, te
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             modifier = Modifier.weight(1f, fill = false),
             style = androidx.compose.ui.text.TextStyle(
                 shadow = androidx.compose.ui.graphics.Shadow(Color(0x66000000), Offset(0f, 2f), 3f),

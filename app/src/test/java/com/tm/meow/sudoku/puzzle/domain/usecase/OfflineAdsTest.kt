@@ -139,6 +139,8 @@ class OfflineAdsTest {
         assertFalse(off.online)
         assertFalse(off.levelsGameNative)
         assertFalse(off.sudokuGameNative)
+        // Offline: no request, but the slot (skeleton) stays reserved.
+        assertTrue(off.levelsGameNativeSlot && off.sudokuGameNativeSlot)
         // CTAs stay visible (surface flags unchanged); load state OFFLINE = UI shows the helper text and ignores the click.
         assertTrue(off.levelsRevive && off.levelsBoosters && off.sudokuRevive && off.sudokuBoosters)
         assertEquals(RewardedLoadState.OFFLINE, off.rewardedLoad)

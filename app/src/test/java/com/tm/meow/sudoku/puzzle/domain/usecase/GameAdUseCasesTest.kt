@@ -121,6 +121,19 @@ class GameAdUseCasesTest {
     }
 
     @Test
+    fun gameNativeSlotOnlyFollowsRemoteSwitch() = runTest {
+        val level = MutableStateFlow(20)
+        // No consent / SDK off / unit not configured: no request, but the slot (skeleton) stays.
+        surfaces(20, consent = GaConsent(false))(level).first().let { assertTrue(it.levelsGameNativeSlot && it.sudokuGameNativeSlot) }
+        surfaces(20, sdk = GaSdk(false))(level).first().let { assertTrue(it.levelsGameNativeSlot && !it.levelsGameNative) }
+        surfaces(20, nativeAds = GaNative(isConfigured = false))(level).first().let { assertTrue(it.sudokuGameNativeSlot) }
+        surfaces(20, config = AdPolicyConfig(levelsGameNativeShow = false))(level).first()
+            .let { assertFalse(it.levelsGameNativeSlot); assertTrue(it.sudokuGameNativeSlot) }
+        surfaces(20, config = AdPolicyConfig(sudokuGameNativeShow = false))(level).first()
+            .let { assertTrue(it.levelsGameNativeSlot); assertFalse(it.sudokuGameNativeSlot) }
+    }
+
+    @Test
     fun surfaceLevelIsMaxOfScreenAndProgress() = runTest {
         // Daily: screen level 0, progress says 12 -> ads allowed.
         assertTrue(surfaces(flagLevel = 12)(MutableStateFlow(0)).first().levelsGameNative)

@@ -24,6 +24,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import com.tm.meow.sudoku.puzzle.ui.screens.game.rememberAnimationsEnabled
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -73,12 +76,7 @@ fun NativeAdSlot(state: NativeAdSlotState, modifier: Modifier = Modifier) {
  */
 @Composable
 private fun NativeAdSkeleton(modifier: Modifier = Modifier) {
-    val progress = rememberInfiniteTransition(label = "nativeAdShimmer").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(durationMillis = 1300, easing = LinearEasing)),
-        label = "nativeAdShimmerProgress",
-    )
+    val progress = rememberShimmerProgress("nativeAdShimmer")
     Column(
         modifier
             .fillMaxWidth()
@@ -89,21 +87,36 @@ private fun NativeAdSkeleton(modifier: Modifier = Modifier) {
         Box(Modifier.fillMaxWidth().height(SKELETON_HEIGHT)) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(colorResource(R.color.native_ad_top_stroke)))
             Box(Modifier.fillMaxSize().padding(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 4.dp)) {
-                ShimmerBlock(progress, Modifier.size(45.dp), 8.dp)
+                ShimmerBlock(progress, Modifier.size(50.dp), 8.dp)
                 ShimmerBlock(
                     progress,
-                    Modifier.padding(start = 61.dp, top = 6.dp).fillMaxWidth(0.55f).height(16.dp),
+                    Modifier.padding(start = 66.dp, top = 6.dp).fillMaxWidth(0.55f).height(16.dp),
                     8.dp,
                 )
                 ShimmerBlock(
                     progress,
-                    Modifier.padding(start = 61.dp, top = 35.dp).fillMaxWidth(0.8f).height(10.dp),
+                    Modifier.padding(start = 66.dp, top = 35.dp).fillMaxWidth(0.8f).height(10.dp),
                     5.dp,
                 )
                 ShimmerBlock(progress, Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(44.dp), 22.dp)
             }
         }
     }
+}
+
+/**
+ * Shared shimmer sweep 0..1 (1300 ms loop). Honors the platform animator scale 0 and the app's "Reduce effects" setting
+ * ([rememberAnimationsEnabled]): when off, a fixed mid value = static placeholder (still visible, no motion).
+ */
+@Composable
+internal fun rememberShimmerProgress(label: String): State<Float> {
+    if (!rememberAnimationsEnabled(null)) return remember { mutableFloatStateOf(0.5f) }
+    return rememberInfiniteTransition(label = label).animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(durationMillis = 1300, easing = LinearEasing)),
+        label = "${label}Progress",
+    )
 }
 
 @Composable

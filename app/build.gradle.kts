@@ -25,12 +25,12 @@ android {
         // ---- Ads / UMP (phase 9). ----
         // ALL builds (debug, release, nonMinifiedRelease, benchmarkRelease) currently = REAL IDs (pub-4314093941046206). Defined ONCE here.
         // Edit ONLY the ids below (single place). No per-buildType ad ids exist.
-        // SWAP TO TEST IDs for dev (Google test pub-3940256099942544):
-        //   app          ca-app-pub-3940256099942544~3347511713
-        //   interstitial ca-app-pub-3940256099942544/1033173712
-        //   native       ca-app-pub-3940256099942544/2247696110
-        //   app open     ca-app-pub-3940256099942544/9257395921
-        //   rewarded     ca-app-pub-3940256099942544/5224354917
+        // Google TEST IDs (pub-3940256099942544) for dev: app ~3347511713, interstitial /1033173712, native /2247696110, app open /9257395921, rewarded /5224354917. Real IDs:
+        //   app          ca-app-pub-4314093941046206~9747457418
+        //   interstitial ca-app-pub-4314093941046206/9472125240
+        //   native       ca-app-pub-4314093941046206/4495130734
+        //   app open     ca-app-pub-4314093941046206/4609671647
+        //   rewarded     ca-app-pub-4314093941046206/9921708076
         // (banner unit 7814419481 retired: game screens now use the native unit)
         // Placeholder guard (PLACEHOLDER_MARK = 16 zeros contains-check): passes for real + test IDs so ads stay enabled.
         val admobAppId = "ca-app-pub-4314093941046206~9747457418"

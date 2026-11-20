@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Game-screen compact native ad bar (Levels + Sudoku). Host (GameNativeAdSlot) fixes the height to 88dp; this layout fills it
-    (match_parent). Two rows: app icon (56dp) at start spanning both rows, vertically centered; right column row 1 =
+    (match_parent). Two rows: app icon (50dp) at start spanning both rows, vertically centered; right column row 1 =
     ["Ad" badge][ONE-line headline], row 2 = full-width CTA pill (40dp). No MediaView, no body, no advertiser/store/price/stars.
     Asset ids match admob_native_hundred.xml so NativeAdBar.bind() is reused: ad_app_icon, ad_headline, ad_attribute_txtv
     (Ad badge, static, always visible), ad_call_to_action. ad_body absent (bind() is null-safe).
@@ -10,6 +10,8 @@
 <com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:layoutDirection="ltr">
 
     <LinearLayout
@@ -17,6 +19,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/native_ad_background"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="12dp"
@@ -26,8 +30,8 @@
 
         <ImageView
             android:id="@+id/ad_app_icon"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:contentDescription="@null"
             android:importantForAccessibility="no"
             android:scaleType="fitCenter" />
@@ -36,6 +40,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:layout_weight="1"
             android:gravity="center_vertical"
             android:orientation="vertical">
@@ -87,6 +93,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
                 android:layout_marginTop="4dp"
+                android:layout_marginBottom="2dp"
+                android:elevation="3dp"
                 android:background="@drawable/ripple_bg_native_ad_button_twenty"
                 android:ellipsize="end"
                 android:gravity="center"

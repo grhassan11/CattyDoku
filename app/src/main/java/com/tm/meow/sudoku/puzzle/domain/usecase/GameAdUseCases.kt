@@ -84,6 +84,8 @@ class ObserveAdSurfaces(
                     !AdFreePolicy.isSuppressedByPurchase(AdFormat.NATIVE_GAME, removed),
                 sudokuGameNative = sudokuBase && cfg.sudokuGameNativeShow && nativeAds.isConfigured && online &&
                     !AdFreePolicy.isSuppressedByPurchase(AdFormat.NATIVE_GAME, removed),
+                levelsGameNativeSlot = cfg.levelsGameNativeShow && !AdFreePolicy.isSuppressedByPurchase(AdFormat.NATIVE_GAME, removed),
+                sudokuGameNativeSlot = cfg.sudokuGameNativeShow && !AdFreePolicy.isSuppressedByPurchase(AdFormat.NATIVE_GAME, removed),
                 adsRemoved = removed,
                 online = online,
             )

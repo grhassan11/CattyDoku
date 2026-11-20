@@ -46,11 +46,20 @@ class NativeAdSlotStateTest {
     ) = LoadNativeAd(Consent(consent), repo, config, removed(adsRemoved))
 
     @Test
-    fun onlyLoadingAndLoadedReserveTheSlot() {
+    fun everythingExceptHiddenReservesTheSlot() {
         assertTrue(NativeAdSlotState.Loading.reservesSlot)
         assertTrue(NativeAdSlotState.Loaded(Handle()).reservesSlot)
+        assertTrue("failed keeps the skeleton", NativeAdSlotState.Failed.reservesSlot)
         assertFalse(NativeAdSlotState.Hidden.reservesSlot)
-        assertFalse(NativeAdSlotState.Failed.reservesSlot)
+    }
+
+    @Test
+    fun slotStaysEnabledWithoutConsentOrSdkButNotWithKillSwitchOrPurchase() {
+        assertTrue(useCase(consent = false).isSlotEnabled(AdPlacement.LEVELS_HOME))
+        assertTrue(useCase(repo = Repo(isConfigured = false)).isSlotEnabled(AdPlacement.SUDOKU_HOME))
+        assertFalse(useCase(config = AdPolicyConfig(levelsHomeNativeShow = false)).isSlotEnabled(AdPlacement.LEVELS_HOME))
+        assertTrue(useCase(config = AdPolicyConfig(levelsHomeNativeShow = false)).isSlotEnabled(AdPlacement.SUDOKU_HOME))
+        assertFalse(useCase(adsRemoved = true).isSlotEnabled(AdPlacement.LEVELS_HOME))
     }
 
     @Test

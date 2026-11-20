@@ -89,8 +89,13 @@ fun SudokuGameRoute(
     }
 
     // Compact native slot (Sudoku placement, no level gate; driven by sudoku_game_native_ad_show): load when allowed, destroy when the surface turns off or on leave.
-    LaunchedEffect(surfaces.sudokuGameNative) {
-        if (surfaces.sudokuGameNative) adsViewModel.requestGameNative(AdPlacement.SUDOKU_GAME) else adsViewModel.releaseGameNative()
+    // Slot shown whenever the RC switch is on (skeleton while offline / no consent / SDK not ready: no request then).
+    LaunchedEffect(surfaces.sudokuGameNativeSlot, surfaces.sudokuGameNative) {
+        when {
+            !surfaces.sudokuGameNativeSlot -> adsViewModel.releaseGameNative()
+            surfaces.sudokuGameNative -> adsViewModel.requestGameNative(AdPlacement.SUDOKU_GAME)
+            else -> adsViewModel.showGameNativeSkeleton()
+        }
     }
     DisposableEffect(adsViewModel) { onDispose { adsViewModel.releaseGameNative() } }
     // No native ad under dialogs (restart / win / game over / out of hints): slot stays reserved, ad view detaches. Pause does NOT affect it.
@@ -182,7 +187,7 @@ fun SudokuGameRoute(
             onOpenShop(Booster.HINT)
         },
         modifier = modifier,
-        nativeReserved = surfaces.sudokuGameNative,
+        nativeReserved = surfaces.sudokuGameNativeSlot,
         nativeSlot = if (nativeVisible) gameNative else NativeAdSlotState.Hidden,
     )
 }

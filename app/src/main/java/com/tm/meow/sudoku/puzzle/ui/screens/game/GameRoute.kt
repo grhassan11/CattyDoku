@@ -177,8 +177,13 @@ fun GameRoute(
     LaunchedEffect(surfaces.levelsBoosters) { if (!surfaces.levelsBoosters) boosterDialog = null }
 
     // Compact native slot (driven by levels_game_native_ad_show): load when allowed, destroy when the surface turns off.
-    LaunchedEffect(surfaces.levelsGameNative) {
-        if (surfaces.levelsGameNative) adsViewModel.requestGameNative(AdPlacement.LEVELS_GAME) else adsViewModel.releaseGameNative()
+    // Slot shown whenever the RC switch is on (skeleton while offline / no consent / SDK not ready: no request then).
+    LaunchedEffect(surfaces.levelsGameNativeSlot, surfaces.levelsGameNative) {
+        when {
+            !surfaces.levelsGameNativeSlot -> adsViewModel.releaseGameNative()
+            surfaces.levelsGameNative -> adsViewModel.requestGameNative(AdPlacement.LEVELS_GAME)
+            else -> adsViewModel.showGameNativeSkeleton()
+        }
     }
     // No native ad under dialogs (win / lose / booster): the slot stays reserved, the ad view detaches.
     val nativeVisible = content?.outcome == null && boosterDialog == null && !settingsVisible
@@ -187,7 +192,7 @@ fun GameRoute(
         reviveSurface = surfaces.levelsRevive,
         rewardedLoad = surfaces.rewardedLoad,
         rewardedBusy = rewardedBusy,
-        nativeReserved = surfaces.levelsGameNative,
+        nativeReserved = surfaces.levelsGameNativeSlot,
         nativeSlot = if (nativeVisible) gameNative else NativeAdSlotState.Hidden,
     )
 

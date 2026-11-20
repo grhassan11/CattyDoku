@@ -154,7 +154,11 @@ fun HomeRoute(
     RateUsHost(rateUsViewModel, snackbarHostState)
     if (showExit) {
         ExitSheet(
-            onRateStar = rateUsViewModel::onExitSheetStar,
+            onRateStar = { stars ->
+                // Store / feedback email opens next: close the sheet so it is gone when the user returns.
+                showExit = false
+                rateUsViewModel.onExitSheetStar(stars)
+            },
             onDismiss = { showExit = false },
             showRemoveAds = state.removeAdsBadgeVisible,
             onRemoveAds = {

@@ -312,6 +312,25 @@ class AdsViewModelTest {
     }
 
     @Test
+    fun skeletonWithoutRequestWhenRequestNotAllowed() = adsTest { rig, vm ->
+        vm.showGameNativeSkeleton()
+        advanceUntilIdle()
+        assertEquals(NativeAdSlotState.Loading, vm.gameNative.value)
+        assertEquals("no request spent", 0, rig.nativeAds.loadCalls)
+    }
+
+    @Test
+    fun throttledRetryKeepsSkeletonNotBlank() = adsTest { rig, vm ->
+        rig.nativeAds.fail = true
+        vm.requestGameNative(AdPlacement.SUDOKU_GAME)
+        advanceUntilIdle()
+        vm.releaseGameNative() // Hidden
+        vm.requestGameNative(AdPlacement.SUDOKU_GAME) // throttled
+        assertEquals(NativeAdSlotState.Failed, vm.gameNative.value)
+        assertEquals(1, rig.nativeAds.loadCalls)
+    }
+
+    @Test
     fun preloadedGameNativeIsBoundWithoutALiveRequestAndTakenOnce() = adsTest { rig, vm ->
         rig.preloadGame(AdPlacement.SUDOKU_GAME) // what Sudoku entry does
         assertEquals(1, rig.nativeAds.loadCalls)

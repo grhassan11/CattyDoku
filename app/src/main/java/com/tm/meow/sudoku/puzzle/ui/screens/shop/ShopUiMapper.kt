@@ -2,6 +2,7 @@ package com.tm.meow.sudoku.puzzle.ui.screens.shop
 
 import com.tm.meow.sudoku.puzzle.domain.billing.CatalogState
 import com.tm.meow.sudoku.puzzle.domain.billing.Entitlement
+import com.tm.meow.sudoku.puzzle.domain.billing.PriceFormatter
 import com.tm.meow.sudoku.puzzle.domain.billing.ShopProduct
 import com.tm.meow.sudoku.puzzle.domain.model.Booster
 
@@ -26,7 +27,9 @@ object ShopUiMapper {
             is CatalogState.Ready -> CatalogStatus.READY
             is CatalogState.Unavailable -> CatalogStatus.UNAVAILABLE
         }
-        fun price(product: ShopProduct): String? = (catalog as? CatalogState.Ready)?.prices?.get(product.id)?.formattedPrice
+        // Every Store price (Remove Ads + all packs) drops an all-zero fraction ("$5.00" -> "$5"); fractional prices untouched.
+        fun price(product: ShopProduct): String? =
+            (catalog as? CatalogState.Ready)?.prices?.get(product.id)?.let { PriceFormatter.trimZeroFraction(it) }
         fun purchasable(product: ShopProduct): Boolean = price(product) != null && !busy
 
         val monthlyOwnership = when {

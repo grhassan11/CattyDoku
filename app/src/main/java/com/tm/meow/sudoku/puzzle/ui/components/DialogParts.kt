@@ -102,6 +102,7 @@ fun PillButton(
             fontWeight = FontWeight.Bold,
             fontFamily = FredokaFamily,
             maxLines = 1,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             style = if (style.textShadow) {
                 androidx.compose.ui.text.TextStyle(
                     shadow = androidx.compose.ui.graphics.Shadow(Color(0x66000000), Offset(0f, 2f), 3f),

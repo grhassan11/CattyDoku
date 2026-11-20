@@ -36,8 +36,11 @@ class LoadNativeAd(
     private val adsRemoved: AdsRemovedRepository = NoAdsRemoved,
     private val connectivity: ConnectivityObserver = AlwaysOnline,
 ) {
-    /** Single policy gate: false = no slot at all (kill switch, Remove Ads, offline, no consent, SDK off / placeholder ID). */
-    fun isAllowed(placement: AdPlacement): Boolean {
+    /**
+     * Slot gate: true = the slot (skeleton or ad) is shown. False ONLY for the remote kill switch or a Remove Ads purchase.
+     * Offline / no consent / SDK not ready do NOT hide the slot (skeleton stays); they only block the request ([isAllowed]).
+     */
+    fun isSlotEnabled(placement: AdPlacement): Boolean {
         val cfg = config.current()
         val unitOn = when (placement) {
             AdPlacement.LEVELS_HOME -> cfg.levelsHomeNativeShow
@@ -46,12 +49,16 @@ class LoadNativeAd(
             AdPlacement.SUDOKU_GAME -> cfg.sudokuGameNativeShow
         }
         if (!unitOn) return false
-        // Remove Ads: never even request the ad.
         val format = when (placement) {
             AdPlacement.LEVELS_HOME, AdPlacement.SUDOKU_HOME -> AdFormat.NATIVE_HOME
             AdPlacement.LEVELS_GAME, AdPlacement.SUDOKU_GAME -> AdFormat.NATIVE_GAME
         }
-        if (AdFreePolicy.isSuppressedByPurchase(format, adsRemoved.adsRemoved.value)) return false
+        return !AdFreePolicy.isSuppressedByPurchase(format, adsRemoved.adsRemoved.value)
+    }
+
+    /** Request gate: false = never request (slot disabled, Remove Ads, offline, no consent, SDK off / placeholder ID). The slot may still show its skeleton. */
+    fun isAllowed(placement: AdPlacement): Boolean {
+        if (!isSlotEnabled(placement)) return false
         if (!connectivity.isOnline.value) return false
         if (!consent.state.value.canRequestAds) return false
         return repository.isConfigured
